@@ -1,6 +1,8 @@
-const API_BASE = 'https://dataanalyticsdashboard.somchaibutphon.workers.dev/';
+(function () {
+  'use strict';
 
-const Api = (() => {
+  const API_BASE = 'https://dataanalyticsdashboard.somchaibutphon.workers.dev/';
+
   function getToken() {
     return localStorage.getItem('analytics_token') || '';
   }
@@ -58,7 +60,7 @@ const Api = (() => {
     return s ? `?${s}` : '';
   }
 
-  return {
+  window.Api = {
     getToken,
     setToken,
     clearToken,
