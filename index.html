@@ -1,1 +1,157 @@
 
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <title>Analytics Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <link rel="preconnect" href="https://cdn.jsdelivr.net">
+  <link rel="stylesheet" href="./styles.css?v=1">
+
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+
+<body>
+  <div id="app">
+
+    <!-- Login Page -->
+    <section id="loginView" class="loginView hidden">
+      <div class="loginCard">
+        <div class="loginLogo">
+          <div class="logoMark">A</div>
+          <div>
+            <h1>Analytics Dashboard</h1>
+            <p>เข้าสู่ระบบเพื่อดูข้อมูลวิเคราะห์</p>
+          </div>
+        </div>
+
+        <form id="loginForm" class="loginForm">
+          <label>
+            <span>Username</span>
+            <input id="loginUsername" type="text" autocomplete="username" placeholder="เช่น admin" required>
+          </label>
+
+          <label>
+            <span>Password</span>
+            <input id="loginPassword" type="password" autocomplete="current-password" placeholder="รหัสผ่าน" required>
+          </label>
+
+          <button id="loginBtn" type="submit" class="primaryBtn">
+            เข้าสู่ระบบ
+          </button>
+        </form>
+
+        <div class="loginHelp">
+          ระบบจะตรวจสอบชื่อผู้ใช้และรหัสผ่านจาก Google Sheet หลังบ้าน
+        </div>
+      </div>
+    </section>
+
+    <!-- Main App -->
+    <section id="mainView" class="mainView hidden">
+
+      <header class="topbar">
+        <div class="brand">
+          <div class="brandIcon">A</div>
+          <div class="brandText">
+            <strong>Analytics Dashboard</strong>
+            <span>Google Sheets Data Analytics</span>
+          </div>
+        </div>
+
+        <div class="topbarRight">
+          <div class="userBox">
+            <span id="userName">-</span>
+            <small id="userRole">-</small>
+          </div>
+          <button id="logoutBtn" class="ghostBtn">ออกจากระบบ</button>
+        </div>
+      </header>
+
+      <main class="page">
+
+        <section class="controlPanel">
+          <div class="controlHeader">
+            <div>
+              <h2>เลือก Dashboard</h2>
+              <p>เลือกชุดข้อมูลและเงื่อนไขที่ต้องการวิเคราะห์</p>
+            </div>
+
+            <button id="refreshBtn" class="secondaryBtn">
+              โหลดข้อมูลใหม่
+            </button>
+          </div>
+
+          <div class="controlGrid">
+            <label>
+              <span>Dashboard</span>
+              <select id="dashboardSelect">
+                <option value="">กำลังโหลด...</option>
+              </select>
+            </label>
+
+            <label>
+              <span>วันที่เริ่มต้น</span>
+              <input id="dateFrom" type="date">
+            </label>
+
+            <label>
+              <span>วันที่สิ้นสุด</span>
+              <input id="dateTo" type="date">
+            </label>
+
+            <div class="filterActions">
+              <button id="applyFilterBtn" class="primaryBtn">แสดงผล</button>
+              <button id="clearFilterBtn" class="ghostBtn">ล้างตัวกรอง</button>
+            </div>
+          </div>
+
+          <div id="dynamicFilters" class="dynamicFilters"></div>
+        </section>
+
+        <section class="statusBar">
+          <div>
+            <strong id="dashboardTitle">-</strong>
+            <span id="dashboardMeta">ยังไม่ได้โหลดข้อมูล</span>
+          </div>
+          <div id="loadingState" class="loadingState hidden">
+            กำลังโหลด...
+          </div>
+        </section>
+
+        <section id="metricGrid" class="metricGrid"></section>
+
+        <section id="chartGrid" class="chartGrid"></section>
+
+        <section class="tableSection">
+          <div class="sectionHeader">
+            <div>
+              <h3>ตารางข้อมูล</h3>
+              <p id="tableMeta">-</p>
+            </div>
+
+            <div class="tableTools">
+              <input id="tableSearch" type="search" placeholder="ค้นหาในตาราง...">
+            </div>
+          </div>
+
+          <div class="tableWrap">
+            <table id="dataTable">
+              <thead></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </section>
+
+      </main>
+    </section>
+  </div>
+
+  <script src="./api.js?v=1"></script>
+  <script src="./auth.js?v=1"></script>
+  <script src="./dashboard.js?v=1"></script>
+  <script src="./app.js?v=1"></script>
+</body>
+</html>
