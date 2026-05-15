@@ -1,5 +1,14 @@
-const Auth = (() => {
+(function () {
+  'use strict';
+
   let currentUser = null;
+
+  function getApi_() {
+    if (!window.Api) {
+      throw new Error('ไม่พบ api.js หรือโหลด api.js ไม่สำเร็จ');
+    }
+    return window.Api;
+  }
 
   function getUser() {
     return currentUser;
@@ -16,6 +25,7 @@ const Auth = (() => {
   }
 
   async function checkExistingSession() {
+    const Api = getApi_();
     const token = Api.getToken();
 
     if (!token) {
@@ -42,6 +52,7 @@ const Auth = (() => {
   }
 
   async function login(username, password) {
+    const Api = getApi_();
     const result = await Api.login(username, password);
 
     if (!result.token) {
@@ -55,17 +66,17 @@ const Auth = (() => {
   }
 
   async function logout() {
+    const Api = getApi_();
+
     try {
       await Api.logout();
-    } catch (err) {
-      // ไม่ต้อง block logout ถ้า API error
-    }
+    } catch (err) {}
 
     Api.clearToken();
     setUser(null);
   }
 
-  return {
+  window.Auth = {
     getUser,
     setUser,
     checkExistingSession,
