@@ -1,7 +1,7 @@
 (function () {
   'use strict';
 
-  const API_BASE = 'https://dataanalyticsdashboard.somchaibutphon.workers.dev/';
+  const API_BASE = 'https://dataanalyticsdashboard.somchaibutphon.workers.dev';
 
   function getToken() {
     return localStorage.getItem('analytics_token') || '';
