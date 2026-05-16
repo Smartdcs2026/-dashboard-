@@ -2,7 +2,6 @@
   'use strict';
 
   const API_BASE = 'https://dashboard.somchaibutphon.workers.dev';
-
   const TOKEN_KEY = 'analytics_dashboard_token';
 
   function getToken() {
@@ -19,16 +18,31 @@
     localStorage.removeItem(TOKEN_KEY);
   }
 
+  function buildQuery(params) {
+    const search = new URLSearchParams();
+
+    Object.keys(params || {}).forEach(function (key) {
+      const value = params[key];
+
+      if (value !== undefined && value !== null && String(value).trim() !== '') {
+        search.set(key, String(value));
+      }
+    });
+
+    const text = search.toString();
+    return text ? '?' + text : '';
+  }
+
   async function request(path, options = {}) {
-    const url = API_BASE + path;
     const token = getToken();
+    const method = String(options.method || 'GET').toUpperCase();
+    const query = options.query ? buildQuery(options.query) : '';
+    const url = API_BASE + path + query;
 
     const headers = {
-      'Accept': 'application/json',
+      Accept: 'application/json',
       ...(options.headers || {})
     };
-
-    const method = String(options.method || 'GET').toUpperCase();
 
     let body = options.body;
 
@@ -130,6 +144,27 @@
     return request('/api/sources');
   }
 
+  function createSource(payload) {
+    return request('/api/sources', {
+      method: 'POST',
+      body: payload
+    });
+  }
+
+  function listSourceSheets(payload) {
+    return request('/api/source-sheets', {
+      method: 'POST',
+      body: payload
+    });
+  }
+
+  function readHeaders(payload) {
+    return request('/api/headers', {
+      method: 'POST',
+      body: payload
+    });
+  }
+
   function listDashboards() {
     return request('/api/dashboards');
   }
@@ -147,6 +182,9 @@
     logout,
     changePassword,
     listSources,
+    createSource,
+    listSourceSheets,
+    readHeaders,
     listDashboards
   };
 })();
