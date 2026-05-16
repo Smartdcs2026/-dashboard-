@@ -1,157 +1,163 @@
-
 <!doctype html>
 <html lang="th">
 <head>
   <meta charset="utf-8">
-  <title>Analytics Dashboard</title>
+  <title>Data Analytics Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <link rel="preconnect" href="https://cdn.jsdelivr.net">
-  <link rel="stylesheet" href="./styles.css?v=1">
+  <meta name="theme-color" content="#0f172a">
+  <meta name="description" content="Universal Data Analytics Dashboard">
 
-  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap"
+    rel="stylesheet"
+  >
+
+  <link rel="stylesheet" href="./style.css">
 </head>
 
 <body>
-  <div id="app">
+  <div id="app" class="app">
 
-    <!-- Login Page -->
-    <section id="loginView" class="loginView hidden">
-      <div class="loginCard">
-        <div class="loginLogo">
-          <div class="logoMark">A</div>
+    <section id="loginView" class="login-page hidden">
+      <div class="login-card">
+        <div class="brand">
+          <div class="brand-icon">DA</div>
           <div>
-            <h1>Analytics Dashboard</h1>
-            <p>เข้าสู่ระบบเพื่อดูข้อมูลวิเคราะห์</p>
+            <h1>Data Analytics Dashboard</h1>
+            <p>ระบบวิเคราะห์ข้อมูลจาก Google Sheets</p>
           </div>
         </div>
 
-        <form id="loginForm" class="loginForm">
-          <label>
-            <span>Username</span>
-            <input id="loginUsername" type="text" autocomplete="username" placeholder="เช่น admin" required>
+        <div id="apiStatus" class="status-box status-muted">
+          กำลังตรวจสอบสถานะระบบ...
+        </div>
+
+        <form id="loginForm" class="form">
+          <label class="field">
+            <span>ชื่อผู้ใช้</span>
+            <input
+              id="username"
+              type="text"
+              autocomplete="username"
+              placeholder="เช่น admin"
+              required
+            >
           </label>
 
-          <label>
-            <span>Password</span>
-            <input id="loginPassword" type="password" autocomplete="current-password" placeholder="รหัสผ่าน" required>
+          <label class="field">
+            <span>รหัสผ่าน</span>
+            <input
+              id="password"
+              type="password"
+              autocomplete="current-password"
+              placeholder="กรอกรหัสผ่าน"
+              required
+            >
           </label>
 
-          <button id="loginBtn" type="submit" class="primaryBtn">
+          <button id="loginBtn" class="btn btn-primary" type="submit">
             เข้าสู่ระบบ
           </button>
+
+          <p id="loginMessage" class="form-message"></p>
         </form>
 
-        <div class="loginHelp">
-          ระบบจะตรวจสอบชื่อผู้ใช้และรหัสผ่านจาก Google Sheet หลังบ้าน
+        <div class="login-hint">
+          <strong>ค่าเริ่มต้น:</strong>
+          Username: <code>admin</code>,
+          Password: <code>admin123</code>
         </div>
       </div>
     </section>
 
-    <!-- Main App -->
-    <section id="mainView" class="mainView hidden">
-
+    <section id="dashboardView" class="dashboard-page hidden">
       <header class="topbar">
-        <div class="brand">
-          <div class="brandIcon">A</div>
-          <div class="brandText">
-            <strong>Analytics Dashboard</strong>
-            <span>Google Sheets Data Analytics</span>
+        <div class="topbar-left">
+          <div class="brand-icon small">DA</div>
+          <div>
+            <h2>Data Analytics Dashboard</h2>
+            <p id="systemStatusText">พร้อมใช้งาน</p>
           </div>
         </div>
 
-        <div class="topbarRight">
-          <div class="userBox">
-            <span id="userName">-</span>
+        <div class="topbar-right">
+          <div class="user-chip">
+            <span id="userDisplayName">-</span>
             <small id="userRole">-</small>
           </div>
-          <button id="logoutBtn" class="ghostBtn">ออกจากระบบ</button>
+
+          <button id="logoutBtn" class="btn btn-ghost" type="button">
+            ออกจากระบบ
+          </button>
         </div>
       </header>
 
-      <main class="page">
+      <main class="main">
+        <section class="hero-card">
+          <div>
+            <h1>Admin Console</h1>
+            <p>
+              ระบบเชื่อมต่อ Worker และ Apps Script สำเร็จแล้ว
+              ขั้นถัดไปคือเพิ่มแหล่งข้อมูล, อ่านชีท, อ่านหัวคอลัมน์ และสร้าง Dashboard
+            </p>
+          </div>
 
-        <section class="controlPanel">
-          <div class="controlHeader">
+          <button id="refreshMeBtn" class="btn btn-secondary" type="button">
+            Refresh ข้อมูลผู้ใช้
+          </button>
+        </section>
+
+        <section class="grid">
+          <article class="card">
+            <h3>สถานะ API</h3>
+            <p id="healthResult">-</p>
+          </article>
+
+          <article class="card">
+            <h3>ผู้ใช้งาน</h3>
+            <p id="meResult">-</p>
+          </article>
+
+          <article class="card">
+            <h3>แหล่งข้อมูล</h3>
+            <p id="sourceResult">ยังไม่ได้โหลดข้อมูล</p>
+            <button id="loadSourcesBtn" class="btn btn-secondary" type="button">
+              โหลดแหล่งข้อมูล
+            </button>
+          </article>
+
+          <article class="card">
+            <h3>Dashboard</h3>
+            <p id="dashboardResult">ยังไม่ได้โหลดข้อมูล</p>
+            <button id="loadDashboardsBtn" class="btn btn-secondary" type="button">
+              โหลด Dashboard
+            </button>
+          </article>
+        </section>
+
+        <section class="panel">
+          <div class="panel-header">
             <div>
-              <h2>เลือก Dashboard</h2>
-              <p>เลือกชุดข้อมูลและเงื่อนไขที่ต้องการวิเคราะห์</p>
+              <h3>ผลลัพธ์ API ล่าสุด</h3>
+              <p>ใช้ตรวจสอบข้อมูลที่ Worker ส่งกลับมา</p>
             </div>
 
-            <button id="refreshBtn" class="secondaryBtn">
-              โหลดข้อมูลใหม่
+            <button id="clearLogBtn" class="btn btn-ghost" type="button">
+              ล้าง Log
             </button>
           </div>
 
-          <div class="controlGrid">
-            <label>
-              <span>Dashboard</span>
-              <select id="dashboardSelect">
-                <option value="">กำลังโหลด...</option>
-              </select>
-            </label>
-
-            <label>
-              <span>วันที่เริ่มต้น</span>
-              <input id="dateFrom" type="date">
-            </label>
-
-            <label>
-              <span>วันที่สิ้นสุด</span>
-              <input id="dateTo" type="date">
-            </label>
-
-            <div class="filterActions">
-              <button id="applyFilterBtn" class="primaryBtn">แสดงผล</button>
-              <button id="clearFilterBtn" class="ghostBtn">ล้างตัวกรอง</button>
-            </div>
-          </div>
-
-          <div id="dynamicFilters" class="dynamicFilters"></div>
+          <pre id="debugLog" class="debug-log">ยังไม่มีข้อมูล</pre>
         </section>
-
-        <section class="statusBar">
-          <div>
-            <strong id="dashboardTitle">-</strong>
-            <span id="dashboardMeta">ยังไม่ได้โหลดข้อมูล</span>
-          </div>
-          <div id="loadingState" class="loadingState hidden">
-            กำลังโหลด...
-          </div>
-        </section>
-
-        <section id="metricGrid" class="metricGrid"></section>
-
-        <section id="chartGrid" class="chartGrid"></section>
-
-        <section class="tableSection">
-          <div class="sectionHeader">
-            <div>
-              <h3>ตารางข้อมูล</h3>
-              <p id="tableMeta">-</p>
-            </div>
-
-            <div class="tableTools">
-              <input id="tableSearch" type="search" placeholder="ค้นหาในตาราง...">
-            </div>
-          </div>
-
-          <div class="tableWrap">
-            <table id="dataTable">
-              <thead></thead>
-              <tbody></tbody>
-            </table>
-          </div>
-        </section>
-
       </main>
     </section>
+
   </div>
 
-  <script src="./api.js?v=5"></script>
-<script src="./auth.js?v=5"></script>
-<script src="./dashboard.js?v=5"></script>
-<script src="./app.js?v=5"></script>
+  <script src="./api.js"></script>
+  <script src="./app.js"></script>
 </body>
 </html>
