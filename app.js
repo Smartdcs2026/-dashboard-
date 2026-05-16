@@ -43,6 +43,8 @@
     meResult: document.getElementById('meResult'),
     sourceResult: document.getElementById('sourceResult'),
     dashboardResult: document.getElementById('dashboardResult'),
+    previewDashboardBtn: document.getElementById('previewDashboardBtn'),
+previewResult: document.getElementById('previewResult'),
     debugLog: document.getElementById('debugLog')
   };
 
@@ -93,7 +95,9 @@
     if (el.sourceForm) {
       el.sourceForm.addEventListener('submit', handleCreateSource);
     }
-
+    if (el.previewDashboardBtn) {
+  el.previewDashboardBtn.addEventListener('click', handleDashboardPreview);
+}
     if (el.saveMappingBtn) {
       el.saveMappingBtn.addEventListener('click', handleSaveMapping);
       el.saveMappingBtn.disabled = true;
@@ -674,6 +678,10 @@
       });
 
       setMappingMessage('บันทึก Mapping สำเร็จ จำนวน ' + (data.total || fields.length) + ' ฟิลด์');
+      if (el.previewResult) {
+  el.previewResult.classList.remove('empty');
+  el.previewResult.textContent = 'บันทึก Mapping แล้ว สามารถกด “สร้าง Dashboard Preview” ได้';
+}
 
       writeLog({
         step: 'save_mapping',
@@ -960,4 +968,209 @@
   function escapeAttr(value) {
     return escapeHtml(value).replaceAll('`', '&#096;');
   }
+
+  async function handleDashboardPreview() {
+  if (!selectedSourceId || !selectedSheetName) {
+    setPreviewMessage('กรุณาเลือกแหล่งข้อมูลและชีทก่อน');
+    return;
+  }
+
+  if (!window.AnalyticsAPI.dashboardPreview) {
+    setPreviewMessage('ยังไม่พบฟังก์ชัน dashboardPreview ใน api.js');
+    return;
+  }
+
+  el.previewDashboardBtn.disabled = true;
+  el.previewDashboardBtn.textContent = 'กำลังสร้าง Preview...';
+
+  setPreviewMessage('กำลังสร้าง Dashboard Preview...');
+
+  try {
+    const data = await window.AnalyticsAPI.dashboardPreview({
+      sourceId: selectedSourceId,
+      sheetName: selectedSheetName,
+      limit: 1000
+    });
+
+    renderDashboardPreview(data);
+
+    writeLog({
+      step: 'dashboard_preview',
+      response: data
+    });
+
+  } catch (error) {
+    setPreviewMessage(error.message);
+
+    writeLog({
+      step: 'dashboard_preview_error',
+      message: error.message,
+      payload: error.payload || null
+    });
+
+  } finally {
+    el.previewDashboardBtn.disabled = false;
+    el.previewDashboardBtn.textContent = 'สร้าง Dashboard Preview';
+  }
+}
+
+
+function renderDashboardPreview(data) {
+  if (!el.previewResult) {
+    return;
+  }
+
+  if (!data || !data.ok) {
+    setPreviewMessage((data && data.message) || 'ไม่สามารถสร้าง Preview ได้');
+    return;
+  }
+
+  el.previewResult.classList.remove('empty');
+
+  const kpisHtml = renderPreviewKpis(data.kpis || []);
+  const chartsHtml = renderPreviewCharts(data.charts || []);
+  const tableHtml = renderPreviewTable(data.table || { fields: [], rows: [] });
+
+  el.previewResult.innerHTML = `
+    <div class="preview-summary">
+      <strong>${escapeHtml(data.sourceName || '')}</strong>
+      <span> / ${escapeHtml(data.sheetName || '')}</span>
+      <span> / อ่านข้อมูล ${Number(data.totalRowsRead || 0).toLocaleString()} แถว</span>
+    </div>
+
+    ${kpisHtml}
+    ${chartsHtml}
+    ${tableHtml}
+  `;
+}
+
+
+function renderPreviewKpis(kpis) {
+  if (!kpis.length) {
+    return '';
+  }
+
+  const html = kpis.map(function (kpi) {
+    return `
+      <div class="preview-kpi">
+        <div class="preview-kpi-title">${escapeHtml(kpi.title || '-')}</div>
+        <div class="preview-kpi-value">${formatNumber(kpi.value)}</div>
+        <div class="preview-kpi-unit">${escapeHtml(kpi.unit || '')}</div>
+      </div>
+    `;
+  }).join('');
+
+  return `
+    <div class="preview-kpi-grid">
+      ${html}
+    </div>
+  `;
+}
+
+
+function renderPreviewCharts(charts) {
+  if (!charts.length) {
+    return '';
+  }
+
+  const html = charts.map(function (chart) {
+    return `
+      <div class="preview-chart">
+        <h4>${escapeHtml(chart.title || '-')}</h4>
+        ${renderSimpleBarChart(chart.data || [])}
+      </div>
+    `;
+  }).join('');
+
+  return `
+    <div class="preview-chart-grid">
+      ${html}
+    </div>
+  `;
+}
+
+
+function renderSimpleBarChart(items) {
+  if (!items.length) {
+    return '<p class="empty">ไม่มีข้อมูลสำหรับกราฟ</p>';
+  }
+
+  const max = Math.max.apply(null, items.map(function (x) {
+    return Number(x.value || 0);
+  })) || 1;
+
+  const html = items.map(function (item) {
+    const value = Number(item.value || 0);
+    const percent = Math.max(2, Math.round((value / max) * 100));
+
+    return `
+      <div class="simple-bar-item">
+        <div class="simple-bar-label" title="${escapeAttr(item.name || '')}">
+          ${escapeHtml(item.name || '(ว่าง)')}
+        </div>
+        <div class="simple-bar-track">
+          <div class="simple-bar-fill" style="width:${percent}%"></div>
+        </div>
+        <div class="simple-bar-value">${formatNumber(value)}</div>
+      </div>
+    `;
+  }).join('');
+
+  return `<div class="simple-bar-list">${html}</div>`;
+}
+
+
+function renderPreviewTable(table) {
+  const fields = table.fields || [];
+  const rows = table.rows || [];
+
+  if (!fields.length || !rows.length) {
+    return '';
+  }
+
+  const headersHtml = fields.map(function (field) {
+    return `<th>${escapeHtml(field.displayName || field.columnName || '')}</th>`;
+  }).join('');
+
+  const rowsHtml = rows.map(function (row) {
+    const cells = fields.map(function (field) {
+      const key = field.displayName || field.columnName;
+      return `<td>${escapeHtml(row[key] || '')}</td>`;
+    }).join('');
+
+    return `<tr>${cells}</tr>`;
+  }).join('');
+
+  return `
+    <div class="preview-table-wrap">
+      <table class="preview-table">
+        <thead>
+          <tr>${headersHtml}</tr>
+        </thead>
+        <tbody>${rowsHtml}</tbody>
+      </table>
+    </div>
+  `;
+}
+
+
+function setPreviewMessage(message) {
+  if (el.previewResult) {
+    el.previewResult.textContent = message || '';
+    el.previewResult.classList.add('empty');
+  }
+}
+
+
+function formatNumber(value) {
+  const num = Number(value);
+
+  if (isNaN(num)) {
+    return escapeHtml(value);
+  }
+
+  return num.toLocaleString('th-TH', {
+    maximumFractionDigits: 2
+  });
+}
 })();
