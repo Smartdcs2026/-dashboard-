@@ -688,6 +688,98 @@
       .replaceAll('"', '&quot;')
       .replaceAll("'", '&#039;');
   }
+
+  function renderDataTypeOptions(selected) {
+  const options = [
+    ['text', 'ข้อความ'],
+    ['number', 'ตัวเลข'],
+    ['currency', 'จำนวนเงิน'],
+    ['percent', 'เปอร์เซ็นต์'],
+    ['date', 'วันที่'],
+    ['datetime', 'วันที่และเวลา'],
+    ['time', 'เวลา'],
+    ['duration', 'ระยะเวลา'],
+    ['category', 'หมวดหมู่'],
+    ['status', 'สถานะ'],
+    ['person', 'บุคคล'],
+    ['location', 'สถานที่'],
+    ['boolean', 'จริง/เท็จ'],
+    ['url', 'URL'],
+    ['image', 'รูปภาพ'],
+    ['document', 'เอกสาร'],
+    ['id', 'รหัสอ้างอิง'],
+    ['remark', 'หมายเหตุ']
+  ];
+
+  return options.map(function (opt) {
+    return `<option value="${escapeAttr(opt[0])}" ${opt[0] === selected ? 'selected' : ''}>${escapeHtml(opt[1])}</option>`;
+  }).join('');
+}
+
+
+function renderMeaningTypeOptions(selected) {
+  const options = [
+    ['text', 'ข้อความทั่วไป'],
+    ['date', 'วันที่หลัก/เวลา'],
+    ['measure', 'ค่าตัวเลขวิเคราะห์'],
+    ['category', 'หมวดหมู่'],
+    ['status', 'สถานะ'],
+    ['person', 'บุคคล'],
+    ['team', 'ทีม/แผนก'],
+    ['location', 'สถานที่/DC/สาขา'],
+    ['asset', 'ทรัพย์สิน/รถ/อุปกรณ์'],
+    ['document', 'เอกสาร'],
+    ['image', 'รูปภาพ'],
+    ['url', 'URL'],
+    ['id', 'รหัสอ้างอิง'],
+    ['remark', 'หมายเหตุ']
+  ];
+
+  return options.map(function (opt) {
+    return `<option value="${escapeAttr(opt[0])}" ${opt[0] === selected ? 'selected' : ''}>${escapeHtml(opt[1])}</option>`;
+  }).join('');
+}
+
+
+function renderCheck(name, label, checked) {
+  return `
+    <label class="mapping-check">
+      <input data-map-check="${escapeAttr(name)}" type="checkbox" ${checked ? 'checked' : ''}>
+      <span>${escapeHtml(label)}</span>
+    </label>
+  `;
+}
+
+
+function shouldDefaultFilter(meaning, dataType) {
+  return [
+    'date',
+    'category',
+    'status',
+    'person',
+    'team',
+    'location'
+  ].includes(meaning) || ['date', 'datetime', 'status', 'category'].includes(dataType);
+}
+
+
+function getFirstSampleValue(sampleRows, colIndex) {
+  for (let i = 0; i < sampleRows.length; i++) {
+    const row = sampleRows[i] || [];
+    const value = row[colIndex];
+
+    if (value !== undefined && value !== null && String(value).trim() !== '') {
+      return String(value);
+    }
+  }
+
+  return '';
+}
+
+
+function escapeAttr(value) {
+  return escapeHtml(value).replaceAll('`', '&#096;');
+}
 })();
 async function handleSaveMapping() {
   if (!lastHeadersData || !lastHeadersData.headers || !selectedSourceId || !selectedSheetName) {
@@ -787,101 +879,3 @@ function collectMappingFields() {
 }
 
 
-function renderDataTypeOptions(selected) {
-  const options = [
-    ['text', 'ข้อความ'],
-    ['number', 'ตัวเลข'],
-    ['currency', 'จำนวนเงิน'],
-    ['percent', 'เปอร์เซ็นต์'],
-    ['date', 'วันที่'],
-    ['datetime', 'วันที่และเวลา'],
-    ['time', 'เวลา'],
-    ['duration', 'ระยะเวลา'],
-    ['category', 'หมวดหมู่'],
-    ['status', 'สถานะ'],
-    ['person', 'บุคคล'],
-    ['location', 'สถานที่'],
-    ['boolean', 'จริง/เท็จ'],
-    ['url', 'URL'],
-    ['image', 'รูปภาพ'],
-    ['document', 'เอกสาร'],
-    ['id', 'รหัสอ้างอิง'],
-    ['remark', 'หมายเหตุ']
-  ];
-
-  return options.map(function (opt) {
-    return `<option value="${escapeAttr(opt[0])}" ${opt[0] === selected ? 'selected' : ''}>${escapeHtml(opt[1])}</option>`;
-  }).join('');
-}
-
-
-function renderMeaningTypeOptions(selected) {
-  const options = [
-    ['text', 'ข้อความทั่วไป'],
-    ['date', 'วันที่หลัก/เวลา'],
-    ['measure', 'ค่าตัวเลขวิเคราะห์'],
-    ['category', 'หมวดหมู่'],
-    ['status', 'สถานะ'],
-    ['person', 'บุคคล'],
-    ['team', 'ทีม/แผนก'],
-    ['location', 'สถานที่/DC/สาขา'],
-    ['asset', 'ทรัพย์สิน/รถ/อุปกรณ์'],
-    ['document', 'เอกสาร'],
-    ['image', 'รูปภาพ'],
-    ['url', 'URL'],
-    ['id', 'รหัสอ้างอิง'],
-    ['remark', 'หมายเหตุ']
-  ];
-
-  return options.map(function (opt) {
-    return `<option value="${escapeAttr(opt[0])}" ${opt[0] === selected ? 'selected' : ''}>${escapeHtml(opt[1])}</option>`;
-  }).join('');
-}
-
-
-function renderCheck(name, label, checked) {
-  return `
-    <label class="mapping-check">
-      <input data-map-check="${escapeAttr(name)}" type="checkbox" ${checked ? 'checked' : ''}>
-      <span>${escapeHtml(label)}</span>
-    </label>
-  `;
-}
-
-
-function shouldDefaultFilter(meaning, dataType) {
-  return [
-    'date',
-    'category',
-    'status',
-    'person',
-    'team',
-    'location'
-  ].includes(meaning) || ['date', 'datetime', 'status', 'category'].includes(dataType);
-}
-
-
-function getFirstSampleValue(sampleRows, colIndex) {
-  for (let i = 0; i < sampleRows.length; i++) {
-    const row = sampleRows[i] || [];
-    const value = row[colIndex];
-
-    if (value !== undefined && value !== null && String(value).trim() !== '') {
-      return String(value);
-    }
-  }
-
-  return '';
-}
-
-
-function setMappingMessage(message) {
-  if (el.mappingMessage) {
-    el.mappingMessage.textContent = message || '';
-  }
-}
-
-
-function escapeAttr(value) {
-  return escapeHtml(value).replaceAll('`', '&#096;');
-}
