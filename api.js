@@ -169,6 +169,26 @@
     return request('/api/dashboards');
   }
 
+function getMapping(payload) {
+  return request('/api/mapping', {
+    method: 'POST',
+    body: {
+      mode: 'get',
+      ...payload
+    }
+  });
+}
+
+function saveMapping(payload) {
+  return request('/api/mapping', {
+    method: 'POST',
+    body: {
+      mode: 'save',
+      ...payload
+    }
+  });
+}
+  
   window.AnalyticsAPI = {
     API_BASE,
     getToken,
@@ -185,6 +205,8 @@
     createSource,
     listSourceSheets,
     readHeaders,
+    getMapping,
+saveMapping,
     listDashboards
   };
 })();
