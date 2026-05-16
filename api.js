@@ -202,7 +202,12 @@
   function listDashboards() {
     return request('/api/dashboards');
   }
-
+function dashboardView(payload) {
+  return request('/api/dashboard-view', {
+    method: 'POST',
+    body: payload
+  });
+}
   window.AnalyticsAPI = {
     API_BASE,
     TOKEN_KEY,
@@ -230,7 +235,7 @@
 
     dashboardPreview,
     createDashboardFromPreview,
-
+    dashboardView,
     listDashboards
   };
 })();
