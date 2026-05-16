@@ -465,43 +465,82 @@
 
   el.headersResult.classList.remove('empty');
 
-  const wrap = document.createElement('div');
-  wrap.className = 'headers-table-wrap';
+  const box = document.createElement('div');
+  box.className = 'mapping-card-list';
 
-  const rows = data.headers.map(function (header, idx) {
+  const cards = data.headers.map(function (header, idx) {
     const columnName = header.name || '';
     const guessedType = header.guessedType || 'text';
     const guessedMeaning = header.guessedMeaning || 'text';
     const sampleValue = getFirstSampleValue(data.sampleRows || [], idx);
 
     return `
-      <tr data-map-row="${idx}">
-        <td>${escapeHtml(header.index)}</td>
-        <td>${escapeHtml(header.columnLetter)}</td>
-        <td>
-          <div class="header-name">${escapeHtml(columnName || '(ไม่มีหัวคอลัมน์)')}</div>
-          <input
-            class="map-display-name"
-            type="text"
-            value="${escapeAttr(columnName)}"
-            placeholder="ชื่อแสดงผล"
-          >
-        </td>
-        <td>
-          <div class="mapping-control">
+      <div class="mapping-card" data-map-row="${idx}">
+        <div class="mapping-card-head">
+          <div>
+            <div class="mapping-index">
+              ${escapeHtml(header.index)} / ${escapeHtml(header.columnLetter)}
+            </div>
+            <div class="mapping-title">
+              ${escapeHtml(columnName || '(ไม่มีหัวคอลัมน์)')}
+            </div>
+          </div>
+
+          <div class="mapping-badges">
+            <span class="badge badge-muted">${escapeHtml(guessedType)}</span>
+            <span class="badge badge-muted">${escapeHtml(guessedMeaning)}</span>
+          </div>
+        </div>
+
+        <div class="mapping-form-grid">
+          <label class="mapping-control">
+            <span>ชื่อแสดงผล</span>
+            <input
+              class="map-display-name"
+              type="text"
+              value="${escapeAttr(columnName)}"
+              placeholder="ชื่อแสดงผล"
+            >
+          </label>
+
+          <label class="mapping-control">
+            <span>ประเภทข้อมูล</span>
             <select class="map-data-type">
               ${renderDataTypeOptions(guessedType)}
             </select>
-          </div>
-        </td>
-        <td>
-          <div class="mapping-control">
+          </label>
+
+          <label class="mapping-control">
+            <span>ความหมายข้อมูล</span>
             <select class="map-meaning-type">
               ${renderMeaningTypeOptions(guessedMeaning)}
             </select>
-          </div>
-        </td>
-        <td>
+          </label>
+
+          <label class="mapping-control">
+            <span>หน่วย</span>
+            <input class="map-unit" type="text" placeholder="เช่น รายการ / บาท / ชั่วโมง" value="">
+          </label>
+
+          <label class="mapping-control">
+            <span>รูปแบบวันที่</span>
+            <input
+              class="map-date-format"
+              type="text"
+              placeholder="dd/MM/yyyy HH:mm:ss"
+              value="${guessedType === 'datetime' ? 'dd/MM/yyyy HH:mm:ss' : ''}"
+            >
+          </label>
+
+          <label class="mapping-control">
+            <span>หมายเหตุ</span>
+            <input class="map-note" type="text" placeholder="หมายเหตุ" value="">
+          </label>
+        </div>
+
+        <div class="mapping-check-section">
+          <div class="mapping-check-title">เลือกการใช้งานของคอลัมน์นี้</div>
+
           <div class="mapping-checks">
             ${renderCheck('isPrimaryDate', 'วันที่หลัก', guessedMeaning === 'date')}
             ${renderCheck('isPrimaryTime', 'เวลาหลัก', guessedType === 'time')}
@@ -514,46 +553,25 @@
             ${renderCheck('isDocument', 'เอกสาร', guessedMeaning === 'document')}
             ${renderCheck('isImage', 'รูปภาพ', guessedMeaning === 'image')}
             ${renderCheck('isUrl', 'URL', guessedMeaning === 'url')}
-            ${renderCheck('useFilter', 'Filter', shouldDefaultFilter(guessedMeaning, guessedType))}
-            ${renderCheck('useExport', 'Export', true)}
-            ${renderCheck('required', 'บังคับ', false)}
+            ${renderCheck('useFilter', 'ใช้เป็น Filter', shouldDefaultFilter(guessedMeaning, guessedType))}
+            ${renderCheck('useExport', 'ใช้ Export', true)}
+            ${renderCheck('required', 'บังคับกรอก', false)}
           </div>
-        </td>
-        <td>
-          <input class="map-unit" type="text" placeholder="หน่วย" value="">
-        </td>
-        <td>
-          <input class="map-date-format" type="text" placeholder="dd/MM/yyyy HH:mm:ss" value="${guessedType === 'datetime' ? 'dd/MM/yyyy HH:mm:ss' : ''}">
-        </td>
-        <td>
-          <input class="map-note" type="text" placeholder="หมายเหตุ" value="">
-          <input class="map-column-name" type="hidden" value="${escapeAttr(columnName)}">
-          <input class="map-sample-value" type="hidden" value="${escapeAttr(sampleValue)}">
-        </td>
-      </tr>
+        </div>
+
+        <div class="mapping-sample">
+          <strong>ตัวอย่างข้อมูล:</strong>
+          <span>${escapeHtml(sampleValue || '-')}</span>
+        </div>
+
+        <input class="map-column-name" type="hidden" value="${escapeAttr(columnName)}">
+        <input class="map-sample-value" type="hidden" value="${escapeAttr(sampleValue)}">
+      </div>
     `;
   }).join('');
 
-  wrap.innerHTML = `
-    <table class="headers-table mapping-table">
-      <thead>
-        <tr>
-          <th>#</th>
-          <th>คอลัมน์</th>
-          <th>หัวคอลัมน์ / ชื่อแสดงผล</th>
-          <th>ประเภทข้อมูล</th>
-          <th>ความหมายข้อมูล</th>
-          <th>ใช้ทำอะไร</th>
-          <th>หน่วย</th>
-          <th>รูปแบบวันที่</th>
-          <th>หมายเหตุ</th>
-        </tr>
-      </thead>
-      <tbody>${rows}</tbody>
-    </table>
-  `;
-
-  el.headersResult.appendChild(wrap);
+  box.innerHTML = cards;
+  el.headersResult.appendChild(box);
 
   const sampleBox = document.createElement('div');
   sampleBox.className = 'sample-box';
