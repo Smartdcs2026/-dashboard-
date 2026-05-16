@@ -27,9 +27,13 @@
     createSourceBtn: document.getElementById('createSourceBtn'),
     reloadSourcesBtn: document.getElementById('reloadSourcesBtn'),
     sourceFormMessage: document.getElementById('sourceFormMessage'),
+
     sourcesList: document.getElementById('sourcesList'),
     sourceSheetsList: document.getElementById('sourceSheetsList'),
     headersResult: document.getElementById('headersResult'),
+
+    saveMappingBtn: document.getElementById('saveMappingBtn'),
+    mappingMessage: document.getElementById('mappingMessage'),
 
     userDisplayName: document.getElementById('userDisplayName'),
     userRole: document.getElementById('userRole'),
@@ -39,8 +43,6 @@
     meResult: document.getElementById('meResult'),
     sourceResult: document.getElementById('sourceResult'),
     dashboardResult: document.getElementById('dashboardResult'),
-    saveMappingBtn: document.getElementById('saveMappingBtn'),
-    mappingMessage: document.getElementById('mappingMessage'),
     debugLog: document.getElementById('debugLog')
   };
 
@@ -60,17 +62,42 @@
   }
 
   function bindEvents() {
-    el.loginForm.addEventListener('submit', handleLogin);
-    el.logoutBtn.addEventListener('click', handleLogout);
-    el.refreshMeBtn.addEventListener('click', loadMe);
+    if (el.loginForm) {
+      el.loginForm.addEventListener('submit', handleLogin);
+    }
 
-    el.loadSourcesBtn.addEventListener('click', loadSources);
-    el.reloadSourcesBtn.addEventListener('click', loadSources);
-    el.loadDashboardsBtn.addEventListener('click', loadDashboards);
-    el.clearLogBtn.addEventListener('click', clearLog);
+    if (el.logoutBtn) {
+      el.logoutBtn.addEventListener('click', handleLogout);
+    }
 
-    el.sourceForm.addEventListener('submit', handleCreateSource);
-    el.saveMappingBtn.addEventListener('click', handleSaveMapping);
+    if (el.refreshMeBtn) {
+      el.refreshMeBtn.addEventListener('click', loadMe);
+    }
+
+    if (el.loadSourcesBtn) {
+      el.loadSourcesBtn.addEventListener('click', loadSources);
+    }
+
+    if (el.reloadSourcesBtn) {
+      el.reloadSourcesBtn.addEventListener('click', loadSources);
+    }
+
+    if (el.loadDashboardsBtn) {
+      el.loadDashboardsBtn.addEventListener('click', loadDashboards);
+    }
+
+    if (el.clearLogBtn) {
+      el.clearLogBtn.addEventListener('click', clearLog);
+    }
+
+    if (el.sourceForm) {
+      el.sourceForm.addEventListener('submit', handleCreateSource);
+    }
+
+    if (el.saveMappingBtn) {
+      el.saveMappingBtn.addEventListener('click', handleSaveMapping);
+      el.saveMappingBtn.disabled = true;
+    }
   }
 
   async function checkApiHealth() {
@@ -82,8 +109,10 @@
 
       setApiStatus('เชื่อมต่อ API สำเร็จ: ' + (health.message || 'พร้อมใช้งาน'), 'success');
 
-      el.healthResult.textContent =
-        'API พร้อมใช้งาน | Setup: ' + (setup.ok ? 'ครบถ้วน' : 'ยังไม่ครบ');
+      if (el.healthResult) {
+        el.healthResult.textContent =
+          'API พร้อมใช้งาน | Setup: ' + (setup.ok ? 'ครบถ้วน' : 'ยังไม่ครบ');
+      }
 
       setSystemStatus('API พร้อมใช้งาน');
 
@@ -95,7 +124,11 @@
 
     } catch (error) {
       setApiStatus(error.message, 'error');
-      el.healthResult.textContent = 'เชื่อมต่อ API ไม่สำเร็จ';
+
+      if (el.healthResult) {
+        el.healthResult.textContent = 'เชื่อมต่อ API ไม่สำเร็จ';
+      }
+
       setSystemStatus('API มีปัญหา');
 
       writeLog({
@@ -184,9 +217,10 @@
     selectedSourceId = '';
     selectedSheetName = '';
     sourcesCache = [];
+    lastHeadersData = null;
 
-    el.username.value = '';
-    el.password.value = '';
+    if (el.username) el.username.value = '';
+    if (el.password) el.password.value = '';
 
     renderSources([]);
     renderSourceSheets([]);
@@ -201,9 +235,11 @@
     currentUser = data.user || null;
     renderUser(currentUser);
 
-    el.meResult.textContent = currentUser
-      ? `${currentUser.displayName || currentUser.username} (${currentUser.role})`
-      : '-';
+    if (el.meResult) {
+      el.meResult.textContent = currentUser
+        ? `${currentUser.displayName || currentUser.username} (${currentUser.role})`
+        : '-';
+    }
 
     writeLog({
       step: 'me',
@@ -266,16 +302,24 @@
   }
 
   async function loadSources() {
-    el.sourceResult.textContent = 'กำลังโหลด...';
-    el.sourcesList.textContent = 'กำลังโหลด...';
-    el.sourcesList.classList.add('empty');
+    if (el.sourceResult) {
+      el.sourceResult.textContent = 'กำลังโหลด...';
+    }
+
+    if (el.sourcesList) {
+      el.sourcesList.textContent = 'กำลังโหลด...';
+      el.sourcesList.classList.add('empty');
+    }
 
     try {
       const data = await window.AnalyticsAPI.listSources();
 
       sourcesCache = data.sources || [];
 
-      el.sourceResult.textContent = `พบแหล่งข้อมูล ${data.total || 0} รายการ`;
+      if (el.sourceResult) {
+        el.sourceResult.textContent = `พบแหล่งข้อมูล ${data.total || 0} รายการ`;
+      }
+
       renderSources(sourcesCache);
 
       writeLog({
@@ -284,9 +328,14 @@
       });
 
     } catch (error) {
-      el.sourceResult.textContent = error.message;
-      el.sourcesList.textContent = error.message;
-      el.sourcesList.classList.add('empty');
+      if (el.sourceResult) {
+        el.sourceResult.textContent = error.message;
+      }
+
+      if (el.sourcesList) {
+        el.sourcesList.textContent = error.message;
+        el.sourcesList.classList.add('empty');
+      }
 
       writeLog({
         step: 'sources_error',
@@ -297,6 +346,8 @@
   }
 
   function renderSources(sources) {
+    if (!el.sourcesList) return;
+
     el.sourcesList.innerHTML = '';
 
     if (!sources || !sources.length) {
@@ -343,6 +394,8 @@
   }
 
   async function loadSourceSheets(sourceId) {
+    if (!el.sourceSheetsList) return;
+
     el.sourceSheetsList.textContent = 'กำลังอ่านรายชื่อชีท...';
     el.sourceSheetsList.classList.add('empty');
 
@@ -371,6 +424,8 @@
   }
 
   function renderSourceSheets(sheets) {
+    if (!el.sourceSheetsList) return;
+
     el.sourceSheetsList.innerHTML = '';
 
     if (!sheets || !sheets.length) {
@@ -404,20 +459,24 @@
       btn.addEventListener('click', function () {
         selectedSheetName = sheetName;
         renderSourceSheets(sheets);
-        readHeaders(sourceIdOrSelected(), selectedSheetName);
+        readHeaders(selectedSourceId, selectedSheetName);
       });
 
       el.sourceSheetsList.appendChild(btn);
     });
   }
 
-  function sourceIdOrSelected() {
-    return selectedSourceId;
-  }
-
   async function readHeaders(sourceId, sheetName) {
+    if (!el.headersResult) return;
+
     el.headersResult.textContent = 'กำลังอ่านหัวคอลัมน์...';
     el.headersResult.classList.add('empty');
+
+    setMappingMessage('');
+
+    if (el.saveMappingBtn) {
+      el.saveMappingBtn.disabled = true;
+    }
 
     try {
       const data = await window.AnalyticsAPI.readHeaders({
@@ -446,151 +505,253 @@
   }
 
   function renderHeaders(data) {
-  el.headersResult.innerHTML = '';
-  lastHeadersData = data || null;
+    if (!el.headersResult) return;
 
-  if (el.saveMappingBtn) {
-    el.saveMappingBtn.disabled = !data || !data.headers;
-  }
+    el.headersResult.innerHTML = '';
+    lastHeadersData = data || null;
 
-  if (el.mappingMessage) {
-    el.mappingMessage.textContent = '';
-  }
+    if (el.saveMappingBtn) {
+      el.saveMappingBtn.disabled = !data || !data.headers;
+    }
 
-  if (!data || !data.headers) {
-    el.headersResult.textContent = 'กรุณาเลือกชีทก่อน';
-    el.headersResult.classList.add('empty');
-    return;
-  }
+    setMappingMessage('');
 
-  el.headersResult.classList.remove('empty');
+    if (!data || !data.headers) {
+      el.headersResult.textContent = 'กรุณาเลือกชีทก่อน';
+      el.headersResult.classList.add('empty');
+      return;
+    }
 
-  const box = document.createElement('div');
-  box.className = 'mapping-card-list';
+    el.headersResult.classList.remove('empty');
 
-  const cards = data.headers.map(function (header, idx) {
-    const columnName = header.name || '';
-    const guessedType = header.guessedType || 'text';
-    const guessedMeaning = header.guessedMeaning || 'text';
-    const sampleValue = getFirstSampleValue(data.sampleRows || [], idx);
+    const box = document.createElement('div');
+    box.className = 'mapping-card-list';
 
-    return `
-      <div class="mapping-card" data-map-row="${idx}">
-        <div class="mapping-card-head">
-          <div>
-            <div class="mapping-index">
-              ${escapeHtml(header.index)} / ${escapeHtml(header.columnLetter)}
+    const cards = data.headers.map(function (header, idx) {
+      const columnName = header.name || '';
+      const guessedType = header.guessedType || 'text';
+      const guessedMeaning = header.guessedMeaning || 'text';
+      const sampleValue = getFirstSampleValue(data.sampleRows || [], idx);
+
+      return `
+        <div class="mapping-card" data-map-row="${idx}">
+          <div class="mapping-card-head">
+            <div>
+              <div class="mapping-index">
+                ${escapeHtml(header.index)} / ${escapeHtml(header.columnLetter)}
+              </div>
+              <div class="mapping-title">
+                ${escapeHtml(columnName || '(ไม่มีหัวคอลัมน์)')}
+              </div>
             </div>
-            <div class="mapping-title">
-              ${escapeHtml(columnName || '(ไม่มีหัวคอลัมน์)')}
+
+            <div class="mapping-badges">
+              <span class="badge badge-muted">${escapeHtml(guessedType)}</span>
+              <span class="badge badge-muted">${escapeHtml(guessedMeaning)}</span>
             </div>
           </div>
 
-          <div class="mapping-badges">
-            <span class="badge badge-muted">${escapeHtml(guessedType)}</span>
-            <span class="badge badge-muted">${escapeHtml(guessedMeaning)}</span>
+          <div class="mapping-form-grid">
+            <label class="mapping-control">
+              <span>ชื่อแสดงผล</span>
+              <input
+                class="map-display-name"
+                type="text"
+                value="${escapeAttr(columnName)}"
+                placeholder="ชื่อแสดงผล"
+              >
+            </label>
+
+            <label class="mapping-control">
+              <span>ประเภทข้อมูล</span>
+              <select class="map-data-type">
+                ${renderDataTypeOptions(guessedType)}
+              </select>
+            </label>
+
+            <label class="mapping-control">
+              <span>ความหมายข้อมูล</span>
+              <select class="map-meaning-type">
+                ${renderMeaningTypeOptions(guessedMeaning)}
+              </select>
+            </label>
+
+            <label class="mapping-control">
+              <span>หน่วย</span>
+              <input class="map-unit" type="text" placeholder="เช่น รายการ / บาท / ชั่วโมง" value="">
+            </label>
+
+            <label class="mapping-control">
+              <span>รูปแบบวันที่</span>
+              <input
+                class="map-date-format"
+                type="text"
+                placeholder="dd/MM/yyyy HH:mm:ss"
+                value="${guessedType === 'datetime' ? 'dd/MM/yyyy HH:mm:ss' : ''}"
+              >
+            </label>
+
+            <label class="mapping-control">
+              <span>หมายเหตุ</span>
+              <input class="map-note" type="text" placeholder="หมายเหตุ" value="">
+            </label>
           </div>
-        </div>
 
-        <div class="mapping-form-grid">
-          <label class="mapping-control">
-            <span>ชื่อแสดงผล</span>
-            <input
-              class="map-display-name"
-              type="text"
-              value="${escapeAttr(columnName)}"
-              placeholder="ชื่อแสดงผล"
-            >
-          </label>
+          <div class="mapping-check-section">
+            <div class="mapping-check-title">เลือกการใช้งานของคอลัมน์นี้</div>
 
-          <label class="mapping-control">
-            <span>ประเภทข้อมูล</span>
-            <select class="map-data-type">
-              ${renderDataTypeOptions(guessedType)}
-            </select>
-          </label>
-
-          <label class="mapping-control">
-            <span>ความหมายข้อมูล</span>
-            <select class="map-meaning-type">
-              ${renderMeaningTypeOptions(guessedMeaning)}
-            </select>
-          </label>
-
-          <label class="mapping-control">
-            <span>หน่วย</span>
-            <input class="map-unit" type="text" placeholder="เช่น รายการ / บาท / ชั่วโมง" value="">
-          </label>
-
-          <label class="mapping-control">
-            <span>รูปแบบวันที่</span>
-            <input
-              class="map-date-format"
-              type="text"
-              placeholder="dd/MM/yyyy HH:mm:ss"
-              value="${guessedType === 'datetime' ? 'dd/MM/yyyy HH:mm:ss' : ''}"
-            >
-          </label>
-
-          <label class="mapping-control">
-            <span>หมายเหตุ</span>
-            <input class="map-note" type="text" placeholder="หมายเหตุ" value="">
-          </label>
-        </div>
-
-        <div class="mapping-check-section">
-          <div class="mapping-check-title">เลือกการใช้งานของคอลัมน์นี้</div>
-
-          <div class="mapping-checks">
-            ${renderCheck('isPrimaryDate', 'วันที่หลัก', guessedMeaning === 'date')}
-            ${renderCheck('isPrimaryTime', 'เวลาหลัก', guessedType === 'time')}
-            ${renderCheck('isMeasure', 'ตัวเลข', guessedMeaning === 'measure' || guessedType === 'number')}
-            ${renderCheck('isCategory', 'หมวดหมู่', guessedMeaning === 'category')}
-            ${renderCheck('isStatus', 'สถานะ', guessedMeaning === 'status')}
-            ${renderCheck('isPerson', 'บุคคล', guessedMeaning === 'person')}
-            ${renderCheck('isTeam', 'ทีม', false)}
-            ${renderCheck('isLocation', 'สถานที่', guessedMeaning === 'location')}
-            ${renderCheck('isDocument', 'เอกสาร', guessedMeaning === 'document')}
-            ${renderCheck('isImage', 'รูปภาพ', guessedMeaning === 'image')}
-            ${renderCheck('isUrl', 'URL', guessedMeaning === 'url')}
-            ${renderCheck('useFilter', 'ใช้เป็น Filter', shouldDefaultFilter(guessedMeaning, guessedType))}
-            ${renderCheck('useExport', 'ใช้ Export', true)}
-            ${renderCheck('required', 'บังคับกรอก', false)}
+            <div class="mapping-checks">
+              ${renderCheck('isPrimaryDate', 'วันที่หลัก', guessedMeaning === 'date')}
+              ${renderCheck('isPrimaryTime', 'เวลาหลัก', guessedType === 'time')}
+              ${renderCheck('isMeasure', 'ตัวเลข', guessedMeaning === 'measure' || guessedType === 'number')}
+              ${renderCheck('isCategory', 'หมวดหมู่', guessedMeaning === 'category')}
+              ${renderCheck('isStatus', 'สถานะ', guessedMeaning === 'status')}
+              ${renderCheck('isPerson', 'บุคคล', guessedMeaning === 'person')}
+              ${renderCheck('isTeam', 'ทีม', false)}
+              ${renderCheck('isLocation', 'สถานที่', guessedMeaning === 'location')}
+              ${renderCheck('isDocument', 'เอกสาร', guessedMeaning === 'document')}
+              ${renderCheck('isImage', 'รูปภาพ', guessedMeaning === 'image')}
+              ${renderCheck('isUrl', 'URL', guessedMeaning === 'url')}
+              ${renderCheck('useFilter', 'ใช้เป็น Filter', shouldDefaultFilter(guessedMeaning, guessedType))}
+              ${renderCheck('useExport', 'ใช้ Export', true)}
+              ${renderCheck('required', 'บังคับกรอก', false)}
+            </div>
           </div>
-        </div>
 
-        <div class="mapping-sample">
-          <strong>ตัวอย่างข้อมูล:</strong>
-          <span>${escapeHtml(sampleValue || '-')}</span>
-        </div>
+          <div class="mapping-sample">
+            <strong>ตัวอย่างข้อมูล:</strong>
+            <span>${escapeHtml(sampleValue || '-')}</span>
+          </div>
 
-        <input class="map-column-name" type="hidden" value="${escapeAttr(columnName)}">
-        <input class="map-sample-value" type="hidden" value="${escapeAttr(sampleValue)}">
-      </div>
+          <input class="map-column-name" type="hidden" value="${escapeAttr(columnName)}">
+          <input class="map-sample-value" type="hidden" value="${escapeAttr(sampleValue)}">
+        </div>
+      `;
+    }).join('');
+
+    box.innerHTML = cards;
+    el.headersResult.appendChild(box);
+
+    const sampleBox = document.createElement('div');
+    sampleBox.className = 'sample-box';
+
+    sampleBox.innerHTML = `
+      <h4>ตัวอย่างข้อมูล 20 แถวแรก</h4>
+      <pre>${escapeHtml(JSON.stringify(data.sampleRows || [], null, 2))}</pre>
     `;
-  }).join('');
 
-  box.innerHTML = cards;
-  el.headersResult.appendChild(box);
+    el.headersResult.appendChild(sampleBox);
+  }
 
-  const sampleBox = document.createElement('div');
-  sampleBox.className = 'sample-box';
+  async function handleSaveMapping() {
+    if (!lastHeadersData || !lastHeadersData.headers || !selectedSourceId || !selectedSheetName) {
+      setMappingMessage('กรุณาเลือกแหล่งข้อมูลและชีทก่อน');
+      return;
+    }
 
-  sampleBox.innerHTML = `
-    <h4>ตัวอย่างข้อมูล 20 แถวแรก</h4>
-    <pre>${escapeHtml(JSON.stringify(data.sampleRows || [], null, 2))}</pre>
-  `;
+    const selectedSource = sourcesCache.find(function (src) {
+      return String(src['รหัสแหล่งข้อมูล'] || '') === selectedSourceId;
+    }) || {};
 
-  el.headersResult.appendChild(sampleBox);
-}
+    const fields = collectMappingFields();
+
+    if (!fields.length) {
+      setMappingMessage('ไม่มี Mapping ให้บันทึก');
+      return;
+    }
+
+    el.saveMappingBtn.disabled = true;
+    el.saveMappingBtn.textContent = 'กำลังบันทึก...';
+    setMappingMessage('');
+
+    try {
+      const data = await window.AnalyticsAPI.saveMapping({
+        sourceId: selectedSourceId,
+        sourceName: selectedSource['ชื่อแหล่งข้อมูล'] || '',
+        sourceSheetId: '',
+        sheetName: selectedSheetName,
+        fields: fields
+      });
+
+      setMappingMessage('บันทึก Mapping สำเร็จ จำนวน ' + (data.total || fields.length) + ' ฟิลด์');
+
+      writeLog({
+        step: 'save_mapping',
+        response: data
+      });
+
+    } catch (error) {
+      setMappingMessage(error.message);
+
+      writeLog({
+        step: 'save_mapping_error',
+        message: error.message,
+        payload: error.payload || null
+      });
+
+    } finally {
+      el.saveMappingBtn.disabled = false;
+      el.saveMappingBtn.textContent = 'บันทึก Mapping';
+    }
+  }
+
+  function collectMappingFields() {
+    const rows = Array.from(
+      el.headersResult.querySelectorAll('.mapping-card[data-map-row]')
+    );
+
+    return rows.map(function (row, index) {
+      const getValue = function (selector) {
+        const input = row.querySelector(selector);
+        return input ? input.value : '';
+      };
+
+      const getChecked = function (name) {
+        const input = row.querySelector('input[data-map-check="' + name + '"]');
+        return !!(input && input.checked);
+      };
+
+      return {
+        columnName: getValue('.map-column-name'),
+        displayName: getValue('.map-display-name'),
+        dataType: getValue('.map-data-type'),
+        meaningType: getValue('.map-meaning-type'),
+
+        isPrimaryDate: getChecked('isPrimaryDate'),
+        isPrimaryTime: getChecked('isPrimaryTime'),
+        isMeasure: getChecked('isMeasure'),
+        isCategory: getChecked('isCategory'),
+        isStatus: getChecked('isStatus'),
+        isPerson: getChecked('isPerson'),
+        isTeam: getChecked('isTeam'),
+        isLocation: getChecked('isLocation'),
+        isDocument: getChecked('isDocument'),
+        isImage: getChecked('isImage'),
+        isUrl: getChecked('isUrl'),
+        useFilter: getChecked('useFilter'),
+        useExport: getChecked('useExport'),
+        required: getChecked('required'),
+
+        unit: getValue('.map-unit'),
+        dateFormat: getValue('.map-date-format'),
+        note: getValue('.map-note'),
+        sampleValue: getValue('.map-sample-value'),
+        displayOrder: index + 1
+      };
+    });
+  }
 
   async function loadDashboards() {
-    el.dashboardResult.textContent = 'กำลังโหลด...';
+    if (el.dashboardResult) {
+      el.dashboardResult.textContent = 'กำลังโหลด...';
+    }
 
     try {
       const data = await window.AnalyticsAPI.listDashboards();
 
-      el.dashboardResult.textContent = `พบ Dashboard ${data.total || 0} รายการ`;
+      if (el.dashboardResult) {
+        el.dashboardResult.textContent = `พบ Dashboard ${data.total || 0} รายการ`;
+      }
 
       writeLog({
         step: 'dashboards',
@@ -598,7 +759,9 @@
       });
 
     } catch (error) {
-      el.dashboardResult.textContent = error.message;
+      if (el.dashboardResult) {
+        el.dashboardResult.textContent = error.message;
+      }
 
       writeLog({
         step: 'dashboards_error',
@@ -626,16 +789,18 @@
   }
 
   function showLogin() {
-    el.loginView.classList.remove('hidden');
-    el.dashboardView.classList.add('hidden');
+    if (el.loginView) el.loginView.classList.remove('hidden');
+    if (el.dashboardView) el.dashboardView.classList.add('hidden');
   }
 
   function showDashboard() {
-    el.loginView.classList.add('hidden');
-    el.dashboardView.classList.remove('hidden');
+    if (el.loginView) el.loginView.classList.add('hidden');
+    if (el.dashboardView) el.dashboardView.classList.remove('hidden');
   }
 
   function setApiStatus(message, type) {
+    if (!el.apiStatus) return;
+
     el.apiStatus.textContent = message || '';
 
     el.apiStatus.classList.remove('status-muted', 'status-success', 'status-error');
@@ -650,34 +815,137 @@
   }
 
   function setSystemStatus(message) {
-    el.systemStatusText.textContent = message || '';
+    if (el.systemStatusText) {
+      el.systemStatusText.textContent = message || '';
+    }
   }
 
   function setLoginMessage(message) {
-    el.loginMessage.textContent = message || '';
+    if (el.loginMessage) {
+      el.loginMessage.textContent = message || '';
+    }
   }
 
   function setSourceFormMessage(message) {
-    el.sourceFormMessage.textContent = message || '';
+    if (el.sourceFormMessage) {
+      el.sourceFormMessage.textContent = message || '';
+    }
+  }
+
+  function setMappingMessage(message) {
+    if (el.mappingMessage) {
+      el.mappingMessage.textContent = message || '';
+    }
   }
 
   function setLoading(isLoading) {
+    if (!el.loginBtn) return;
+
     el.loginBtn.disabled = !!isLoading;
     el.loginBtn.textContent = isLoading ? 'กำลังเข้าสู่ระบบ...' : 'เข้าสู่ระบบ';
   }
 
   function writeLog(data) {
-    el.debugLog.textContent = JSON.stringify(data, null, 2);
+    if (el.debugLog) {
+      el.debugLog.textContent = JSON.stringify(data, null, 2);
+    }
   }
 
   function clearLog() {
-    el.debugLog.textContent = 'ยังไม่มีข้อมูล';
+    if (el.debugLog) {
+      el.debugLog.textContent = 'ยังไม่มีข้อมูล';
+    }
   }
 
   function toBool(value) {
     if (value === true) return true;
+
     const text = String(value == null ? '' : value).trim().toLowerCase();
+
     return ['true', 'yes', '1', 'active', 'ใช่'].includes(text);
+  }
+
+  function renderDataTypeOptions(selected) {
+    const options = [
+      ['text', 'ข้อความ'],
+      ['number', 'ตัวเลข'],
+      ['currency', 'จำนวนเงิน'],
+      ['percent', 'เปอร์เซ็นต์'],
+      ['date', 'วันที่'],
+      ['datetime', 'วันที่และเวลา'],
+      ['time', 'เวลา'],
+      ['duration', 'ระยะเวลา'],
+      ['category', 'หมวดหมู่'],
+      ['status', 'สถานะ'],
+      ['person', 'บุคคล'],
+      ['location', 'สถานที่'],
+      ['boolean', 'จริง/เท็จ'],
+      ['url', 'URL'],
+      ['image', 'รูปภาพ'],
+      ['document', 'เอกสาร'],
+      ['id', 'รหัสอ้างอิง'],
+      ['remark', 'หมายเหตุ']
+    ];
+
+    return options.map(function (opt) {
+      return `<option value="${escapeAttr(opt[0])}" ${opt[0] === selected ? 'selected' : ''}>${escapeHtml(opt[1])}</option>`;
+    }).join('');
+  }
+
+  function renderMeaningTypeOptions(selected) {
+    const options = [
+      ['text', 'ข้อความทั่วไป'],
+      ['date', 'วันที่หลัก/เวลา'],
+      ['measure', 'ค่าตัวเลขวิเคราะห์'],
+      ['category', 'หมวดหมู่'],
+      ['status', 'สถานะ'],
+      ['person', 'บุคคล'],
+      ['team', 'ทีม/แผนก'],
+      ['location', 'สถานที่/DC/สาขา'],
+      ['asset', 'ทรัพย์สิน/รถ/อุปกรณ์'],
+      ['document', 'เอกสาร'],
+      ['image', 'รูปภาพ'],
+      ['url', 'URL'],
+      ['id', 'รหัสอ้างอิง'],
+      ['remark', 'หมายเหตุ']
+    ];
+
+    return options.map(function (opt) {
+      return `<option value="${escapeAttr(opt[0])}" ${opt[0] === selected ? 'selected' : ''}>${escapeHtml(opt[1])}</option>`;
+    }).join('');
+  }
+
+  function renderCheck(name, label, checked) {
+    return `
+      <label class="mapping-check">
+        <input data-map-check="${escapeAttr(name)}" type="checkbox" ${checked ? 'checked' : ''}>
+        <span>${escapeHtml(label)}</span>
+      </label>
+    `;
+  }
+
+  function shouldDefaultFilter(meaning, dataType) {
+    return [
+      'date',
+      'category',
+      'status',
+      'person',
+      'team',
+      'location'
+    ].includes(meaning) || ['date', 'datetime', 'status', 'category'].includes(dataType);
+  }
+
+  function getFirstSampleValue(sampleRows, colIndex) {
+    for (let i = 0; i < sampleRows.length; i++) {
+      const row = sampleRows[i] || [];
+      const value = row[colIndex];
+
+      if (value !== undefined && value !== null && String(value).trim() !== '') {
+        return String(value);
+      }
+    }
+
+    return '';
   }
 
   function escapeHtml(value) {
@@ -689,200 +957,7 @@
       .replaceAll("'", '&#039;');
   }
 
-  function renderDataTypeOptions(selected) {
-  const options = [
-    ['text', 'ข้อความ'],
-    ['number', 'ตัวเลข'],
-    ['currency', 'จำนวนเงิน'],
-    ['percent', 'เปอร์เซ็นต์'],
-    ['date', 'วันที่'],
-    ['datetime', 'วันที่และเวลา'],
-    ['time', 'เวลา'],
-    ['duration', 'ระยะเวลา'],
-    ['category', 'หมวดหมู่'],
-    ['status', 'สถานะ'],
-    ['person', 'บุคคล'],
-    ['location', 'สถานที่'],
-    ['boolean', 'จริง/เท็จ'],
-    ['url', 'URL'],
-    ['image', 'รูปภาพ'],
-    ['document', 'เอกสาร'],
-    ['id', 'รหัสอ้างอิง'],
-    ['remark', 'หมายเหตุ']
-  ];
-
-  return options.map(function (opt) {
-    return `<option value="${escapeAttr(opt[0])}" ${opt[0] === selected ? 'selected' : ''}>${escapeHtml(opt[1])}</option>`;
-  }).join('');
-}
-
-
-function renderMeaningTypeOptions(selected) {
-  const options = [
-    ['text', 'ข้อความทั่วไป'],
-    ['date', 'วันที่หลัก/เวลา'],
-    ['measure', 'ค่าตัวเลขวิเคราะห์'],
-    ['category', 'หมวดหมู่'],
-    ['status', 'สถานะ'],
-    ['person', 'บุคคล'],
-    ['team', 'ทีม/แผนก'],
-    ['location', 'สถานที่/DC/สาขา'],
-    ['asset', 'ทรัพย์สิน/รถ/อุปกรณ์'],
-    ['document', 'เอกสาร'],
-    ['image', 'รูปภาพ'],
-    ['url', 'URL'],
-    ['id', 'รหัสอ้างอิง'],
-    ['remark', 'หมายเหตุ']
-  ];
-
-  return options.map(function (opt) {
-    return `<option value="${escapeAttr(opt[0])}" ${opt[0] === selected ? 'selected' : ''}>${escapeHtml(opt[1])}</option>`;
-  }).join('');
-}
-
-
-function renderCheck(name, label, checked) {
-  return `
-    <label class="mapping-check">
-      <input data-map-check="${escapeAttr(name)}" type="checkbox" ${checked ? 'checked' : ''}>
-      <span>${escapeHtml(label)}</span>
-    </label>
-  `;
-}
-
-
-function shouldDefaultFilter(meaning, dataType) {
-  return [
-    'date',
-    'category',
-    'status',
-    'person',
-    'team',
-    'location'
-  ].includes(meaning) || ['date', 'datetime', 'status', 'category'].includes(dataType);
-}
-
-
-function getFirstSampleValue(sampleRows, colIndex) {
-  for (let i = 0; i < sampleRows.length; i++) {
-    const row = sampleRows[i] || [];
-    const value = row[colIndex];
-
-    if (value !== undefined && value !== null && String(value).trim() !== '') {
-      return String(value);
-    }
+  function escapeAttr(value) {
+    return escapeHtml(value).replaceAll('`', '&#096;');
   }
-
-  return '';
-}
-
-
-function escapeAttr(value) {
-  return escapeHtml(value).replaceAll('`', '&#096;');
-}
-
-async function handleSaveMapping() {
-  if (!lastHeadersData || !lastHeadersData.headers || !selectedSourceId || !selectedSheetName) {
-    setMappingMessage('กรุณาเลือกแหล่งข้อมูลและชีทก่อน');
-    return;
-  }
-
-  const selectedSource = sourcesCache.find(function (src) {
-    return String(src['รหัสแหล่งข้อมูล'] || '') === selectedSourceId;
-  }) || {};
-
-  const fields = collectMappingFields();
-
-  if (!fields.length) {
-    setMappingMessage('ไม่มี Mapping ให้บันทึก');
-    return;
-  }
-
-  el.saveMappingBtn.disabled = true;
-  el.saveMappingBtn.textContent = 'กำลังบันทึก...';
-  setMappingMessage('');
-
-  try {
-    const data = await window.AnalyticsAPI.saveMapping({
-      sourceId: selectedSourceId,
-      sourceName: selectedSource['ชื่อแหล่งข้อมูล'] || '',
-      sourceSheetId: '',
-      sheetName: selectedSheetName,
-      fields: fields
-    });
-
-    setMappingMessage('บันทึก Mapping สำเร็จ จำนวน ' + (data.total || fields.length) + ' ฟิลด์');
-
-    writeLog({
-      step: 'save_mapping',
-      response: data
-    });
-
-  } catch (error) {
-    setMappingMessage(error.message);
-
-    writeLog({
-      step: 'save_mapping_error',
-      message: error.message,
-      payload: error.payload || null
-    });
-
-  } finally {
-    el.saveMappingBtn.disabled = false;
-    el.saveMappingBtn.textContent = 'บันทึก Mapping';
-  }
-}
-
-
-function collectMappingFields() {
-  const rows = Array.from(
-    el.headersResult.querySelectorAll('.mapping-card[data-map-row]')
-  );
-
-  return rows.map(function (row, index) {
-    const getValue = function (selector) {
-      const input = row.querySelector(selector);
-      return input ? input.value : '';
-    };
-
-    const getChecked = function (name) {
-      const input = row.querySelector('input[data-map-check="' + name + '"]');
-      return !!(input && input.checked);
-    };
-
-    return {
-      columnName: getValue('.map-column-name'),
-      displayName: getValue('.map-display-name'),
-      dataType: getValue('.map-data-type'),
-      meaningType: getValue('.map-meaning-type'),
-
-      isPrimaryDate: getChecked('isPrimaryDate'),
-      isPrimaryTime: getChecked('isPrimaryTime'),
-      isMeasure: getChecked('isMeasure'),
-      isCategory: getChecked('isCategory'),
-      isStatus: getChecked('isStatus'),
-      isPerson: getChecked('isPerson'),
-      isTeam: getChecked('isTeam'),
-      isLocation: getChecked('isLocation'),
-      isDocument: getChecked('isDocument'),
-      isImage: getChecked('isImage'),
-      isUrl: getChecked('isUrl'),
-      useFilter: getChecked('useFilter'),
-      useExport: getChecked('useExport'),
-      required: getChecked('required'),
-
-      unit: getValue('.map-unit'),
-      dateFormat: getValue('.map-date-format'),
-      note: getValue('.map-note'),
-      sampleValue: getValue('.map-sample-value'),
-      displayOrder: index + 1
-    };
-  });
-}
-  function setMappingMessage(message) {
-  if (el.mappingMessage) {
-    el.mappingMessage.textContent = message || '';
-  }
-}
 })();
-
