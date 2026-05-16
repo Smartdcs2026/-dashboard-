@@ -188,7 +188,12 @@ function saveMapping(payload) {
     }
   });
 }
-  
+  function dashboardPreview(payload) {
+  return request('/api/dashboard-preview', {
+    method: 'POST',
+    body: payload
+  });
+}
   window.AnalyticsAPI = {
     API_BASE,
     getToken,
@@ -207,6 +212,7 @@ function saveMapping(payload) {
     readHeaders,
     getMapping,
 saveMapping,
+     dashboardPreview,
     listDashboards
   };
 })();
