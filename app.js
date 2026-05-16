@@ -45,6 +45,10 @@
     dashboardResult: document.getElementById('dashboardResult'),
     previewDashboardBtn: document.getElementById('previewDashboardBtn'),
 previewResult: document.getElementById('previewResult'),
+    dashboardName: document.getElementById('dashboardName'),
+dashboardType: document.getElementById('dashboardType'),
+createDashboardBtn: document.getElementById('createDashboardBtn'),
+createDashboardMessage: document.getElementById('createDashboardMessage'),
     debugLog: document.getElementById('debugLog')
   };
 
@@ -97,6 +101,9 @@ previewResult: document.getElementById('previewResult'),
     }
     if (el.previewDashboardBtn) {
   el.previewDashboardBtn.addEventListener('click', handleDashboardPreview);
+}
+    if (el.createDashboardBtn) {
+  el.createDashboardBtn.addEventListener('click', handleCreateDashboardFromPreview);
 }
     if (el.saveMappingBtn) {
       el.saveMappingBtn.addEventListener('click', handleSaveMapping);
@@ -1172,5 +1179,72 @@ function formatNumber(value) {
   return num.toLocaleString('th-TH', {
     maximumFractionDigits: 2
   });
+}
+  async function handleCreateDashboardFromPreview() {
+  if (!selectedSourceId || !selectedSheetName) {
+    setCreateDashboardMessage('กรุณาเลือกแหล่งข้อมูลและชีทก่อน');
+    return;
+  }
+
+  const dashboardName = el.dashboardName ? el.dashboardName.value.trim() : '';
+  const dashboardType = el.dashboardType ? el.dashboardType.value : 'Custom';
+
+  if (!dashboardName) {
+    setCreateDashboardMessage('กรุณากรอกชื่อ Dashboard');
+    return;
+  }
+
+  if (!window.AnalyticsAPI.createDashboardFromPreview) {
+    setCreateDashboardMessage('ยังไม่พบฟังก์ชัน createDashboardFromPreview ใน api.js');
+    return;
+  }
+
+  el.createDashboardBtn.disabled = true;
+  el.createDashboardBtn.textContent = 'กำลังบันทึก Dashboard...';
+  setCreateDashboardMessage('');
+
+  try {
+    const data = await window.AnalyticsAPI.createDashboardFromPreview({
+      sourceId: selectedSourceId,
+      sheetName: selectedSheetName,
+      dashboardName: dashboardName,
+      dashboardType: dashboardType,
+      description: 'สร้างจาก Mapping ผ่าน Admin Console'
+    });
+
+    setCreateDashboardMessage(
+      'สร้าง Dashboard สำเร็จ: ' + data.dashboardId +
+      ' | KPI ' + data.totalMetrics +
+      ' | กราฟ ' + data.totalCharts +
+      ' | ตัวกรอง ' + data.totalFilters
+    );
+
+    writeLog({
+      step: 'create_dashboard_from_preview',
+      response: data
+    });
+
+    await loadDashboards();
+
+  } catch (error) {
+    setCreateDashboardMessage(error.message);
+
+    writeLog({
+      step: 'create_dashboard_from_preview_error',
+      message: error.message,
+      payload: error.payload || null
+    });
+
+  } finally {
+    el.createDashboardBtn.disabled = false;
+    el.createDashboardBtn.textContent = 'บันทึกเป็น Dashboard จริง';
+  }
+}
+
+
+function setCreateDashboardMessage(message) {
+  if (el.createDashboardMessage) {
+    el.createDashboardMessage.textContent = message || '';
+  }
 }
 })();
