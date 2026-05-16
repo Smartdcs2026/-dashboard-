@@ -39,6 +39,8 @@
     meResult: document.getElementById('meResult'),
     sourceResult: document.getElementById('sourceResult'),
     dashboardResult: document.getElementById('dashboardResult'),
+    saveMappingBtn: document.getElementById('saveMappingBtn'),
+    mappingMessage: document.getElementById('mappingMessage'),
     debugLog: document.getElementById('debugLog')
   };
 
@@ -46,6 +48,7 @@
   let sourcesCache = [];
   let selectedSourceId = '';
   let selectedSheetName = '';
+  let lastHeadersData = null;
 
   document.addEventListener('DOMContentLoaded', init);
 
@@ -67,6 +70,7 @@
     el.clearLogBtn.addEventListener('click', clearLog);
 
     el.sourceForm.addEventListener('submit', handleCreateSource);
+    el.saveMappingBtn.addEventListener('click', handleSaveMapping);
   }
 
   async function checkApiHealth() {
@@ -442,58 +446,125 @@
   }
 
   function renderHeaders(data) {
-    el.headersResult.innerHTML = '';
+  el.headersResult.innerHTML = '';
+  lastHeadersData = data || null;
 
-    if (!data || !data.headers) {
-      el.headersResult.textContent = 'กรุณาเลือกชีทก่อน';
-      el.headersResult.classList.add('empty');
-      return;
-    }
-
-    el.headersResult.classList.remove('empty');
-
-    const wrap = document.createElement('div');
-    wrap.className = 'headers-table-wrap';
-
-    const rows = data.headers.map(function (header) {
-      return `
-        <tr>
-          <td>${escapeHtml(header.index)}</td>
-          <td>${escapeHtml(header.columnLetter)}</td>
-          <td class="header-name">${escapeHtml(header.name || '(ไม่มีหัวคอลัมน์)')}</td>
-          <td><span class="badge badge-muted">${escapeHtml(header.guessedType)}</span></td>
-          <td><span class="badge badge-muted">${escapeHtml(header.guessedMeaning)}</span></td>
-        </tr>
-      `;
-    }).join('');
-
-    wrap.innerHTML = `
-      <table class="headers-table">
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>คอลัมน์</th>
-            <th>ชื่อหัวคอลัมน์</th>
-            <th>ประเภทที่เดา</th>
-            <th>ความหมายที่เดา</th>
-          </tr>
-        </thead>
-        <tbody>${rows}</tbody>
-      </table>
-    `;
-
-    el.headersResult.appendChild(wrap);
-
-    const sampleBox = document.createElement('div');
-    sampleBox.className = 'sample-box';
-
-    sampleBox.innerHTML = `
-      <h4>ตัวอย่างข้อมูล 20 แถวแรก</h4>
-      <pre>${escapeHtml(JSON.stringify(data.sampleRows || [], null, 2))}</pre>
-    `;
-
-    el.headersResult.appendChild(sampleBox);
+  if (el.saveMappingBtn) {
+    el.saveMappingBtn.disabled = !data || !data.headers;
   }
+
+  if (el.mappingMessage) {
+    el.mappingMessage.textContent = '';
+  }
+
+  if (!data || !data.headers) {
+    el.headersResult.textContent = 'กรุณาเลือกชีทก่อน';
+    el.headersResult.classList.add('empty');
+    return;
+  }
+
+  el.headersResult.classList.remove('empty');
+
+  const wrap = document.createElement('div');
+  wrap.className = 'headers-table-wrap';
+
+  const rows = data.headers.map(function (header, idx) {
+    const columnName = header.name || '';
+    const guessedType = header.guessedType || 'text';
+    const guessedMeaning = header.guessedMeaning || 'text';
+    const sampleValue = getFirstSampleValue(data.sampleRows || [], idx);
+
+    return `
+      <tr data-map-row="${idx}">
+        <td>${escapeHtml(header.index)}</td>
+        <td>${escapeHtml(header.columnLetter)}</td>
+        <td>
+          <div class="header-name">${escapeHtml(columnName || '(ไม่มีหัวคอลัมน์)')}</div>
+          <input
+            class="map-display-name"
+            type="text"
+            value="${escapeAttr(columnName)}"
+            placeholder="ชื่อแสดงผล"
+          >
+        </td>
+        <td>
+          <div class="mapping-control">
+            <select class="map-data-type">
+              ${renderDataTypeOptions(guessedType)}
+            </select>
+          </div>
+        </td>
+        <td>
+          <div class="mapping-control">
+            <select class="map-meaning-type">
+              ${renderMeaningTypeOptions(guessedMeaning)}
+            </select>
+          </div>
+        </td>
+        <td>
+          <div class="mapping-checks">
+            ${renderCheck('isPrimaryDate', 'วันที่หลัก', guessedMeaning === 'date')}
+            ${renderCheck('isPrimaryTime', 'เวลาหลัก', guessedType === 'time')}
+            ${renderCheck('isMeasure', 'ตัวเลข', guessedMeaning === 'measure' || guessedType === 'number')}
+            ${renderCheck('isCategory', 'หมวดหมู่', guessedMeaning === 'category')}
+            ${renderCheck('isStatus', 'สถานะ', guessedMeaning === 'status')}
+            ${renderCheck('isPerson', 'บุคคล', guessedMeaning === 'person')}
+            ${renderCheck('isTeam', 'ทีม', false)}
+            ${renderCheck('isLocation', 'สถานที่', guessedMeaning === 'location')}
+            ${renderCheck('isDocument', 'เอกสาร', guessedMeaning === 'document')}
+            ${renderCheck('isImage', 'รูปภาพ', guessedMeaning === 'image')}
+            ${renderCheck('isUrl', 'URL', guessedMeaning === 'url')}
+            ${renderCheck('useFilter', 'Filter', shouldDefaultFilter(guessedMeaning, guessedType))}
+            ${renderCheck('useExport', 'Export', true)}
+            ${renderCheck('required', 'บังคับ', false)}
+          </div>
+        </td>
+        <td>
+          <input class="map-unit" type="text" placeholder="หน่วย" value="">
+        </td>
+        <td>
+          <input class="map-date-format" type="text" placeholder="dd/MM/yyyy HH:mm:ss" value="${guessedType === 'datetime' ? 'dd/MM/yyyy HH:mm:ss' : ''}">
+        </td>
+        <td>
+          <input class="map-note" type="text" placeholder="หมายเหตุ" value="">
+          <input class="map-column-name" type="hidden" value="${escapeAttr(columnName)}">
+          <input class="map-sample-value" type="hidden" value="${escapeAttr(sampleValue)}">
+        </td>
+      </tr>
+    `;
+  }).join('');
+
+  wrap.innerHTML = `
+    <table class="headers-table mapping-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>คอลัมน์</th>
+          <th>หัวคอลัมน์ / ชื่อแสดงผล</th>
+          <th>ประเภทข้อมูล</th>
+          <th>ความหมายข้อมูล</th>
+          <th>ใช้ทำอะไร</th>
+          <th>หน่วย</th>
+          <th>รูปแบบวันที่</th>
+          <th>หมายเหตุ</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+  `;
+
+  el.headersResult.appendChild(wrap);
+
+  const sampleBox = document.createElement('div');
+  sampleBox.className = 'sample-box';
+
+  sampleBox.innerHTML = `
+    <h4>ตัวอย่างข้อมูล 20 แถวแรก</h4>
+    <pre>${escapeHtml(JSON.stringify(data.sampleRows || [], null, 2))}</pre>
+  `;
+
+  el.headersResult.appendChild(sampleBox);
+}
 
   async function loadDashboards() {
     el.dashboardResult.textContent = 'กำลังโหลด...';
@@ -600,3 +671,199 @@
       .replaceAll("'", '&#039;');
   }
 })();
+async function handleSaveMapping() {
+  if (!lastHeadersData || !lastHeadersData.headers || !selectedSourceId || !selectedSheetName) {
+    setMappingMessage('กรุณาเลือกแหล่งข้อมูลและชีทก่อน');
+    return;
+  }
+
+  const selectedSource = sourcesCache.find(function (src) {
+    return String(src['รหัสแหล่งข้อมูล'] || '') === selectedSourceId;
+  }) || {};
+
+  const fields = collectMappingFields();
+
+  if (!fields.length) {
+    setMappingMessage('ไม่มี Mapping ให้บันทึก');
+    return;
+  }
+
+  el.saveMappingBtn.disabled = true;
+  el.saveMappingBtn.textContent = 'กำลังบันทึก...';
+  setMappingMessage('');
+
+  try {
+    const data = await window.AnalyticsAPI.saveMapping({
+      sourceId: selectedSourceId,
+      sourceName: selectedSource['ชื่อแหล่งข้อมูล'] || '',
+      sourceSheetId: '',
+      sheetName: selectedSheetName,
+      fields: fields
+    });
+
+    setMappingMessage('บันทึก Mapping สำเร็จ จำนวน ' + (data.total || fields.length) + ' ฟิลด์');
+
+    writeLog({
+      step: 'save_mapping',
+      response: data
+    });
+
+  } catch (error) {
+    setMappingMessage(error.message);
+
+    writeLog({
+      step: 'save_mapping_error',
+      message: error.message,
+      payload: error.payload || null
+    });
+
+  } finally {
+    el.saveMappingBtn.disabled = false;
+    el.saveMappingBtn.textContent = 'บันทึก Mapping';
+  }
+}
+
+
+function collectMappingFields() {
+  const rows = Array.from(el.headersResult.querySelectorAll('tr[data-map-row]'));
+
+  return rows.map(function (row, index) {
+    const getValue = function (selector) {
+      const input = row.querySelector(selector);
+      return input ? input.value : '';
+    };
+
+    const getChecked = function (name) {
+      const input = row.querySelector('input[data-map-check="' + name + '"]');
+      return !!(input && input.checked);
+    };
+
+    return {
+      columnName: getValue('.map-column-name'),
+      displayName: getValue('.map-display-name'),
+      dataType: getValue('.map-data-type'),
+      meaningType: getValue('.map-meaning-type'),
+
+      isPrimaryDate: getChecked('isPrimaryDate'),
+      isPrimaryTime: getChecked('isPrimaryTime'),
+      isMeasure: getChecked('isMeasure'),
+      isCategory: getChecked('isCategory'),
+      isStatus: getChecked('isStatus'),
+      isPerson: getChecked('isPerson'),
+      isTeam: getChecked('isTeam'),
+      isLocation: getChecked('isLocation'),
+      isDocument: getChecked('isDocument'),
+      isImage: getChecked('isImage'),
+      isUrl: getChecked('isUrl'),
+      useFilter: getChecked('useFilter'),
+      useExport: getChecked('useExport'),
+      required: getChecked('required'),
+
+      unit: getValue('.map-unit'),
+      dateFormat: getValue('.map-date-format'),
+      note: getValue('.map-note'),
+      sampleValue: getValue('.map-sample-value'),
+      displayOrder: index + 1
+    };
+  });
+}
+
+
+function renderDataTypeOptions(selected) {
+  const options = [
+    ['text', 'ข้อความ'],
+    ['number', 'ตัวเลข'],
+    ['currency', 'จำนวนเงิน'],
+    ['percent', 'เปอร์เซ็นต์'],
+    ['date', 'วันที่'],
+    ['datetime', 'วันที่และเวลา'],
+    ['time', 'เวลา'],
+    ['duration', 'ระยะเวลา'],
+    ['category', 'หมวดหมู่'],
+    ['status', 'สถานะ'],
+    ['person', 'บุคคล'],
+    ['location', 'สถานที่'],
+    ['boolean', 'จริง/เท็จ'],
+    ['url', 'URL'],
+    ['image', 'รูปภาพ'],
+    ['document', 'เอกสาร'],
+    ['id', 'รหัสอ้างอิง'],
+    ['remark', 'หมายเหตุ']
+  ];
+
+  return options.map(function (opt) {
+    return `<option value="${escapeAttr(opt[0])}" ${opt[0] === selected ? 'selected' : ''}>${escapeHtml(opt[1])}</option>`;
+  }).join('');
+}
+
+
+function renderMeaningTypeOptions(selected) {
+  const options = [
+    ['text', 'ข้อความทั่วไป'],
+    ['date', 'วันที่หลัก/เวลา'],
+    ['measure', 'ค่าตัวเลขวิเคราะห์'],
+    ['category', 'หมวดหมู่'],
+    ['status', 'สถานะ'],
+    ['person', 'บุคคล'],
+    ['team', 'ทีม/แผนก'],
+    ['location', 'สถานที่/DC/สาขา'],
+    ['asset', 'ทรัพย์สิน/รถ/อุปกรณ์'],
+    ['document', 'เอกสาร'],
+    ['image', 'รูปภาพ'],
+    ['url', 'URL'],
+    ['id', 'รหัสอ้างอิง'],
+    ['remark', 'หมายเหตุ']
+  ];
+
+  return options.map(function (opt) {
+    return `<option value="${escapeAttr(opt[0])}" ${opt[0] === selected ? 'selected' : ''}>${escapeHtml(opt[1])}</option>`;
+  }).join('');
+}
+
+
+function renderCheck(name, label, checked) {
+  return `
+    <label class="mapping-check">
+      <input data-map-check="${escapeAttr(name)}" type="checkbox" ${checked ? 'checked' : ''}>
+      <span>${escapeHtml(label)}</span>
+    </label>
+  `;
+}
+
+
+function shouldDefaultFilter(meaning, dataType) {
+  return [
+    'date',
+    'category',
+    'status',
+    'person',
+    'team',
+    'location'
+  ].includes(meaning) || ['date', 'datetime', 'status', 'category'].includes(dataType);
+}
+
+
+function getFirstSampleValue(sampleRows, colIndex) {
+  for (let i = 0; i < sampleRows.length; i++) {
+    const row = sampleRows[i] || [];
+    const value = row[colIndex];
+
+    if (value !== undefined && value !== null && String(value).trim() !== '') {
+      return String(value);
+    }
+  }
+
+  return '';
+}
+
+
+function setMappingMessage(message) {
+  if (el.mappingMessage) {
+    el.mappingMessage.textContent = message || '';
+  }
+}
+
+
+function escapeAttr(value) {
+  return escapeHtml(value).replaceAll('`', '&#096;');
+}
