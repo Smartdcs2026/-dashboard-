@@ -38,24 +38,12 @@
         <form id="loginForm" class="form">
           <label class="field">
             <span>ชื่อผู้ใช้</span>
-            <input
-              id="username"
-              type="text"
-              autocomplete="username"
-              placeholder="เช่น admin"
-              required
-            >
+            <input id="username" type="text" autocomplete="username" placeholder="เช่น admin" required>
           </label>
 
           <label class="field">
             <span>รหัสผ่าน</span>
-            <input
-              id="password"
-              type="password"
-              autocomplete="current-password"
-              placeholder="กรอกรหัสผ่าน"
-              required
-            >
+            <input id="password" type="password" autocomplete="current-password" placeholder="กรอกรหัสผ่าน" required>
           </label>
 
           <button id="loginBtn" class="btn btn-primary" type="submit">
@@ -100,14 +88,116 @@
           <div>
             <h1>Admin Console</h1>
             <p>
-              ระบบเชื่อมต่อ Worker และ Apps Script สำเร็จแล้ว
-              ขั้นถัดไปคือเพิ่มแหล่งข้อมูล, อ่านชีท, อ่านหัวคอลัมน์ และสร้าง Dashboard
+              เพิ่ม Google Sheet ID เป็นแหล่งข้อมูล จากนั้นเลือกรายชื่อชีทและอ่านหัวคอลัมน์เพื่อเตรียมทำ Mapping / Dashboard
             </p>
           </div>
 
           <button id="refreshMeBtn" class="btn btn-secondary" type="button">
-            Refresh ข้อมูลผู้ใช้
+            Refresh ผู้ใช้
           </button>
+        </section>
+
+        <section class="admin-layout">
+
+          <article class="panel">
+            <div class="panel-header">
+              <div>
+                <h3>เพิ่มแหล่งข้อมูล Google Sheet</h3>
+                <p>Admin สามารถเพิ่ม Sheet ID ที่ต้องการนำมาวิเคราะห์</p>
+              </div>
+            </div>
+
+            <form id="sourceForm" class="source-form">
+              <div class="form-grid">
+                <label class="field">
+                  <span>ชื่อแหล่งข้อมูล</span>
+                  <input id="sourceName" type="text" placeholder="เช่น ข้อมูลพาเลทขาออก" required>
+                </label>
+
+                <label class="field">
+                  <span>ประเภทข้อมูล</span>
+                  <select id="sourceDataType">
+                    <option value="Operation">Operation</option>
+                    <option value="Audit">Audit</option>
+                    <option value="HR">HR</option>
+                    <option value="Vehicle">Vehicle</option>
+                    <option value="Inventory">Inventory</option>
+                    <option value="Incident">Incident / Error</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </label>
+
+                <label class="field field-wide">
+                  <span>Google Sheet ID</span>
+                  <input id="sourceSpreadsheetId" type="text" placeholder="วาง Google Sheet ID" required>
+                </label>
+
+                <label class="field">
+                  <span>เจ้าของข้อมูล</span>
+                  <input id="sourceOwner" type="text" placeholder="เช่น LPS / Operation / DC906">
+                </label>
+
+                <label class="field">
+                  <span>คำอธิบาย</span>
+                  <input id="sourceDescription" type="text" placeholder="รายละเอียดเพิ่มเติม">
+                </label>
+              </div>
+
+              <div class="actions-row">
+                <button id="createSourceBtn" class="btn btn-primary" type="submit">
+                  เพิ่มแหล่งข้อมูล
+                </button>
+
+                <button id="reloadSourcesBtn" class="btn btn-secondary" type="button">
+                  โหลดรายการใหม่
+                </button>
+              </div>
+
+              <p id="sourceFormMessage" class="form-message"></p>
+            </form>
+          </article>
+
+          <article class="panel">
+            <div class="panel-header">
+              <div>
+                <h3>แหล่งข้อมูลที่ลงทะเบียนแล้ว</h3>
+                <p>เลือกแหล่งข้อมูลเพื่ออ่านรายชื่อชีท</p>
+              </div>
+            </div>
+
+            <div id="sourcesList" class="list-box empty">
+              ยังไม่มีข้อมูล
+            </div>
+          </article>
+
+        </section>
+
+        <section class="admin-layout">
+          <article class="panel">
+            <div class="panel-header">
+              <div>
+                <h3>ชีทในแหล่งข้อมูล</h3>
+                <p>เลือกชีทเพื่ออ่านหัวคอลัมน์</p>
+              </div>
+            </div>
+
+            <div id="sourceSheetsList" class="list-box empty">
+              กรุณาเลือกแหล่งข้อมูลก่อน
+            </div>
+          </article>
+
+          <article class="panel">
+            <div class="panel-header">
+              <div>
+                <h3>หัวคอลัมน์และการเดาประเภทข้อมูล</h3>
+                <p>ระบบจะเดาประเภทข้อมูลเบื้องต้นให้ก่อนทำ Mapping</p>
+              </div>
+            </div>
+
+            <div id="headersResult" class="headers-box empty">
+              กรุณาเลือกชีทก่อน
+            </div>
+          </article>
         </section>
 
         <section class="grid">
@@ -122,18 +212,18 @@
           </article>
 
           <article class="card">
-            <h3>แหล่งข้อมูล</h3>
-            <p id="sourceResult">ยังไม่ได้โหลดข้อมูล</p>
-            <button id="loadSourcesBtn" class="btn btn-secondary" type="button">
-              โหลดแหล่งข้อมูล
-            </button>
-          </article>
-
-          <article class="card">
             <h3>Dashboard</h3>
             <p id="dashboardResult">ยังไม่ได้โหลดข้อมูล</p>
             <button id="loadDashboardsBtn" class="btn btn-secondary" type="button">
               โหลด Dashboard
+            </button>
+          </article>
+
+          <article class="card">
+            <h3>แหล่งข้อมูล</h3>
+            <p id="sourceResult">ยังไม่ได้โหลดข้อมูล</p>
+            <button id="loadSourcesBtn" class="btn btn-secondary" type="button">
+              โหลดแหล่งข้อมูล
             </button>
           </article>
         </section>
