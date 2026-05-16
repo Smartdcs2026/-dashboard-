@@ -780,7 +780,7 @@ function getFirstSampleValue(sampleRows, colIndex) {
 function escapeAttr(value) {
   return escapeHtml(value).replaceAll('`', '&#096;');
 }
-})();
+
 async function handleSaveMapping() {
   if (!lastHeadersData || !lastHeadersData.headers || !selectedSourceId || !selectedSheetName) {
     setMappingMessage('กรุณาเลือกแหล่งข้อมูลและชีทก่อน');
@@ -835,7 +835,9 @@ async function handleSaveMapping() {
 
 
 function collectMappingFields() {
-  const rows = Array.from(el.headersResult.querySelectorAll('tr[data-map-row]'));
+  const rows = Array.from(
+    el.headersResult.querySelectorAll('.mapping-card[data-map-row]')
+  );
 
   return rows.map(function (row, index) {
     const getValue = function (selector) {
@@ -877,5 +879,10 @@ function collectMappingFields() {
     };
   });
 }
-
+  function setMappingMessage(message) {
+  if (el.mappingMessage) {
+    el.mappingMessage.textContent = message || '';
+  }
+}
+})();
 
