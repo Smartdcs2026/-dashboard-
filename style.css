@@ -1073,3 +1073,33 @@ input {
   border-bottom: 1px solid var(--border);
   background: #f8fafc;
 }
+.dashboard-viewer-box {
+  padding: 16px;
+  border-bottom: 1px solid var(--border);
+  background: #f8fafc;
+}
+
+.dashboard-title-box {
+  margin-bottom: 16px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: #ffffff;
+}
+
+.dashboard-title-box h3 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.dashboard-title-box p {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.dashboard-section-title {
+  margin: 18px 0 10px;
+  font-size: 16px;
+  font-weight: 800;
+}
