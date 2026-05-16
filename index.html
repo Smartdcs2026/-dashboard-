@@ -237,7 +237,52 @@
       </select>
     </label>
   </div>
+ <section class="panel">
+  <div class="panel-header">
+    <div>
+      <h3>Dashboard Viewer</h3>
+      <p>เปิดดู Dashboard ที่บันทึกจริงแล้วจาก Google Sheet Config</p>
+    </div>
 
+    <div class="actions-row">
+      <button id="reloadDashboardListBtn" class="btn btn-secondary" type="button">
+        โหลดรายการ Dashboard
+      </button>
+    </div>
+  </div>
+
+  <div class="dashboard-viewer-box">
+    <div class="form-grid">
+      <label class="field">
+        <span>เลือก Dashboard</span>
+        <select id="dashboardSelect">
+          <option value="">ยังไม่มีรายการ Dashboard</option>
+        </select>
+      </label>
+
+      <label class="field">
+        <span>จำนวนแถวที่อ่าน</span>
+        <select id="dashboardLimit">
+          <option value="500">500 แถว</option>
+          <option value="1000" selected>1,000 แถว</option>
+          <option value="3000">3,000 แถว</option>
+          <option value="5000">5,000 แถว</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="actions-row">
+      <button id="openDashboardBtn" class="btn btn-primary" type="button">
+        เปิด Dashboard
+      </button>
+      <span id="dashboardViewMessage" class="mapping-message"></span>
+    </div>
+  </div>
+
+  <div id="dashboardViewResult" class="preview-box empty">
+    กรุณาเลือก Dashboard แล้วกดเปิด Dashboard
+  </div>
+</section>
   <div class="actions-row">
     <button id="createDashboardBtn" class="btn btn-secondary" type="button">
       บันทึกเป็น Dashboard จริง
