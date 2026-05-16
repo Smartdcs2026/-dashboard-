@@ -165,61 +165,72 @@
     });
   }
 
+  function getMapping(payload) {
+    return request('/api/mapping', {
+      method: 'POST',
+      body: {
+        mode: 'get',
+        ...payload
+      }
+    });
+  }
+
+  function saveMapping(payload) {
+    return request('/api/mapping', {
+      method: 'POST',
+      body: {
+        mode: 'save',
+        ...payload
+      }
+    });
+  }
+
+  function dashboardPreview(payload) {
+    return request('/api/dashboard-preview', {
+      method: 'POST',
+      body: payload
+    });
+  }
+
+  function createDashboardFromPreview(payload) {
+    return request('/api/dashboard-create', {
+      method: 'POST',
+      body: payload
+    });
+  }
+
   function listDashboards() {
     return request('/api/dashboards');
   }
 
-function getMapping(payload) {
-  return request('/api/mapping', {
-    method: 'POST',
-    body: {
-      mode: 'get',
-      ...payload
-    }
-  });
-}
-
-function saveMapping(payload) {
-  return request('/api/mapping', {
-    method: 'POST',
-    body: {
-      mode: 'save',
-      ...payload
-    }
-  });
-}
-  function dashboardPreview(payload) {
-  return request('/api/dashboard-preview', {
-    method: 'POST',
-    body: payload
-  });
-}
-  function createDashboardFromPreview(payload) {
-  return request('/api/dashboard-create', {
-    method: 'POST',
-    body: payload
-  });
-}
   window.AnalyticsAPI = {
     API_BASE,
+    TOKEN_KEY,
+
     getToken,
     setToken,
     clearToken,
+
     request,
+
     health,
     setupStatus,
     login,
     me,
     logout,
     changePassword,
+
     listSources,
     createSource,
     listSourceSheets,
     readHeaders,
+
     getMapping,
-saveMapping,
-     dashboardPreview,
+    saveMapping,
+
+    dashboardPreview,
     createDashboardFromPreview,
+
     listDashboards
   };
 })();
