@@ -18,6 +18,19 @@
     loadDashboardsBtn: document.getElementById('loadDashboardsBtn'),
     clearLogBtn: document.getElementById('clearLogBtn'),
 
+    sourceForm: document.getElementById('sourceForm'),
+    sourceName: document.getElementById('sourceName'),
+    sourceSpreadsheetId: document.getElementById('sourceSpreadsheetId'),
+    sourceDataType: document.getElementById('sourceDataType'),
+    sourceOwner: document.getElementById('sourceOwner'),
+    sourceDescription: document.getElementById('sourceDescription'),
+    createSourceBtn: document.getElementById('createSourceBtn'),
+    reloadSourcesBtn: document.getElementById('reloadSourcesBtn'),
+    sourceFormMessage: document.getElementById('sourceFormMessage'),
+    sourcesList: document.getElementById('sourcesList'),
+    sourceSheetsList: document.getElementById('sourceSheetsList'),
+    headersResult: document.getElementById('headersResult'),
+
     userDisplayName: document.getElementById('userDisplayName'),
     userRole: document.getElementById('userRole'),
     systemStatusText: document.getElementById('systemStatusText'),
@@ -30,6 +43,9 @@
   };
 
   let currentUser = null;
+  let sourcesCache = [];
+  let selectedSourceId = '';
+  let selectedSheetName = '';
 
   document.addEventListener('DOMContentLoaded', init);
 
@@ -44,9 +60,13 @@
     el.loginForm.addEventListener('submit', handleLogin);
     el.logoutBtn.addEventListener('click', handleLogout);
     el.refreshMeBtn.addEventListener('click', loadMe);
+
     el.loadSourcesBtn.addEventListener('click', loadSources);
+    el.reloadSourcesBtn.addEventListener('click', loadSources);
     el.loadDashboardsBtn.addEventListener('click', loadDashboards);
     el.clearLogBtn.addEventListener('click', clearLog);
+
+    el.sourceForm.addEventListener('submit', handleCreateSource);
   }
 
   async function checkApiHealth() {
@@ -73,6 +93,7 @@
       setApiStatus(error.message, 'error');
       el.healthResult.textContent = 'เชื่อมต่อ API ไม่สำเร็จ';
       setSystemStatus('API มีปัญหา');
+
       writeLog({
         step: 'health_error',
         message: error.message,
@@ -92,9 +113,11 @@
     try {
       await loadMe();
       showDashboard();
+      await loadSources();
     } catch (error) {
       window.AnalyticsAPI.clearToken();
       showLogin();
+
       writeLog({
         step: 'restore_session_error',
         message: error.message,
@@ -126,6 +149,7 @@
       });
 
       await loadMe();
+      await loadSources();
 
     } catch (error) {
       setLoginMessage(error.message || 'เข้าสู่ระบบไม่สำเร็จ');
@@ -153,8 +177,17 @@
     }
 
     currentUser = null;
+    selectedSourceId = '';
+    selectedSheetName = '';
+    sourcesCache = [];
+
     el.username.value = '';
     el.password.value = '';
+
+    renderSources([]);
+    renderSourceSheets([]);
+    renderHeaders(null);
+
     showLogin();
   }
 
@@ -176,13 +209,70 @@
     return data;
   }
 
+  async function handleCreateSource(event) {
+    event.preventDefault();
+
+    const payload = {
+      name: el.sourceName.value.trim(),
+      spreadsheetId: el.sourceSpreadsheetId.value.trim(),
+      dataType: el.sourceDataType.value,
+      owner: el.sourceOwner.value.trim(),
+      description: el.sourceDescription.value.trim()
+    };
+
+    if (!payload.name || !payload.spreadsheetId) {
+      setSourceFormMessage('กรุณากรอกชื่อแหล่งข้อมูลและ Google Sheet ID');
+      return;
+    }
+
+    setSourceFormMessage('');
+    el.createSourceBtn.disabled = true;
+    el.createSourceBtn.textContent = 'กำลังเพิ่ม...';
+
+    try {
+      const data = await window.AnalyticsAPI.createSource(payload);
+
+      setSourceFormMessage('เพิ่มแหล่งข้อมูลสำเร็จ');
+
+      el.sourceName.value = '';
+      el.sourceSpreadsheetId.value = '';
+      el.sourceOwner.value = '';
+      el.sourceDescription.value = '';
+
+      writeLog({
+        step: 'create_source',
+        response: data
+      });
+
+      await loadSources();
+
+    } catch (error) {
+      setSourceFormMessage(error.message);
+
+      writeLog({
+        step: 'create_source_error',
+        message: error.message,
+        payload: error.payload || null
+      });
+
+    } finally {
+      el.createSourceBtn.disabled = false;
+      el.createSourceBtn.textContent = 'เพิ่มแหล่งข้อมูล';
+    }
+  }
+
   async function loadSources() {
     el.sourceResult.textContent = 'กำลังโหลด...';
+    el.sourcesList.textContent = 'กำลังโหลด...';
+    el.sourcesList.classList.add('empty');
 
     try {
       const data = await window.AnalyticsAPI.listSources();
 
+      sourcesCache = data.sources || [];
+
       el.sourceResult.textContent = `พบแหล่งข้อมูล ${data.total || 0} รายการ`;
+      renderSources(sourcesCache);
 
       writeLog({
         step: 'sources',
@@ -191,6 +281,8 @@
 
     } catch (error) {
       el.sourceResult.textContent = error.message;
+      el.sourcesList.textContent = error.message;
+      el.sourcesList.classList.add('empty');
 
       writeLog({
         step: 'sources_error',
@@ -198,6 +290,209 @@
         payload: error.payload || null
       });
     }
+  }
+
+  function renderSources(sources) {
+    el.sourcesList.innerHTML = '';
+
+    if (!sources || !sources.length) {
+      el.sourcesList.textContent = 'ยังไม่มีแหล่งข้อมูล ให้เพิ่ม Google Sheet ID ก่อน';
+      el.sourcesList.classList.add('empty');
+      return;
+    }
+
+    el.sourcesList.classList.remove('empty');
+
+    sources.forEach(function (source) {
+      const sourceId = source['รหัสแหล่งข้อมูล'] || '';
+      const name = source['ชื่อแหล่งข้อมูล'] || '-';
+      const sheetId = source['Google Sheet ID'] || '-';
+      const type = source['ประเภทข้อมูล'] || '-';
+      const active = toBool(source['สถานะใช้งาน']);
+
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'source-item' + (sourceId === selectedSourceId ? ' active' : '');
+
+      btn.innerHTML = `
+        <div class="item-title">
+          <span>${escapeHtml(name)}</span>
+          <span class="badge ${active ? 'badge-success' : 'badge-muted'}">${active ? 'Active' : 'Inactive'}</span>
+        </div>
+        <div class="item-meta">
+          <div>ประเภท: ${escapeHtml(type)}</div>
+          <div>Source ID: ${escapeHtml(sourceId)}</div>
+          <div>Sheet ID: ${escapeHtml(sheetId)}</div>
+        </div>
+      `;
+
+      btn.addEventListener('click', function () {
+        selectedSourceId = sourceId;
+        selectedSheetName = '';
+        renderSources(sourcesCache);
+        renderHeaders(null);
+        loadSourceSheets(sourceId);
+      });
+
+      el.sourcesList.appendChild(btn);
+    });
+  }
+
+  async function loadSourceSheets(sourceId) {
+    el.sourceSheetsList.textContent = 'กำลังอ่านรายชื่อชีท...';
+    el.sourceSheetsList.classList.add('empty');
+
+    try {
+      const data = await window.AnalyticsAPI.listSourceSheets({
+        sourceId
+      });
+
+      renderSourceSheets(data.sheets || []);
+
+      writeLog({
+        step: 'source_sheets',
+        response: data
+      });
+
+    } catch (error) {
+      el.sourceSheetsList.textContent = error.message;
+      el.sourceSheetsList.classList.add('empty');
+
+      writeLog({
+        step: 'source_sheets_error',
+        message: error.message,
+        payload: error.payload || null
+      });
+    }
+  }
+
+  function renderSourceSheets(sheets) {
+    el.sourceSheetsList.innerHTML = '';
+
+    if (!sheets || !sheets.length) {
+      el.sourceSheetsList.textContent = selectedSourceId
+        ? 'ไม่พบชีทในแหล่งข้อมูลนี้'
+        : 'กรุณาเลือกแหล่งข้อมูลก่อน';
+
+      el.sourceSheetsList.classList.add('empty');
+      return;
+    }
+
+    el.sourceSheetsList.classList.remove('empty');
+
+    sheets.forEach(function (sheet) {
+      const sheetName = sheet.sheetName || '';
+
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'sheet-item' + (sheetName === selectedSheetName ? ' active' : '');
+
+      btn.innerHTML = `
+        <div class="item-title">
+          <span>${escapeHtml(sheetName)}</span>
+          <span class="badge badge-muted">${Number(sheet.lastRow || 0).toLocaleString()} rows</span>
+        </div>
+        <div class="item-meta">
+          <div>คอลัมน์: ${Number(sheet.lastColumn || 0).toLocaleString()}</div>
+        </div>
+      `;
+
+      btn.addEventListener('click', function () {
+        selectedSheetName = sheetName;
+        renderSourceSheets(sheets);
+        readHeaders(sourceIdOrSelected(), selectedSheetName);
+      });
+
+      el.sourceSheetsList.appendChild(btn);
+    });
+  }
+
+  function sourceIdOrSelected() {
+    return selectedSourceId;
+  }
+
+  async function readHeaders(sourceId, sheetName) {
+    el.headersResult.textContent = 'กำลังอ่านหัวคอลัมน์...';
+    el.headersResult.classList.add('empty');
+
+    try {
+      const data = await window.AnalyticsAPI.readHeaders({
+        sourceId,
+        sheetName,
+        headerRow: 1
+      });
+
+      renderHeaders(data);
+
+      writeLog({
+        step: 'headers',
+        response: data
+      });
+
+    } catch (error) {
+      el.headersResult.textContent = error.message;
+      el.headersResult.classList.add('empty');
+
+      writeLog({
+        step: 'headers_error',
+        message: error.message,
+        payload: error.payload || null
+      });
+    }
+  }
+
+  function renderHeaders(data) {
+    el.headersResult.innerHTML = '';
+
+    if (!data || !data.headers) {
+      el.headersResult.textContent = 'กรุณาเลือกชีทก่อน';
+      el.headersResult.classList.add('empty');
+      return;
+    }
+
+    el.headersResult.classList.remove('empty');
+
+    const wrap = document.createElement('div');
+    wrap.className = 'headers-table-wrap';
+
+    const rows = data.headers.map(function (header) {
+      return `
+        <tr>
+          <td>${escapeHtml(header.index)}</td>
+          <td>${escapeHtml(header.columnLetter)}</td>
+          <td class="header-name">${escapeHtml(header.name || '(ไม่มีหัวคอลัมน์)')}</td>
+          <td><span class="badge badge-muted">${escapeHtml(header.guessedType)}</span></td>
+          <td><span class="badge badge-muted">${escapeHtml(header.guessedMeaning)}</span></td>
+        </tr>
+      `;
+    }).join('');
+
+    wrap.innerHTML = `
+      <table class="headers-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>คอลัมน์</th>
+            <th>ชื่อหัวคอลัมน์</th>
+            <th>ประเภทที่เดา</th>
+            <th>ความหมายที่เดา</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    `;
+
+    el.headersResult.appendChild(wrap);
+
+    const sampleBox = document.createElement('div');
+    sampleBox.className = 'sample-box';
+
+    sampleBox.innerHTML = `
+      <h4>ตัวอย่างข้อมูล 20 แถวแรก</h4>
+      <pre>${escapeHtml(JSON.stringify(data.sampleRows || [], null, 2))}</pre>
+    `;
+
+    el.headersResult.appendChild(sampleBox);
   }
 
   async function loadDashboards() {
@@ -273,17 +568,35 @@
     el.loginMessage.textContent = message || '';
   }
 
+  function setSourceFormMessage(message) {
+    el.sourceFormMessage.textContent = message || '';
+  }
+
   function setLoading(isLoading) {
     el.loginBtn.disabled = !!isLoading;
     el.loginBtn.textContent = isLoading ? 'กำลังเข้าสู่ระบบ...' : 'เข้าสู่ระบบ';
   }
 
   function writeLog(data) {
-    const text = JSON.stringify(data, null, 2);
-    el.debugLog.textContent = text;
+    el.debugLog.textContent = JSON.stringify(data, null, 2);
   }
 
   function clearLog() {
     el.debugLog.textContent = 'ยังไม่มีข้อมูล';
+  }
+
+  function toBool(value) {
+    if (value === true) return true;
+    const text = String(value == null ? '' : value).trim().toLowerCase();
+    return ['true', 'yes', '1', 'active', 'ใช่'].includes(text);
+  }
+
+  function escapeHtml(value) {
+    return String(value == null ? '' : value)
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#039;');
   }
 })();
