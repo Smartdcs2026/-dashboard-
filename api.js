@@ -1,27 +1,9 @@
 (function () {
   'use strict';
 
-  /*
-   * สำคัญ:
-   * API_BASE ต้องเป็น URL Worker หลักเท่านั้น
-   * ห้ามต่อท้าย /api
-   */
-  const API_BASE = 'https://dataanalyticsdashboard.somchaibutphon.workers.dev';
+  const API_BASE = 'https://dashboard.somchaibutphon.workers.dev';
 
-  const TOKEN_KEY = 'analytics_token';
-
-  function getBaseUrl() {
-    return String(API_BASE || '').replace(/\/+$/, '');
-  }
-
-  function normalizePath(path) {
-    const p = String(path || '').trim();
-
-    if (!p) return '/';
-
-    // บังคับให้ path เริ่มด้วย /
-    return p.startsWith('/') ? p : `/${p}`;
-  }
+  const TOKEN_KEY = 'analytics_dashboard_token';
 
   function getToken() {
     return localStorage.getItem(TOKEN_KEY) || '';
@@ -38,121 +20,133 @@
   }
 
   async function request(path, options = {}) {
+    const url = API_BASE + path;
     const token = getToken();
-    const url = `${getBaseUrl()}${normalizePath(path)}`;
 
     const headers = {
-      Accept: 'application/json',
-      'Content-Type': 'application/json',
+      'Accept': 'application/json',
       ...(options.headers || {})
     };
 
+    const method = String(options.method || 'GET').toUpperCase();
+
+    let body = options.body;
+
+    if (body && typeof body === 'object' && !(body instanceof FormData)) {
+      headers['Content-Type'] = 'application/json';
+      body = JSON.stringify(body);
+    }
+
     if (token) {
-      headers.Authorization = `Bearer ${token}`;
+      headers.Authorization = 'Bearer ' + token;
     }
 
-    let res;
+    const fetchOptions = {
+      method,
+      headers
+    };
 
-    try {
-      res = await fetch(url, {
-        ...options,
-        headers
-      });
-    } catch (err) {
-      throw new Error(`เชื่อมต่อ API ไม่สำเร็จ: ${err.message || err}`);
+    if (method !== 'GET' && method !== 'HEAD' && body !== undefined) {
+      fetchOptions.body = body;
     }
 
+    let response;
     let data;
 
     try {
-      data = await res.json();
-    } catch (err) {
-      throw new Error(`API ตอบกลับไม่ใช่ JSON หรือ Worker URL ไม่ถูกต้อง: ${url}`);
+      response = await fetch(url, fetchOptions);
+    } catch (error) {
+      throw new Error('ไม่สามารถเชื่อมต่อ API ได้: ' + error.message);
     }
 
-    if (!res.ok || data.ok === false) {
-      throw new Error(data.message || `API Error: ${res.status}`);
+    try {
+      data = await response.json();
+    } catch (error) {
+      throw new Error('API ตอบกลับไม่ใช่ JSON');
     }
 
-    return data.data;
+    if (!response.ok || data.ok === false) {
+      const message = data.message || 'API Error';
+      const err = new Error(message);
+      err.payload = data;
+      err.status = response.status;
+      throw err;
+    }
+
+    return data;
   }
 
-  function buildQuery(params = {}) {
-    const q = new URLSearchParams();
+  function health() {
+    return request('/api/health');
+  }
 
-    Object.entries(params).forEach(([key, value]) => {
-      if (value === undefined || value === null || value === '') return;
-      q.set(key, value);
+  function setupStatus() {
+    return request('/api/setup-status');
+  }
+
+  async function login(username, password) {
+    const data = await request('/api/login', {
+      method: 'POST',
+      body: {
+        username,
+        password
+      }
     });
 
-    const s = q.toString();
-    return s ? `?${s}` : '';
+    if (data.token) {
+      setToken(data.token);
+    }
+
+    return data;
   }
 
-  window.Api = {
+  function me() {
+    return request('/api/me');
+  }
+
+  async function logout() {
+    try {
+      await request('/api/logout', {
+        method: 'POST',
+        body: {}
+      });
+    } finally {
+      clearToken();
+    }
+  }
+
+  function changePassword(oldPassword, newPassword, confirmPassword) {
+    return request('/api/change-password', {
+      method: 'POST',
+      body: {
+        oldPassword,
+        newPassword,
+        confirmPassword
+      }
+    });
+  }
+
+  function listSources() {
+    return request('/api/sources');
+  }
+
+  function listDashboards() {
+    return request('/api/dashboards');
+  }
+
+  window.AnalyticsAPI = {
+    API_BASE,
     getToken,
     setToken,
     clearToken,
-
-    health() {
-      return request('/api/health');
-    },
-
-    login(username, password) {
-      return request('/api/login', {
-        method: 'POST',
-        body: JSON.stringify({
-          username,
-          password
-        })
-      });
-    },
-
-    logout() {
-      return request('/api/logout', {
-        method: 'POST',
-        body: JSON.stringify({})
-      });
-    },
-
-    authCheck() {
-      return request('/api/auth-check');
-    },
-
-    me() {
-      return request('/api/me');
-    },
-
-    config() {
-      return request('/api/config');
-    },
-
-    dashboards() {
-      return request('/api/dashboards');
-    },
-
-    dashboardConfig(dashboardId) {
-      return request(`/api/dashboard-config/${encodeURIComponent(dashboardId)}`);
-    },
-
-    dashboardData(dashboardId, params = {}) {
-      return request(
-        `/api/dashboard-data/${encodeURIComponent(dashboardId)}${buildQuery(params)}`
-      );
-    },
-
-    sourceHeaders(sourceId) {
-      return request(`/api/source-headers/${encodeURIComponent(sourceId)}`);
-    },
-
-    sourcePreview(sourceId, limit = 20) {
-      return request(
-        `/api/source-preview/${encodeURIComponent(sourceId)}${buildQuery({ limit })}`
-      );
-    },
-
-    fieldMap(sourceId) {
-      return request(`/api/field-map/${encodeURIComponent(sourceId)}`);
-    }
+    request,
+    health,
+    setupStatus,
+    login,
+    me,
+    logout,
+    changePassword,
+    listSources,
+    listDashboards
   };
 })();
