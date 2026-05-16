@@ -217,7 +217,34 @@
       สร้าง Dashboard Preview
     </button>
   </div>
+<div class="dashboard-create-box">
+  <div class="form-grid">
+    <label class="field">
+      <span>ชื่อ Dashboard</span>
+      <input id="dashboardName" type="text" placeholder="เช่น Dashboard งานพาเลทขาออก">
+    </label>
 
+    <label class="field">
+      <span>ประเภท Dashboard</span>
+      <select id="dashboardType">
+        <option value="Operation">Operation</option>
+        <option value="Executive">Executive</option>
+        <option value="Error">Error / Incident</option>
+        <option value="Performance">Performance</option>
+        <option value="Audit">Audit</option>
+        <option value="Vehicle">Vehicle</option>
+        <option value="Custom">Custom</option>
+      </select>
+    </label>
+  </div>
+
+  <div class="actions-row">
+    <button id="createDashboardBtn" class="btn btn-secondary" type="button">
+      บันทึกเป็น Dashboard จริง
+    </button>
+    <span id="createDashboardMessage" class="mapping-message"></span>
+  </div>
+</div>
   <div id="previewResult" class="preview-box empty">
     กรุณาบันทึก Mapping ก่อน แล้วกดสร้าง Dashboard Preview
   </div>
