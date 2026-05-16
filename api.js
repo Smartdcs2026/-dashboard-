@@ -194,6 +194,12 @@ function saveMapping(payload) {
     body: payload
   });
 }
+  function createDashboardFromPreview(payload) {
+  return request('/api/dashboard-create', {
+    method: 'POST',
+    body: payload
+  });
+}
   window.AnalyticsAPI = {
     API_BASE,
     getToken,
@@ -213,6 +219,7 @@ function saveMapping(payload) {
     getMapping,
 saveMapping,
      dashboardPreview,
+    createDashboardFromPreview,
     listDashboards
   };
 })();
