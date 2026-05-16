@@ -49,6 +49,12 @@ previewResult: document.getElementById('previewResult'),
 dashboardType: document.getElementById('dashboardType'),
 createDashboardBtn: document.getElementById('createDashboardBtn'),
 createDashboardMessage: document.getElementById('createDashboardMessage'),
+    reloadDashboardListBtn: document.getElementById('reloadDashboardListBtn'),
+dashboardSelect: document.getElementById('dashboardSelect'),
+dashboardLimit: document.getElementById('dashboardLimit'),
+openDashboardBtn: document.getElementById('openDashboardBtn'),
+dashboardViewMessage: document.getElementById('dashboardViewMessage'),
+dashboardViewResult: document.getElementById('dashboardViewResult'),
     debugLog: document.getElementById('debugLog')
   };
 
@@ -104,6 +110,13 @@ createDashboardMessage: document.getElementById('createDashboardMessage'),
 }
     if (el.createDashboardBtn) {
   el.createDashboardBtn.addEventListener('click', handleCreateDashboardFromPreview);
+}
+    if (el.reloadDashboardListBtn) {
+  el.reloadDashboardListBtn.addEventListener('click', loadDashboardOptions);
+}
+
+if (el.openDashboardBtn) {
+  el.openDashboardBtn.addEventListener('click', handleOpenDashboard);
 }
     if (el.saveMappingBtn) {
       el.saveMappingBtn.addEventListener('click', handleSaveMapping);
@@ -162,6 +175,7 @@ createDashboardMessage: document.getElementById('createDashboardMessage'),
       await loadMe();
       showDashboard();
       await loadSources();
+      await loadDashboardOptions();
     } catch (error) {
       window.AnalyticsAPI.clearToken();
       showLogin();
@@ -198,6 +212,7 @@ createDashboardMessage: document.getElementById('createDashboardMessage'),
 
       await loadMe();
       await loadSources();
+      await loadDashboardOptions();
 
     } catch (error) {
       setLoginMessage(error.message || 'เข้าสู่ระบบไม่สำเร็จ');
@@ -1245,6 +1260,151 @@ function formatNumber(value) {
 function setCreateDashboardMessage(message) {
   if (el.createDashboardMessage) {
     el.createDashboardMessage.textContent = message || '';
+  }
+}
+  async function loadDashboardOptions() {
+  if (!el.dashboardSelect) {
+    return;
+  }
+
+  el.dashboardSelect.innerHTML = '<option value="">กำลังโหลด...</option>';
+
+  try {
+    const data = await window.AnalyticsAPI.listDashboards();
+    const dashboards = data.dashboards || [];
+
+    if (!dashboards.length) {
+      el.dashboardSelect.innerHTML = '<option value="">ยังไม่มี Dashboard</option>';
+      setDashboardViewMessage('ยังไม่มี Dashboard ที่บันทึกไว้');
+      return;
+    }
+
+    el.dashboardSelect.innerHTML = '<option value="">เลือก Dashboard</option>' + dashboards.map(function (dash) {
+      const id = dash['รหัส Dashboard'] || '';
+      const name = dash['ชื่อ Dashboard'] || id;
+      const type = dash['ประเภท Dashboard'] || '';
+
+      return `<option value="${escapeAttr(id)}">${escapeHtml(name)} (${escapeHtml(type)})</option>`;
+    }).join('');
+
+    setDashboardViewMessage('โหลด Dashboard แล้ว ' + dashboards.length + ' รายการ');
+
+    writeLog({
+      step: 'dashboard_options',
+      response: data
+    });
+
+  } catch (error) {
+    el.dashboardSelect.innerHTML = '<option value="">โหลด Dashboard ไม่สำเร็จ</option>';
+    setDashboardViewMessage(error.message);
+
+    writeLog({
+      step: 'dashboard_options_error',
+      message: error.message,
+      payload: error.payload || null
+    });
+  }
+}
+
+
+async function handleOpenDashboard() {
+  const dashboardId = el.dashboardSelect ? el.dashboardSelect.value : '';
+  const limit = el.dashboardLimit ? Number(el.dashboardLimit.value || 1000) : 1000;
+
+  if (!dashboardId) {
+    setDashboardViewMessage('กรุณาเลือก Dashboard');
+    return;
+  }
+
+  if (!window.AnalyticsAPI.dashboardView) {
+    setDashboardViewMessage('ยังไม่พบฟังก์ชัน dashboardView ใน api.js');
+    return;
+  }
+
+  el.openDashboardBtn.disabled = true;
+  el.openDashboardBtn.textContent = 'กำลังเปิด Dashboard...';
+  setDashboardViewMessage('กำลังโหลด Dashboard...');
+
+  try {
+    const data = await window.AnalyticsAPI.dashboardView({
+      dashboardId: dashboardId,
+      limit: limit
+    });
+
+    renderSavedDashboard(data);
+    setDashboardViewMessage('โหลด Dashboard สำเร็จ');
+
+    writeLog({
+      step: 'dashboard_view',
+      response: data
+    });
+
+  } catch (error) {
+    setDashboardViewMessage(error.message);
+
+    if (el.dashboardViewResult) {
+      el.dashboardViewResult.textContent = error.message;
+      el.dashboardViewResult.classList.add('empty');
+    }
+
+    writeLog({
+      step: 'dashboard_view_error',
+      message: error.message,
+      payload: error.payload || null
+    });
+
+  } finally {
+    el.openDashboardBtn.disabled = false;
+    el.openDashboardBtn.textContent = 'เปิด Dashboard';
+  }
+}
+
+
+function renderSavedDashboard(data) {
+  if (!el.dashboardViewResult) {
+    return;
+  }
+
+  if (!data || !data.ok) {
+    el.dashboardViewResult.textContent = (data && data.message) || 'โหลด Dashboard ไม่สำเร็จ';
+    el.dashboardViewResult.classList.add('empty');
+    return;
+  }
+
+  const dashboard = data.dashboard || {};
+  const dashboardName = dashboard['ชื่อ Dashboard'] || '-';
+  const dashboardDesc = dashboard['คำอธิบาย'] || '';
+  const source = data.source || {};
+
+  el.dashboardViewResult.classList.remove('empty');
+
+  el.dashboardViewResult.innerHTML = `
+    <div class="dashboard-title-box">
+      <h3>${escapeHtml(dashboardName)}</h3>
+      <p>
+        ${escapeHtml(dashboardDesc)}
+        ${dashboardDesc ? ' | ' : ''}
+        แหล่งข้อมูล: ${escapeHtml(source.sourceName || '')}
+        / ชีท: ${escapeHtml(source.sheetName || '')}
+        / อ่านข้อมูล ${Number(data.totalRowsRead || 0).toLocaleString()} แถว
+      </p>
+    </div>
+
+    <div class="dashboard-section-title">ตัวชี้วัด</div>
+    ${renderPreviewKpis(data.kpis || [])}
+
+    <div class="dashboard-section-title">กราฟ</div>
+    ${renderPreviewCharts(data.chartResults || [])}
+
+    <div class="dashboard-section-title">ตารางข้อมูล</div>
+    ${renderPreviewTable(data.table || { fields: [], rows: [] })}
+  `;
+}
+
+
+function setDashboardViewMessage(message) {
+  if (el.dashboardViewMessage) {
+    el.dashboardViewMessage.textContent = message || '';
   }
 }
 })();
