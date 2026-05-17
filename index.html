@@ -118,10 +118,18 @@
             Refresh ผู้ใช้
           </button>
         </section>
+       <section id="modeSwitcher" class="mode-switcher hidden">
+  <button id="adminModeBtn" class="mode-btn active" type="button">
+    Admin Console
+  </button>
 
+  <button id="userModeBtn" class="mode-btn" type="button">
+    User Dashboard
+  </button>
+</section>
 
         <!-- SOURCE MANAGER -->
-        <section class="admin-layout">
+        <section class="admin-layout admin-only">
           <article class="panel">
             <div class="panel-header">
               <div>
@@ -252,10 +260,10 @@
 
 
         <!-- DASHBOARD PREVIEW -->
-        <section class="panel">
-          <div class="panel-header">
-            <div>
-              <h3>Dashboard Preview จาก Mapping</h3>
+       <section class="panel admin-only">
+  <div class="panel-header">
+    <div>
+      <h3>Dashboard Preview จาก Mapping</h3>
               <p>สร้าง KPI / กราฟ / ตารางตัวอย่างจากโครงสร้างข้อมูลที่บันทึกไว้</p>
             </div>
 
@@ -305,10 +313,10 @@
 
 
         <!-- DASHBOARD VIEWER -->
-        <section class="panel">
-          <div class="panel-header">
-            <div>
-              <h3>Dashboard Viewer</h3>
+        <section class="panel user-dashboard-section">
+  <div class="panel-header">
+    <div>
+      <h3>Dashboard Viewer</h3>
               <p>เปิดดู Dashboard ที่บันทึกจริงแล้วจาก Google Sheet Config</p>
             </div>
 
