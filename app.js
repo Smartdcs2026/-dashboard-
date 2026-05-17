@@ -1,6 +1,8 @@
 (function () {
   'use strict';
 
+  const FORCE_LOGIN_EVERY_OPEN = true;
+
   const el = {
     loginView: document.getElementById('loginView'),
     dashboardView: document.getElementById('dashboardView'),
@@ -35,6 +37,24 @@
     saveMappingBtn: document.getElementById('saveMappingBtn'),
     mappingMessage: document.getElementById('mappingMessage'),
 
+    previewDashboardBtn: document.getElementById('previewDashboardBtn'),
+    previewResult: document.getElementById('previewResult'),
+
+    dashboardName: document.getElementById('dashboardName'),
+    dashboardType: document.getElementById('dashboardType'),
+    createDashboardBtn: document.getElementById('createDashboardBtn'),
+    createDashboardMessage: document.getElementById('createDashboardMessage'),
+
+    reloadDashboardListBtn: document.getElementById('reloadDashboardListBtn'),
+    dashboardSelect: document.getElementById('dashboardSelect'),
+    dashboardLimit: document.getElementById('dashboardLimit'),
+    dashboardFilterBox: document.getElementById('dashboardFilterBox'),
+    openDashboardBtn: document.getElementById('openDashboardBtn'),
+    applyDashboardFilterBtn: document.getElementById('applyDashboardFilterBtn'),
+    resetDashboardFilterBtn: document.getElementById('resetDashboardFilterBtn'),
+    dashboardViewMessage: document.getElementById('dashboardViewMessage'),
+    dashboardViewResult: document.getElementById('dashboardViewResult'),
+
     userDisplayName: document.getElementById('userDisplayName'),
     userRole: document.getElementById('userRole'),
     systemStatusText: document.getElementById('systemStatusText'),
@@ -43,21 +63,6 @@
     meResult: document.getElementById('meResult'),
     sourceResult: document.getElementById('sourceResult'),
     dashboardResult: document.getElementById('dashboardResult'),
-    previewDashboardBtn: document.getElementById('previewDashboardBtn'),
-previewResult: document.getElementById('previewResult'),
-    dashboardName: document.getElementById('dashboardName'),
-dashboardType: document.getElementById('dashboardType'),
-createDashboardBtn: document.getElementById('createDashboardBtn'),
-createDashboardMessage: document.getElementById('createDashboardMessage'),
-    reloadDashboardListBtn: document.getElementById('reloadDashboardListBtn'),
-dashboardSelect: document.getElementById('dashboardSelect'),
-dashboardLimit: document.getElementById('dashboardLimit'),
-openDashboardBtn: document.getElementById('openDashboardBtn'),
-dashboardViewMessage: document.getElementById('dashboardViewMessage'),
-dashboardViewResult: document.getElementById('dashboardViewResult'),
-    dashboardFilterBox: document.getElementById('dashboardFilterBox'),
-applyDashboardFilterBtn: document.getElementById('applyDashboardFilterBtn'),
-resetDashboardFilterBtn: document.getElementById('resetDashboardFilterBtn'),
     debugLog: document.getElementById('debugLog')
   };
 
@@ -67,15 +72,26 @@ resetDashboardFilterBtn: document.getElementById('resetDashboardFilterBtn'),
   let selectedSheetName = '';
   let lastHeadersData = null;
   let currentDashboardId = '';
-let currentDashboardFilters = [];
+  let currentDashboardFilters = [];
 
   document.addEventListener('DOMContentLoaded', init);
 
   async function init() {
     bindEvents();
     showLogin();
+    resetWorkingState();
+
+    if (FORCE_LOGIN_EVERY_OPEN && window.AnalyticsAPI && window.AnalyticsAPI.clearToken) {
+      window.AnalyticsAPI.clearToken();
+    }
+
     await checkApiHealth();
-    await restoreSession();
+
+    if (!FORCE_LOGIN_EVERY_OPEN) {
+      await restoreSession();
+    } else {
+      showLogin();
+    }
   }
 
   function bindEvents() {
@@ -110,30 +126,75 @@ let currentDashboardFilters = [];
     if (el.sourceForm) {
       el.sourceForm.addEventListener('submit', handleCreateSource);
     }
-    if (el.previewDashboardBtn) {
-  el.previewDashboardBtn.addEventListener('click', handleDashboardPreview);
-}
-    if (el.createDashboardBtn) {
-  el.createDashboardBtn.addEventListener('click', handleCreateDashboardFromPreview);
-}
-    if (el.reloadDashboardListBtn) {
-  el.reloadDashboardListBtn.addEventListener('click', loadDashboardOptions);
-}
 
-if (el.openDashboardBtn) {
-  el.openDashboardBtn.addEventListener('click', handleOpenDashboard);
-}
-    if (el.applyDashboardFilterBtn) {
-  el.applyDashboardFilterBtn.addEventListener('click', handleApplyDashboardFilter);
-}
-
-if (el.resetDashboardFilterBtn) {
-  el.resetDashboardFilterBtn.addEventListener('click', handleResetDashboardFilter);
-}
     if (el.saveMappingBtn) {
       el.saveMappingBtn.addEventListener('click', handleSaveMapping);
       el.saveMappingBtn.disabled = true;
     }
+
+    if (el.previewDashboardBtn) {
+      el.previewDashboardBtn.addEventListener('click', handleDashboardPreview);
+    }
+
+    if (el.createDashboardBtn) {
+      el.createDashboardBtn.addEventListener('click', handleCreateDashboardFromPreview);
+    }
+
+    if (el.reloadDashboardListBtn) {
+      el.reloadDashboardListBtn.addEventListener('click', loadDashboardOptions);
+    }
+
+    if (el.openDashboardBtn) {
+      el.openDashboardBtn.addEventListener('click', handleOpenDashboard);
+    }
+
+    if (el.applyDashboardFilterBtn) {
+      el.applyDashboardFilterBtn.addEventListener('click', handleApplyDashboardFilter);
+    }
+
+    if (el.resetDashboardFilterBtn) {
+      el.resetDashboardFilterBtn.addEventListener('click', handleResetDashboardFilter);
+    }
+  }
+
+  function resetWorkingState() {
+    currentUser = null;
+    sourcesCache = [];
+    selectedSourceId = '';
+    selectedSheetName = '';
+    lastHeadersData = null;
+    currentDashboardId = '';
+    currentDashboardFilters = [];
+
+    renderSources([]);
+    renderSourceSheets([]);
+    renderHeaders(null);
+
+    if (el.previewResult) {
+      el.previewResult.classList.add('empty');
+      el.previewResult.textContent = 'กรุณาบันทึก Mapping ก่อน แล้วกดสร้าง Dashboard Preview';
+    }
+
+    if (el.dashboardViewResult) {
+      el.dashboardViewResult.classList.add('empty');
+      el.dashboardViewResult.textContent = 'กรุณาเลือก Dashboard แล้วกดเปิด Dashboard';
+    }
+
+    if (el.dashboardFilterBox) {
+      el.dashboardFilterBox.classList.add('empty');
+      el.dashboardFilterBox.textContent = 'เมื่อเปิด Dashboard แล้ว ระบบจะแสดงตัวกรองที่ตั้งไว้ตรงนี้';
+    }
+
+    if (el.dashboardSelect) {
+      el.dashboardSelect.innerHTML = '<option value="">ยังไม่มีรายการ Dashboard</option>';
+    }
+
+    setLoginMessage('');
+    setSourceFormMessage('');
+    setMappingMessage('');
+    setPreviewMessage('');
+    setCreateDashboardMessage('');
+    setDashboardViewMessage('');
   }
 
   async function checkApiHealth() {
@@ -203,8 +264,13 @@ if (el.resetDashboardFilterBtn) {
   async function handleLogin(event) {
     event.preventDefault();
 
-    const username = el.username.value.trim();
-    const password = el.password.value;
+    const username = el.username ? el.username.value.trim() : '';
+    const password = el.password ? el.password.value : '';
+
+    if (!username || !password) {
+      setLoginMessage('กรุณากรอกชื่อผู้ใช้และรหัสผ่าน');
+      return;
+    }
 
     setLoginMessage('');
     setLoading(true);
@@ -251,19 +317,14 @@ if (el.resetDashboardFilterBtn) {
       });
     }
 
-    currentUser = null;
-    selectedSourceId = '';
-    selectedSheetName = '';
-    sourcesCache = [];
-    lastHeadersData = null;
+    if (window.AnalyticsAPI && window.AnalyticsAPI.clearToken) {
+      window.AnalyticsAPI.clearToken();
+    }
 
     if (el.username) el.username.value = '';
     if (el.password) el.password.value = '';
 
-    renderSources([]);
-    renderSourceSheets([]);
-    renderHeaders(null);
-
+    resetWorkingState();
     showLogin();
   }
 
@@ -291,11 +352,11 @@ if (el.resetDashboardFilterBtn) {
     event.preventDefault();
 
     const payload = {
-      name: el.sourceName.value.trim(),
-      spreadsheetId: el.sourceSpreadsheetId.value.trim(),
-      dataType: el.sourceDataType.value,
-      owner: el.sourceOwner.value.trim(),
-      description: el.sourceDescription.value.trim()
+      name: el.sourceName ? el.sourceName.value.trim() : '',
+      spreadsheetId: el.sourceSpreadsheetId ? el.sourceSpreadsheetId.value.trim() : '',
+      dataType: el.sourceDataType ? el.sourceDataType.value : 'Other',
+      owner: el.sourceOwner ? el.sourceOwner.value.trim() : '',
+      description: el.sourceDescription ? el.sourceDescription.value.trim() : ''
     };
 
     if (!payload.name || !payload.spreadsheetId) {
@@ -304,18 +365,17 @@ if (el.resetDashboardFilterBtn) {
     }
 
     setSourceFormMessage('');
-    el.createSourceBtn.disabled = true;
-    el.createSourceBtn.textContent = 'กำลังเพิ่ม...';
+    setButtonLoading(el.createSourceBtn, true, 'กำลังเพิ่ม...');
 
     try {
       const data = await window.AnalyticsAPI.createSource(payload);
 
       setSourceFormMessage('เพิ่มแหล่งข้อมูลสำเร็จ');
 
-      el.sourceName.value = '';
-      el.sourceSpreadsheetId.value = '';
-      el.sourceOwner.value = '';
-      el.sourceDescription.value = '';
+      if (el.sourceName) el.sourceName.value = '';
+      if (el.sourceSpreadsheetId) el.sourceSpreadsheetId.value = '';
+      if (el.sourceOwner) el.sourceOwner.value = '';
+      if (el.sourceDescription) el.sourceDescription.value = '';
 
       writeLog({
         step: 'create_source',
@@ -334,8 +394,7 @@ if (el.resetDashboardFilterBtn) {
       });
 
     } finally {
-      el.createSourceBtn.disabled = false;
-      el.createSourceBtn.textContent = 'เพิ่มแหล่งข้อมูล';
+      setButtonLoading(el.createSourceBtn, false, 'เพิ่มแหล่งข้อมูล');
     }
   }
 
@@ -438,9 +497,7 @@ if (el.resetDashboardFilterBtn) {
     el.sourceSheetsList.classList.add('empty');
 
     try {
-      const data = await window.AnalyticsAPI.listSourceSheets({
-        sourceId
-      });
+      const data = await window.AnalyticsAPI.listSourceSheets({ sourceId });
 
       renderSourceSheets(data.sheets || []);
 
@@ -592,12 +649,7 @@ if (el.resetDashboardFilterBtn) {
           <div class="mapping-form-grid">
             <label class="mapping-control">
               <span>ชื่อแสดงผล</span>
-              <input
-                class="map-display-name"
-                type="text"
-                value="${escapeAttr(columnName)}"
-                placeholder="ชื่อแสดงผล"
-              >
+              <input class="map-display-name" type="text" value="${escapeAttr(columnName)}" placeholder="ชื่อแสดงผล">
             </label>
 
             <label class="mapping-control">
@@ -698,8 +750,7 @@ if (el.resetDashboardFilterBtn) {
       return;
     }
 
-    el.saveMappingBtn.disabled = true;
-    el.saveMappingBtn.textContent = 'กำลังบันทึก...';
+    setButtonLoading(el.saveMappingBtn, true, 'กำลังบันทึก...');
     setMappingMessage('');
 
     try {
@@ -712,10 +763,11 @@ if (el.resetDashboardFilterBtn) {
       });
 
       setMappingMessage('บันทึก Mapping สำเร็จ จำนวน ' + (data.total || fields.length) + ' ฟิลด์');
+
       if (el.previewResult) {
-  el.previewResult.classList.remove('empty');
-  el.previewResult.textContent = 'บันทึก Mapping แล้ว สามารถกด “สร้าง Dashboard Preview” ได้';
-}
+        el.previewResult.classList.remove('empty');
+        el.previewResult.textContent = 'บันทึก Mapping แล้ว สามารถกด “สร้าง Dashboard Preview” ได้';
+      }
 
       writeLog({
         step: 'save_mapping',
@@ -732,8 +784,7 @@ if (el.resetDashboardFilterBtn) {
       });
 
     } finally {
-      el.saveMappingBtn.disabled = false;
-      el.saveMappingBtn.textContent = 'บันทึก Mapping';
+      setButtonLoading(el.saveMappingBtn, false, 'บันทึก Mapping');
     }
   }
 
@@ -783,6 +834,483 @@ if (el.resetDashboardFilterBtn) {
     });
   }
 
+  async function handleDashboardPreview() {
+    if (!selectedSourceId || !selectedSheetName) {
+      setPreviewMessage('กรุณาเลือกแหล่งข้อมูลและชีทก่อน');
+      return;
+    }
+
+    if (!window.AnalyticsAPI.dashboardPreview) {
+      setPreviewMessage('ยังไม่พบฟังก์ชัน dashboardPreview ใน api.js');
+      return;
+    }
+
+    setButtonLoading(el.previewDashboardBtn, true, 'กำลังสร้าง Preview...');
+    setPreviewMessage('กำลังสร้าง Dashboard Preview...');
+
+    try {
+      const data = await window.AnalyticsAPI.dashboardPreview({
+        sourceId: selectedSourceId,
+        sheetName: selectedSheetName,
+        limit: 1000
+      });
+
+      renderDashboardPreview(data);
+
+      writeLog({
+        step: 'dashboard_preview',
+        response: data
+      });
+
+    } catch (error) {
+      setPreviewMessage(error.message);
+
+      writeLog({
+        step: 'dashboard_preview_error',
+        message: error.message,
+        payload: error.payload || null
+      });
+
+    } finally {
+      setButtonLoading(el.previewDashboardBtn, false, 'สร้าง Dashboard Preview');
+    }
+  }
+
+  function renderDashboardPreview(data) {
+    if (!el.previewResult) {
+      return;
+    }
+
+    if (!data || !data.ok) {
+      setPreviewMessage((data && data.message) || 'ไม่สามารถสร้าง Preview ได้');
+      return;
+    }
+
+    el.previewResult.classList.remove('empty');
+
+    const kpisHtml = renderPreviewKpis(data.kpis || []);
+    const chartsHtml = renderPreviewCharts(data.charts || []);
+    const tableHtml = renderPreviewTable(data.table || { fields: [], rows: [] });
+
+    el.previewResult.innerHTML = `
+      <div class="preview-summary">
+        <strong>${escapeHtml(data.sourceName || '')}</strong>
+        <span> / ${escapeHtml(data.sheetName || '')}</span>
+        <span> / อ่านข้อมูล ${Number(data.totalRowsRead || 0).toLocaleString()} แถว</span>
+        <span> / หลังกรอง ${Number(data.totalRowsAfterFilter || data.totalRowsRead || 0).toLocaleString()} แถว</span>
+      </div>
+
+      ${kpisHtml}
+      ${chartsHtml}
+      ${tableHtml}
+    `;
+  }
+
+  async function handleCreateDashboardFromPreview() {
+    if (!selectedSourceId || !selectedSheetName) {
+      setCreateDashboardMessage('กรุณาเลือกแหล่งข้อมูลและชีทก่อน');
+      return;
+    }
+
+    const dashboardName = el.dashboardName ? el.dashboardName.value.trim() : '';
+    const dashboardType = el.dashboardType ? el.dashboardType.value : 'Custom';
+
+    if (!dashboardName) {
+      setCreateDashboardMessage('กรุณากรอกชื่อ Dashboard');
+      return;
+    }
+
+    if (!window.AnalyticsAPI.createDashboardFromPreview) {
+      setCreateDashboardMessage('ยังไม่พบฟังก์ชัน createDashboardFromPreview ใน api.js');
+      return;
+    }
+
+    setButtonLoading(el.createDashboardBtn, true, 'กำลังบันทึก Dashboard...');
+    setCreateDashboardMessage('');
+
+    try {
+      const data = await window.AnalyticsAPI.createDashboardFromPreview({
+        sourceId: selectedSourceId,
+        sheetName: selectedSheetName,
+        dashboardName: dashboardName,
+        dashboardType: dashboardType,
+        description: 'สร้างจาก Mapping ผ่าน Admin Console'
+      });
+
+      setCreateDashboardMessage(
+        'สร้าง Dashboard สำเร็จ: ' + data.dashboardId +
+        ' | KPI ' + data.totalMetrics +
+        ' | กราฟ ' + data.totalCharts +
+        ' | ตัวกรอง ' + data.totalFilters
+      );
+
+      writeLog({
+        step: 'create_dashboard_from_preview',
+        response: data
+      });
+
+      await loadDashboards();
+      await loadDashboardOptions();
+
+    } catch (error) {
+      setCreateDashboardMessage(error.message);
+
+      writeLog({
+        step: 'create_dashboard_from_preview_error',
+        message: error.message,
+        payload: error.payload || null
+      });
+
+    } finally {
+      setButtonLoading(el.createDashboardBtn, false, 'บันทึกเป็น Dashboard จริง');
+    }
+  }
+
+  async function loadDashboardOptions() {
+    if (!el.dashboardSelect) {
+      return;
+    }
+
+    el.dashboardSelect.innerHTML = '<option value="">กำลังโหลด...</option>';
+
+    try {
+      const data = await window.AnalyticsAPI.listDashboards();
+      const dashboards = data.dashboards || [];
+
+      if (!dashboards.length) {
+        el.dashboardSelect.innerHTML = '<option value="">ยังไม่มี Dashboard</option>';
+        setDashboardViewMessage('ยังไม่มี Dashboard ที่บันทึกไว้');
+        return;
+      }
+
+      el.dashboardSelect.innerHTML =
+        '<option value="">เลือก Dashboard</option>' +
+        dashboards.map(function (dash) {
+          const id = dash['รหัส Dashboard'] || '';
+          const name = dash['ชื่อ Dashboard'] || id;
+          const type = dash['ประเภท Dashboard'] || '';
+
+          return `<option value="${escapeAttr(id)}">${escapeHtml(name)} (${escapeHtml(type)})</option>`;
+        }).join('');
+
+      setDashboardViewMessage('โหลด Dashboard แล้ว ' + dashboards.length + ' รายการ');
+
+      writeLog({
+        step: 'dashboard_options',
+        response: data
+      });
+
+    } catch (error) {
+      el.dashboardSelect.innerHTML = '<option value="">โหลด Dashboard ไม่สำเร็จ</option>';
+      setDashboardViewMessage(error.message);
+
+      writeLog({
+        step: 'dashboard_options_error',
+        message: error.message,
+        payload: error.payload || null
+      });
+    }
+  }
+
+  async function handleOpenDashboard() {
+    const dashboardId = el.dashboardSelect ? el.dashboardSelect.value : '';
+    const limit = el.dashboardLimit ? Number(el.dashboardLimit.value || 1000) : 1000;
+
+    if (!dashboardId) {
+      setDashboardViewMessage('กรุณาเลือก Dashboard');
+      return;
+    }
+
+    if (!window.AnalyticsAPI.dashboardView) {
+      setDashboardViewMessage('ยังไม่พบฟังก์ชัน dashboardView ใน api.js');
+      return;
+    }
+
+    currentDashboardId = dashboardId;
+
+    setButtonLoading(el.openDashboardBtn, true, 'กำลังเปิด Dashboard...');
+    setDashboardViewMessage('กำลังโหลด Dashboard...');
+
+    try {
+      const data = await window.AnalyticsAPI.dashboardView({
+        dashboardId: dashboardId,
+        limit: limit,
+        filters: []
+      });
+
+      renderSavedDashboard(data);
+      renderDashboardFilters(data.filters || []);
+      setDashboardViewMessage('โหลด Dashboard สำเร็จ');
+
+      writeLog({
+        step: 'dashboard_view',
+        response: data
+      });
+
+    } catch (error) {
+      setDashboardViewMessage(error.message);
+
+      if (el.dashboardViewResult) {
+        el.dashboardViewResult.textContent = error.message;
+        el.dashboardViewResult.classList.add('empty');
+      }
+
+      writeLog({
+        step: 'dashboard_view_error',
+        message: error.message,
+        payload: error.payload || null
+      });
+
+    } finally {
+      setButtonLoading(el.openDashboardBtn, false, 'เปิด Dashboard');
+    }
+  }
+
+  async function handleApplyDashboardFilter() {
+    const dashboardId = currentDashboardId || (el.dashboardSelect ? el.dashboardSelect.value : '');
+    const limit = el.dashboardLimit ? Number(el.dashboardLimit.value || 1000) : 1000;
+
+    if (!dashboardId) {
+      setDashboardViewMessage('กรุณาเลือก Dashboard ก่อน');
+      return;
+    }
+
+    const filters = collectDashboardFilters();
+
+    setButtonLoading(el.applyDashboardFilterBtn, true, 'กำลังกรอง...');
+    setDashboardViewMessage('กำลังกรองข้อมูล...');
+
+    try {
+      const data = await window.AnalyticsAPI.dashboardView({
+        dashboardId: dashboardId,
+        limit: limit,
+        filters: filters
+      });
+
+      renderSavedDashboard(data);
+      renderDashboardFilters(data.filters || [], filters);
+
+      setDashboardViewMessage(
+        'กรองข้อมูลสำเร็จ: จาก ' +
+        Number(data.totalRowsRead || 0).toLocaleString() +
+        ' แถว เหลือ ' +
+        Number(data.totalRowsAfterFilter || 0).toLocaleString() +
+        ' แถว'
+      );
+
+      writeLog({
+        step: 'dashboard_filter',
+        filters: filters,
+        response: data
+      });
+
+    } catch (error) {
+      setDashboardViewMessage(error.message);
+
+      writeLog({
+        step: 'dashboard_filter_error',
+        message: error.message,
+        payload: error.payload || null
+      });
+
+    } finally {
+      setButtonLoading(el.applyDashboardFilterBtn, false, 'กรองข้อมูล Dashboard');
+    }
+  }
+
+  async function handleResetDashboardFilter() {
+    if (!el.dashboardFilterBox) {
+      return;
+    }
+
+    const inputs = el.dashboardFilterBox.querySelectorAll('input, select');
+
+    inputs.forEach(function (input) {
+      input.value = '';
+    });
+
+    await handleApplyDashboardFilter();
+  }
+
+  function renderSavedDashboard(data) {
+    if (!el.dashboardViewResult) {
+      return;
+    }
+
+    if (!data || !data.ok) {
+      el.dashboardViewResult.textContent = (data && data.message) || 'โหลด Dashboard ไม่สำเร็จ';
+      el.dashboardViewResult.classList.add('empty');
+      return;
+    }
+
+    const dashboard = data.dashboard || {};
+    const dashboardName = dashboard['ชื่อ Dashboard'] || '-';
+    const dashboardDesc = dashboard['คำอธิบาย'] || '';
+    const source = data.source || {};
+
+    el.dashboardViewResult.classList.remove('empty');
+
+    el.dashboardViewResult.innerHTML = `
+      <div class="dashboard-title-box">
+        <h3>${escapeHtml(dashboardName)}</h3>
+        <p>
+          ${escapeHtml(dashboardDesc)}
+          ${dashboardDesc ? ' | ' : ''}
+          แหล่งข้อมูล: ${escapeHtml(source.sourceName || '')}
+          / ชีท: ${escapeHtml(source.sheetName || '')}
+          / อ่านข้อมูล ${Number(data.totalRowsRead || 0).toLocaleString()} แถว
+          / หลังกรอง ${Number(data.totalRowsAfterFilter || data.totalRowsRead || 0).toLocaleString()} แถว
+        </p>
+      </div>
+
+      <div class="dashboard-section-title">ตัวชี้วัด</div>
+      ${renderPreviewKpis(data.kpis || [])}
+
+      <div class="dashboard-section-title">กราฟ</div>
+      ${renderPreviewCharts(data.chartResults || [])}
+
+      <div class="dashboard-section-title">ตารางข้อมูล</div>
+      ${renderPreviewTable(data.table || { fields: [], rows: [] })}
+    `;
+  }
+
+  function renderDashboardFilters(filters, appliedFilters) {
+    if (!el.dashboardFilterBox) {
+      return;
+    }
+
+    currentDashboardFilters = filters || [];
+    appliedFilters = appliedFilters || [];
+
+    if (!filters || !filters.length) {
+      el.dashboardFilterBox.classList.add('empty');
+      el.dashboardFilterBox.textContent = 'Dashboard นี้ยังไม่มีตัวกรองที่ตั้งไว้';
+      return;
+    }
+
+    el.dashboardFilterBox.classList.remove('empty');
+
+    const html = filters.map(function (filter, index) {
+      const name = filter['ชื่อตัวกรอง'] || filter['คอลัมน์ที่ใช้กรอง'] || '-';
+      const column = filter['คอลัมน์ที่ใช้กรอง'] || '';
+      const type = filter['ประเภทตัวกรอง'] || 'text_search';
+      const applied = findAppliedFilter(appliedFilters, column);
+
+      if (type === 'date_range') {
+        return `
+          <label class="dashboard-filter-item" data-filter-index="${index}">
+            <span>${escapeHtml(name)}</span>
+            <div class="dashboard-filter-date-pair">
+              <input type="date" data-dashboard-filter-field="${escapeAttr(column)}" data-dashboard-filter-type="date_range" data-dashboard-filter-part="from" value="${escapeAttr(applied.from || '')}">
+              <input type="date" data-dashboard-filter-field="${escapeAttr(column)}" data-dashboard-filter-type="date_range" data-dashboard-filter-part="to" value="${escapeAttr(applied.to || '')}">
+            </div>
+          </label>
+        `;
+      }
+
+      if (type === 'number_range') {
+        return `
+          <label class="dashboard-filter-item" data-filter-index="${index}">
+            <span>${escapeHtml(name)}</span>
+            <div class="dashboard-filter-number-pair">
+              <input type="number" data-dashboard-filter-field="${escapeAttr(column)}" data-dashboard-filter-type="number_range" data-dashboard-filter-part="min" placeholder="ต่ำสุด" value="${escapeAttr(applied.min || '')}">
+              <input type="number" data-dashboard-filter-field="${escapeAttr(column)}" data-dashboard-filter-type="number_range" data-dashboard-filter-part="max" placeholder="สูงสุด" value="${escapeAttr(applied.max || '')}">
+            </div>
+          </label>
+        `;
+      }
+
+      return `
+        <label class="dashboard-filter-item" data-filter-index="${index}">
+          <span>${escapeHtml(name)}</span>
+          <input
+            type="text"
+            data-dashboard-filter-field="${escapeAttr(column)}"
+            data-dashboard-filter-type="${escapeAttr(type)}"
+            placeholder="ค้นหา / กรองค่า"
+            value="${escapeAttr(applied.value || '')}"
+          >
+        </label>
+      `;
+    }).join('');
+
+    el.dashboardFilterBox.innerHTML = `
+      <div class="dashboard-filter-grid">
+        ${html}
+      </div>
+    `;
+  }
+
+  function collectDashboardFilters() {
+    if (!el.dashboardFilterBox) {
+      return [];
+    }
+
+    const map = {};
+    const inputs = Array.from(el.dashboardFilterBox.querySelectorAll('[data-dashboard-filter-field]'));
+
+    inputs.forEach(function (input) {
+      const field = input.getAttribute('data-dashboard-filter-field') || '';
+      const type = input.getAttribute('data-dashboard-filter-type') || 'text_search';
+      const part = input.getAttribute('data-dashboard-filter-part') || '';
+      const value = input.value;
+
+      if (!field) {
+        return;
+      }
+
+      if (!map[field]) {
+        map[field] = {
+          field: field,
+          type: type,
+          value: ''
+        };
+      }
+
+      if (type === 'date_range') {
+        if (part === 'from') map[field].from = value;
+        if (part === 'to') map[field].to = value;
+        map[field].value = map[field].from || map[field].to || '';
+        return;
+      }
+
+      if (type === 'number_range') {
+        if (part === 'min') map[field].min = value;
+        if (part === 'max') map[field].max = value;
+        map[field].value = map[field].min || map[field].max || '';
+        return;
+      }
+
+      map[field].value = value;
+    });
+
+    return Object.keys(map)
+      .map(function (key) {
+        return map[key];
+      })
+      .filter(function (f) {
+        if (f.type === 'date_range') {
+          return String(f.from || '').trim() || String(f.to || '').trim();
+        }
+
+        if (f.type === 'number_range') {
+          return String(f.min || '').trim() || String(f.max || '').trim();
+        }
+
+        return String(f.value || '').trim();
+      });
+  }
+
+  function findAppliedFilter(appliedFilters, field) {
+    for (let i = 0; i < appliedFilters.length; i++) {
+      if (String(appliedFilters[i].field || '') === String(field || '')) {
+        return appliedFilters[i];
+      }
+    }
+
+    return {};
+  }
+
   async function loadDashboards() {
     if (el.dashboardResult) {
       el.dashboardResult.textContent = 'กำลังโหลด...';
@@ -813,15 +1341,112 @@ if (el.resetDashboardFilterBtn) {
     }
   }
 
+  function renderPreviewKpis(kpis) {
+    if (!kpis.length) {
+      return '';
+    }
+
+    const html = kpis.map(function (kpi) {
+      return `
+        <div class="preview-kpi">
+          <div class="preview-kpi-title">${escapeHtml(kpi.title || '-')}</div>
+          <div class="preview-kpi-value">${formatNumber(kpi.value)}</div>
+          <div class="preview-kpi-unit">${escapeHtml(kpi.unit || '')}</div>
+        </div>
+      `;
+    }).join('');
+
+    return `<div class="preview-kpi-grid">${html}</div>`;
+  }
+
+  function renderPreviewCharts(charts) {
+    if (!charts.length) {
+      return '';
+    }
+
+    const html = charts.map(function (chart) {
+      return `
+        <div class="preview-chart">
+          <h4>${escapeHtml(chart.title || '-')}</h4>
+          ${renderSimpleBarChart(chart.data || [])}
+        </div>
+      `;
+    }).join('');
+
+    return `<div class="preview-chart-grid">${html}</div>`;
+  }
+
+  function renderSimpleBarChart(items) {
+    if (!items.length) {
+      return '<p class="empty">ไม่มีข้อมูลสำหรับกราฟ</p>';
+    }
+
+    const max = Math.max.apply(null, items.map(function (x) {
+      return Number(x.value || 0);
+    })) || 1;
+
+    const html = items.map(function (item) {
+      const value = Number(item.value || 0);
+      const percent = Math.max(2, Math.round((value / max) * 100));
+
+      return `
+        <div class="simple-bar-item">
+          <div class="simple-bar-label" title="${escapeAttr(item.name || '')}">
+            ${escapeHtml(item.name || '(ว่าง)')}
+          </div>
+          <div class="simple-bar-track">
+            <div class="simple-bar-fill" style="width:${percent}%"></div>
+          </div>
+          <div class="simple-bar-value">${formatNumber(value)}</div>
+        </div>
+      `;
+    }).join('');
+
+    return `<div class="simple-bar-list">${html}</div>`;
+  }
+
+  function renderPreviewTable(table) {
+    const fields = table.fields || [];
+    const rows = table.rows || [];
+
+    if (!fields.length || !rows.length) {
+      return '';
+    }
+
+    const headersHtml = fields.map(function (field) {
+      return `<th>${escapeHtml(field.displayName || field.columnName || '')}</th>`;
+    }).join('');
+
+    const rowsHtml = rows.map(function (row) {
+      const cells = fields.map(function (field) {
+        const key = field.displayName || field.columnName;
+        return `<td>${escapeHtml(row[key] || '')}</td>`;
+      }).join('');
+
+      return `<tr>${cells}</tr>`;
+    }).join('');
+
+    return `
+      <div class="preview-table-wrap">
+        <table class="preview-table">
+          <thead>
+            <tr>${headersHtml}</tr>
+          </thead>
+          <tbody>${rowsHtml}</tbody>
+        </table>
+      </div>
+    `;
+  }
+
   function renderUser(user) {
     if (!user) {
-      el.userDisplayName.textContent = '-';
-      el.userRole.textContent = '-';
+      if (el.userDisplayName) el.userDisplayName.textContent = '-';
+      if (el.userRole) el.userRole.textContent = '-';
       return;
     }
 
-    el.userDisplayName.textContent = user.displayName || user.username || '-';
-    el.userRole.textContent = user.role || '-';
+    if (el.userDisplayName) el.userDisplayName.textContent = user.displayName || user.username || '-';
+    if (el.userRole) el.userRole.textContent = user.role || '-';
 
     if (user.mustChangePassword) {
       setSystemStatus('เข้าสู่ระบบสำเร็จ - แนะนำให้เปลี่ยนรหัสผ่านเริ่มต้น');
@@ -840,11 +1465,20 @@ if (el.resetDashboardFilterBtn) {
     if (el.dashboardView) el.dashboardView.classList.remove('hidden');
   }
 
+  function setButtonLoading(button, isLoading, text) {
+    if (!button) return;
+
+    button.disabled = !!isLoading;
+
+    if (text) {
+      button.textContent = text;
+    }
+  }
+
   function setApiStatus(message, type) {
     if (!el.apiStatus) return;
 
     el.apiStatus.textContent = message || '';
-
     el.apiStatus.classList.remove('status-muted', 'status-success', 'status-error');
 
     if (type === 'success') {
@@ -877,6 +1511,25 @@ if (el.resetDashboardFilterBtn) {
   function setMappingMessage(message) {
     if (el.mappingMessage) {
       el.mappingMessage.textContent = message || '';
+    }
+  }
+
+  function setPreviewMessage(message) {
+    if (el.previewResult && message) {
+      el.previewResult.textContent = message;
+      el.previewResult.classList.add('empty');
+    }
+  }
+
+  function setCreateDashboardMessage(message) {
+    if (el.createDashboardMessage) {
+      el.createDashboardMessage.textContent = message || '';
+    }
+  }
+
+  function setDashboardViewMessage(message) {
+    if (el.dashboardViewMessage) {
+      el.dashboardViewMessage.textContent = message || '';
     }
   }
 
@@ -990,6 +1643,18 @@ if (el.resetDashboardFilterBtn) {
     return '';
   }
 
+  function formatNumber(value) {
+    const num = Number(value);
+
+    if (isNaN(num)) {
+      return escapeHtml(value);
+    }
+
+    return num.toLocaleString('th-TH', {
+      maximumFractionDigits: 2
+    });
+  }
+
   function escapeHtml(value) {
     return String(value == null ? '' : value)
       .replaceAll('&', '&amp;')
@@ -1002,670 +1667,4 @@ if (el.resetDashboardFilterBtn) {
   function escapeAttr(value) {
     return escapeHtml(value).replaceAll('`', '&#096;');
   }
-
-  async function handleDashboardPreview() {
-  if (!selectedSourceId || !selectedSheetName) {
-    setPreviewMessage('กรุณาเลือกแหล่งข้อมูลและชีทก่อน');
-    return;
-  }
-
-  if (!window.AnalyticsAPI.dashboardPreview) {
-    setPreviewMessage('ยังไม่พบฟังก์ชัน dashboardPreview ใน api.js');
-    return;
-  }
-
-  el.previewDashboardBtn.disabled = true;
-  el.previewDashboardBtn.textContent = 'กำลังสร้าง Preview...';
-
-  setPreviewMessage('กำลังสร้าง Dashboard Preview...');
-
-  try {
-    const data = await window.AnalyticsAPI.dashboardPreview({
-      sourceId: selectedSourceId,
-      sheetName: selectedSheetName,
-      limit: 1000
-    });
-
-    renderDashboardPreview(data);
-
-    writeLog({
-      step: 'dashboard_preview',
-      response: data
-    });
-
-  } catch (error) {
-    setPreviewMessage(error.message);
-
-    writeLog({
-      step: 'dashboard_preview_error',
-      message: error.message,
-      payload: error.payload || null
-    });
-
-  } finally {
-    el.previewDashboardBtn.disabled = false;
-    el.previewDashboardBtn.textContent = 'สร้าง Dashboard Preview';
-  }
-}
-
-
-function renderDashboardPreview(data) {
-  if (!el.previewResult) {
-    return;
-  }
-
-  if (!data || !data.ok) {
-    setPreviewMessage((data && data.message) || 'ไม่สามารถสร้าง Preview ได้');
-    return;
-  }
-
-  el.previewResult.classList.remove('empty');
-
-  const kpisHtml = renderPreviewKpis(data.kpis || []);
-  const chartsHtml = renderPreviewCharts(data.charts || []);
-  const tableHtml = renderPreviewTable(data.table || { fields: [], rows: [] });
-
-  el.previewResult.innerHTML = `
-    <div class="preview-summary">
-      <strong>${escapeHtml(data.sourceName || '')}</strong>
-      <span> / ${escapeHtml(data.sheetName || '')}</span>
-     / อ่านข้อมูล ${Number(data.totalRowsRead || 0).toLocaleString()} แถว
-/ หลังกรอง ${Number(data.totalRowsAfterFilter || data.totalRowsRead || 0).toLocaleString()} แถว
-    </div>
-
-    ${kpisHtml}
-    ${chartsHtml}
-    ${tableHtml}
-  `;
-}
-
-
-function renderPreviewKpis(kpis) {
-  if (!kpis.length) {
-    return '';
-  }
-
-  const html = kpis.map(function (kpi) {
-    return `
-      <div class="preview-kpi">
-        <div class="preview-kpi-title">${escapeHtml(kpi.title || '-')}</div>
-        <div class="preview-kpi-value">${formatNumber(kpi.value)}</div>
-        <div class="preview-kpi-unit">${escapeHtml(kpi.unit || '')}</div>
-      </div>
-    `;
-  }).join('');
-
-  return `
-    <div class="preview-kpi-grid">
-      ${html}
-    </div>
-  `;
-}
-
-
-function renderPreviewCharts(charts) {
-  if (!charts.length) {
-    return '';
-  }
-
-  const html = charts.map(function (chart) {
-    return `
-      <div class="preview-chart">
-        <h4>${escapeHtml(chart.title || '-')}</h4>
-        ${renderSimpleBarChart(chart.data || [])}
-      </div>
-    `;
-  }).join('');
-
-  return `
-    <div class="preview-chart-grid">
-      ${html}
-    </div>
-  `;
-}
-
-
-function renderSimpleBarChart(items) {
-  if (!items.length) {
-    return '<p class="empty">ไม่มีข้อมูลสำหรับกราฟ</p>';
-  }
-
-  const max = Math.max.apply(null, items.map(function (x) {
-    return Number(x.value || 0);
-  })) || 1;
-
-  const html = items.map(function (item) {
-    const value = Number(item.value || 0);
-    const percent = Math.max(2, Math.round((value / max) * 100));
-
-    return `
-      <div class="simple-bar-item">
-        <div class="simple-bar-label" title="${escapeAttr(item.name || '')}">
-          ${escapeHtml(item.name || '(ว่าง)')}
-        </div>
-        <div class="simple-bar-track">
-          <div class="simple-bar-fill" style="width:${percent}%"></div>
-        </div>
-        <div class="simple-bar-value">${formatNumber(value)}</div>
-      </div>
-    `;
-  }).join('');
-
-  return `<div class="simple-bar-list">${html}</div>`;
-}
-
-
-function renderPreviewTable(table) {
-  const fields = table.fields || [];
-  const rows = table.rows || [];
-
-  if (!fields.length || !rows.length) {
-    return '';
-  }
-
-  const headersHtml = fields.map(function (field) {
-    return `<th>${escapeHtml(field.displayName || field.columnName || '')}</th>`;
-  }).join('');
-
-  const rowsHtml = rows.map(function (row) {
-    const cells = fields.map(function (field) {
-      const key = field.displayName || field.columnName;
-      return `<td>${escapeHtml(row[key] || '')}</td>`;
-    }).join('');
-
-    return `<tr>${cells}</tr>`;
-  }).join('');
-
-  return `
-    <div class="preview-table-wrap">
-      <table class="preview-table">
-        <thead>
-          <tr>${headersHtml}</tr>
-        </thead>
-        <tbody>${rowsHtml}</tbody>
-      </table>
-    </div>
-  `;
-}
-
-
-function setPreviewMessage(message) {
-  if (el.previewResult) {
-    el.previewResult.textContent = message || '';
-    el.previewResult.classList.add('empty');
-  }
-}
-
-
-function formatNumber(value) {
-  const num = Number(value);
-
-  if (isNaN(num)) {
-    return escapeHtml(value);
-  }
-
-  return num.toLocaleString('th-TH', {
-    maximumFractionDigits: 2
-  });
-}
-  async function handleCreateDashboardFromPreview() {
-  if (!selectedSourceId || !selectedSheetName) {
-    setCreateDashboardMessage('กรุณาเลือกแหล่งข้อมูลและชีทก่อน');
-    return;
-  }
-
-  const dashboardName = el.dashboardName ? el.dashboardName.value.trim() : '';
-  const dashboardType = el.dashboardType ? el.dashboardType.value : 'Custom';
-
-  if (!dashboardName) {
-    setCreateDashboardMessage('กรุณากรอกชื่อ Dashboard');
-    return;
-  }
-
-  if (!window.AnalyticsAPI.createDashboardFromPreview) {
-    setCreateDashboardMessage('ยังไม่พบฟังก์ชัน createDashboardFromPreview ใน api.js');
-    return;
-  }
-
-  el.createDashboardBtn.disabled = true;
-  el.createDashboardBtn.textContent = 'กำลังบันทึก Dashboard...';
-  setCreateDashboardMessage('');
-
-  try {
-    const data = await window.AnalyticsAPI.createDashboardFromPreview({
-      sourceId: selectedSourceId,
-      sheetName: selectedSheetName,
-      dashboardName: dashboardName,
-      dashboardType: dashboardType,
-      description: 'สร้างจาก Mapping ผ่าน Admin Console'
-    });
-
-    setCreateDashboardMessage(
-      'สร้าง Dashboard สำเร็จ: ' + data.dashboardId +
-      ' | KPI ' + data.totalMetrics +
-      ' | กราฟ ' + data.totalCharts +
-      ' | ตัวกรอง ' + data.totalFilters
-    );
-
-    writeLog({
-      step: 'create_dashboard_from_preview',
-      response: data
-    });
-
-    await loadDashboards();
-
-  } catch (error) {
-    setCreateDashboardMessage(error.message);
-
-    writeLog({
-      step: 'create_dashboard_from_preview_error',
-      message: error.message,
-      payload: error.payload || null
-    });
-
-  } finally {
-    el.createDashboardBtn.disabled = false;
-    el.createDashboardBtn.textContent = 'บันทึกเป็น Dashboard จริง';
-  }
-}
-
-
-function setCreateDashboardMessage(message) {
-  if (el.createDashboardMessage) {
-    el.createDashboardMessage.textContent = message || '';
-  }
-}
-  async function loadDashboardOptions() {
-  if (!el.dashboardSelect) {
-    return;
-  }
-
-  el.dashboardSelect.innerHTML = '<option value="">กำลังโหลด...</option>';
-
-  try {
-    const data = await window.AnalyticsAPI.listDashboards();
-    const dashboards = data.dashboards || [];
-
-    if (!dashboards.length) {
-      el.dashboardSelect.innerHTML = '<option value="">ยังไม่มี Dashboard</option>';
-      setDashboardViewMessage('ยังไม่มี Dashboard ที่บันทึกไว้');
-      return;
-    }
-
-    el.dashboardSelect.innerHTML = '<option value="">เลือก Dashboard</option>' + dashboards.map(function (dash) {
-      const id = dash['รหัส Dashboard'] || '';
-      const name = dash['ชื่อ Dashboard'] || id;
-      const type = dash['ประเภท Dashboard'] || '';
-
-      return `<option value="${escapeAttr(id)}">${escapeHtml(name)} (${escapeHtml(type)})</option>`;
-    }).join('');
-
-    setDashboardViewMessage('โหลด Dashboard แล้ว ' + dashboards.length + ' รายการ');
-
-    writeLog({
-      step: 'dashboard_options',
-      response: data
-    });
-
-  } catch (error) {
-    el.dashboardSelect.innerHTML = '<option value="">โหลด Dashboard ไม่สำเร็จ</option>';
-    setDashboardViewMessage(error.message);
-
-    writeLog({
-      step: 'dashboard_options_error',
-      message: error.message,
-      payload: error.payload || null
-    });
-  }
-}
-
-
-async function handleOpenDashboard() {
-  const dashboardId = el.dashboardSelect ? el.dashboardSelect.value : '';
-  const limit = el.dashboardLimit ? Number(el.dashboardLimit.value || 1000) : 1000;
-
-  if (!dashboardId) {
-    setDashboardViewMessage('กรุณาเลือก Dashboard');
-    return;
-  }
-
-  if (!window.AnalyticsAPI.dashboardView) {
-    setDashboardViewMessage('ยังไม่พบฟังก์ชัน dashboardView ใน api.js');
-    return;
-  }
-
-  el.openDashboardBtn.disabled = true;
-  el.openDashboardBtn.textContent = 'กำลังเปิด Dashboard...';
-  setDashboardViewMessage('กำลังโหลด Dashboard...');
-
-  try {
-    currentDashboardId = dashboardId;
-
-const data = await window.AnalyticsAPI.dashboardView({
-  dashboardId: dashboardId,
-  limit: limit,
-  filters: []
-});
-
-    renderSavedDashboard(data);
-    renderDashboardFilters(data.filters || []);
-    setDashboardViewMessage('โหลด Dashboard สำเร็จ');
-
-    writeLog({
-      step: 'dashboard_view',
-      response: data
-    });
-
-  } catch (error) {
-    setDashboardViewMessage(error.message);
-
-    if (el.dashboardViewResult) {
-      el.dashboardViewResult.textContent = error.message;
-      el.dashboardViewResult.classList.add('empty');
-    }
-
-    writeLog({
-      step: 'dashboard_view_error',
-      message: error.message,
-      payload: error.payload || null
-    });
-
-  } finally {
-    el.openDashboardBtn.disabled = false;
-    el.openDashboardBtn.textContent = 'เปิด Dashboard';
-  }
-}
-
-
-function renderSavedDashboard(data) {
-  if (!el.dashboardViewResult) {
-    return;
-  }
-
-  if (!data || !data.ok) {
-    el.dashboardViewResult.textContent = (data && data.message) || 'โหลด Dashboard ไม่สำเร็จ';
-    el.dashboardViewResult.classList.add('empty');
-    return;
-  }
-
-  const dashboard = data.dashboard || {};
-  const dashboardName = dashboard['ชื่อ Dashboard'] || '-';
-  const dashboardDesc = dashboard['คำอธิบาย'] || '';
-  const source = data.source || {};
-
-  el.dashboardViewResult.classList.remove('empty');
-
-  el.dashboardViewResult.innerHTML = `
-    <div class="dashboard-title-box">
-      <h3>${escapeHtml(dashboardName)}</h3>
-      <p>
-        ${escapeHtml(dashboardDesc)}
-        ${dashboardDesc ? ' | ' : ''}
-        แหล่งข้อมูล: ${escapeHtml(source.sourceName || '')}
-        / ชีท: ${escapeHtml(source.sheetName || '')}
-        / อ่านข้อมูล ${Number(data.totalRowsRead || 0).toLocaleString()} แถว
-      </p>
-    </div>
-
-    <div class="dashboard-section-title">ตัวชี้วัด</div>
-    ${renderPreviewKpis(data.kpis || [])}
-
-    <div class="dashboard-section-title">กราฟ</div>
-    ${renderPreviewCharts(data.chartResults || [])}
-
-    <div class="dashboard-section-title">ตารางข้อมูล</div>
-    ${renderPreviewTable(data.table || { fields: [], rows: [] })}
-  `;
-}
-
-
-function setDashboardViewMessage(message) {
-  if (el.dashboardViewMessage) {
-    el.dashboardViewMessage.textContent = message || '';
-  }
-}
-
-  async function handleApplyDashboardFilter() {
-  const dashboardId = currentDashboardId || (el.dashboardSelect ? el.dashboardSelect.value : '');
-  const limit = el.dashboardLimit ? Number(el.dashboardLimit.value || 1000) : 1000;
-
-  if (!dashboardId) {
-    setDashboardViewMessage('กรุณาเลือก Dashboard ก่อน');
-    return;
-  }
-
-  const filters = collectDashboardFilters();
-
-  el.applyDashboardFilterBtn.disabled = true;
-  el.applyDashboardFilterBtn.textContent = 'กำลังกรอง...';
-  setDashboardViewMessage('กำลังกรองข้อมูล...');
-
-  try {
-    const data = await window.AnalyticsAPI.dashboardView({
-      dashboardId: dashboardId,
-      limit: limit,
-      filters: filters
-    });
-
-    renderSavedDashboard(data);
-    renderDashboardFilters(data.filters || [], filters);
-
-    setDashboardViewMessage(
-      'กรองข้อมูลสำเร็จ: จาก ' +
-      Number(data.totalRowsRead || 0).toLocaleString() +
-      ' แถว เหลือ ' +
-      Number(data.totalRowsAfterFilter || 0).toLocaleString() +
-      ' แถว'
-    );
-
-    writeLog({
-      step: 'dashboard_filter',
-      filters: filters,
-      response: data
-    });
-
-  } catch (error) {
-    setDashboardViewMessage(error.message);
-
-    writeLog({
-      step: 'dashboard_filter_error',
-      message: error.message,
-      payload: error.payload || null
-    });
-
-  } finally {
-    el.applyDashboardFilterBtn.disabled = false;
-    el.applyDashboardFilterBtn.textContent = 'กรองข้อมูล Dashboard';
-  }
-}
-
-
-async function handleResetDashboardFilter() {
-  if (!el.dashboardFilterBox) {
-    return;
-  }
-
-  const inputs = el.dashboardFilterBox.querySelectorAll('input, select');
-
-  inputs.forEach(function (input) {
-    input.value = '';
-  });
-
-  await handleApplyDashboardFilter();
-}
-
-
-function renderDashboardFilters(filters, appliedFilters) {
-  if (!el.dashboardFilterBox) {
-    return;
-  }
-
-  currentDashboardFilters = filters || [];
-  appliedFilters = appliedFilters || [];
-
-  if (!filters || !filters.length) {
-    el.dashboardFilterBox.classList.add('empty');
-    el.dashboardFilterBox.textContent = 'Dashboard นี้ยังไม่มีตัวกรองที่ตั้งไว้';
-    return;
-  }
-
-  el.dashboardFilterBox.classList.remove('empty');
-
-  const html = filters.map(function (filter, index) {
-    const name = filter['ชื่อตัวกรอง'] || filter['คอลัมน์ที่ใช้กรอง'] || '-';
-    const column = filter['คอลัมน์ที่ใช้กรอง'] || '';
-    const type = filter['ประเภทตัวกรอง'] || 'text_search';
-    const applied = findAppliedFilter(appliedFilters, column);
-
-    if (type === 'date_range') {
-      return `
-        <label class="dashboard-filter-item" data-filter-index="${index}">
-          <span>${escapeHtml(name)}</span>
-          <div class="dashboard-filter-date-pair">
-            <input
-              type="date"
-              data-dashboard-filter-field="${escapeAttr(column)}"
-              data-dashboard-filter-type="date_range"
-              data-dashboard-filter-part="from"
-              value="${escapeAttr(applied.from || '')}"
-            >
-            <input
-              type="date"
-              data-dashboard-filter-field="${escapeAttr(column)}"
-              data-dashboard-filter-type="date_range"
-              data-dashboard-filter-part="to"
-              value="${escapeAttr(applied.to || '')}"
-            >
-          </div>
-        </label>
-      `;
-    }
-
-    if (type === 'number_range') {
-      return `
-        <label class="dashboard-filter-item" data-filter-index="${index}">
-          <span>${escapeHtml(name)}</span>
-          <div class="dashboard-filter-number-pair">
-            <input
-              type="number"
-              data-dashboard-filter-field="${escapeAttr(column)}"
-              data-dashboard-filter-type="number_range"
-              data-dashboard-filter-part="min"
-              placeholder="ต่ำสุด"
-              value="${escapeAttr(applied.min || '')}"
-            >
-            <input
-              type="number"
-              data-dashboard-filter-field="${escapeAttr(column)}"
-              data-dashboard-filter-type="number_range"
-              data-dashboard-filter-part="max"
-              placeholder="สูงสุด"
-              value="${escapeAttr(applied.max || '')}"
-            >
-          </div>
-        </label>
-      `;
-    }
-
-    return `
-      <label class="dashboard-filter-item" data-filter-index="${index}">
-        <span>${escapeHtml(name)}</span>
-        <input
-          type="text"
-          data-dashboard-filter-field="${escapeAttr(column)}"
-          data-dashboard-filter-type="${escapeAttr(type)}"
-          placeholder="ค้นหา / กรองค่า"
-          value="${escapeAttr(applied.value || '')}"
-        >
-      </label>
-    `;
-  }).join('');
-
-  el.dashboardFilterBox.innerHTML = `
-    <div class="dashboard-filter-grid">
-      ${html}
-    </div>
-  `;
-}
-
-
-function collectDashboardFilters() {
-  if (!el.dashboardFilterBox) {
-    return [];
-  }
-
-  const map = {};
-
-  const inputs = Array.from(
-    el.dashboardFilterBox.querySelectorAll('[data-dashboard-filter-field]')
-  );
-
-  inputs.forEach(function (input) {
-    const field = input.getAttribute('data-dashboard-filter-field') || '';
-    const type = input.getAttribute('data-dashboard-filter-type') || 'text_search';
-    const part = input.getAttribute('data-dashboard-filter-part') || '';
-    const value = input.value;
-
-    if (!field) {
-      return;
-    }
-
-    if (!map[field]) {
-      map[field] = {
-        field: field,
-        type: type,
-        value: ''
-      };
-    }
-
-    if (type === 'date_range') {
-      if (part === 'from') {
-        map[field].from = value;
-      } else if (part === 'to') {
-        map[field].to = value;
-      }
-      map[field].value = map[field].from || map[field].to || '';
-      return;
-    }
-
-    if (type === 'number_range') {
-      if (part === 'min') {
-        map[field].min = value;
-      } else if (part === 'max') {
-        map[field].max = value;
-      }
-      map[field].value = map[field].min || map[field].max || '';
-      return;
-    }
-
-    map[field].value = value;
-  });
-
-  return Object.keys(map)
-    .map(function (key) {
-      return map[key];
-    })
-    .filter(function (f) {
-      if (f.type === 'date_range') {
-        return String(f.from || '').trim() || String(f.to || '').trim();
-      }
-
-      if (f.type === 'number_range') {
-        return String(f.min || '').trim() || String(f.max || '').trim();
-      }
-
-      return String(f.value || '').trim();
-    });
-}
-
-
-function findAppliedFilter(appliedFilters, field) {
-  for (let i = 0; i < appliedFilters.length; i++) {
-    if (String(appliedFilters[i].field || '') === String(field || '')) {
-      return appliedFilters[i];
-    }
-  }
-
-  return {};
-}
 })();
