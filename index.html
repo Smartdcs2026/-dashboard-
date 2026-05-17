@@ -10,6 +10,7 @@
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
   <link
     href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap"
     rel="stylesheet"
@@ -21,7 +22,7 @@
 <body>
   <div id="app" class="app">
 
-    <!-- LOGIN -->
+    <!-- ================= LOGIN ================= -->
     <section id="loginView" class="login-page hidden">
       <div class="login-card">
         <div class="brand">
@@ -74,7 +75,8 @@
       </div>
     </section>
 
-    <!-- DASHBOARD PAGE -->
+
+    <!-- ================= DASHBOARD PAGE ================= -->
     <section id="dashboardView" class="dashboard-page hidden">
 
       <!-- TOPBAR -->
@@ -99,6 +101,7 @@
         </div>
       </header>
 
+
       <main class="main">
 
         <!-- HERO -->
@@ -115,6 +118,7 @@
             Refresh ผู้ใช้
           </button>
         </section>
+
 
         <!-- SOURCE MANAGER -->
         <section class="admin-layout">
@@ -208,6 +212,7 @@
           </article>
         </section>
 
+
         <!-- SHEET + MAPPING -->
         <section class="admin-layout">
           <article class="panel">
@@ -239,10 +244,12 @@
               <button id="saveMappingBtn" class="btn btn-primary" type="button" disabled>
                 บันทึก Mapping
               </button>
+
               <span id="mappingMessage" class="mapping-message"></span>
             </div>
           </article>
         </section>
+
 
         <!-- DASHBOARD PREVIEW -->
         <section class="panel">
@@ -286,6 +293,7 @@
               <button id="createDashboardBtn" class="btn btn-secondary" type="button">
                 บันทึกเป็น Dashboard จริง
               </button>
+
               <span id="createDashboardMessage" class="mapping-message"></span>
             </div>
           </div>
@@ -294,6 +302,7 @@
             กรุณาบันทึก Mapping ก่อน แล้วกดสร้าง Dashboard Preview
           </div>
         </section>
+
 
         <!-- DASHBOARD VIEWER -->
         <section class="panel">
@@ -356,6 +365,7 @@
           </div>
         </section>
 
+
         <!-- STATUS CARDS -->
         <section class="grid">
           <article class="card">
@@ -371,6 +381,7 @@
           <article class="card">
             <h3>Dashboard</h3>
             <p id="dashboardResult">ยังไม่ได้โหลดข้อมูล</p>
+
             <button id="loadDashboardsBtn" class="btn btn-secondary" type="button">
               โหลด Dashboard
             </button>
@@ -379,11 +390,13 @@
           <article class="card">
             <h3>แหล่งข้อมูล</h3>
             <p id="sourceResult">ยังไม่ได้โหลดข้อมูล</p>
+
             <button id="loadSourcesBtn" class="btn btn-secondary" type="button">
               โหลดแหล่งข้อมูล
             </button>
           </article>
         </section>
+
 
         <!-- DEBUG LOG -->
         <section class="panel">
