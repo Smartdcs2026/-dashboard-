@@ -79,6 +79,9 @@ userModeBtn: document.getElementById('userModeBtn'),
   let lastHeadersData = null;
   let currentDashboardId = '';
   let currentDashboardFilters = [];
+  let chartRenderQueue = [];
+let chartInstances = [];
+let chartUid = 0;
   let currentMode = 'admin';
 
   document.addEventListener('DOMContentLoaded', init);
@@ -898,34 +901,39 @@ if (el.userModeBtn) {
   }
 
   function renderDashboardPreview(data) {
-    if (!el.previewResult) {
-      return;
-    }
-
-    if (!data || !data.ok) {
-      setPreviewMessage((data && data.message) || 'ไม่สามารถสร้าง Preview ได้');
-      return;
-    }
-
-    el.previewResult.classList.remove('empty');
-
-    const kpisHtml = renderPreviewKpis(data.kpis || []);
-    const chartsHtml = renderPreviewCharts(data.charts || []);
-    const tableHtml = renderPreviewTable(data.table || { fields: [], rows: [] });
-
-    el.previewResult.innerHTML = `
-      <div class="preview-summary">
-        <strong>${escapeHtml(data.sourceName || '')}</strong>
-        <span> / ${escapeHtml(data.sheetName || '')}</span>
-        <span> / อ่านข้อมูล ${Number(data.totalRowsRead || 0).toLocaleString()} แถว</span>
-        <span> / หลังกรอง ${Number(data.totalRowsAfterFilter || data.totalRowsRead || 0).toLocaleString()} แถว</span>
-      </div>
-
-      ${kpisHtml}
-      ${chartsHtml}
-      ${tableHtml}
-    `;
+  if (!el.previewResult) {
+    return;
   }
+
+  if (!data || !data.ok) {
+    setPreviewMessage((data && data.message) || 'ไม่สามารถสร้าง Preview ได้');
+    return;
+  }
+
+  disposeDashboardCharts();
+  chartRenderQueue = [];
+
+  el.previewResult.classList.remove('empty');
+
+  const kpisHtml = renderPreviewKpis(data.kpis || []);
+  const chartsHtml = renderPreviewCharts(data.charts || []);
+  const tableHtml = renderPreviewTable(data.table || { fields: [], rows: [] });
+
+  el.previewResult.innerHTML = `
+    <div class="preview-summary">
+      <strong>${escapeHtml(data.sourceName || '')}</strong>
+      <span> / ${escapeHtml(data.sheetName || '')}</span>
+      <span> / อ่านข้อมูล ${Number(data.totalRowsRead || 0).toLocaleString()} แถว</span>
+      <span> / หลังกรอง ${Number(data.totalRowsAfterFilter || data.totalRowsRead || 0).toLocaleString()} แถว</span>
+    </div>
+
+    ${kpisHtml}
+    ${chartsHtml}
+    ${tableHtml}
+  `;
+
+  mountQueuedCharts();
+}
 
   async function handleCreateDashboardFromPreview() {
     if (!selectedSourceId || !selectedSheetName) {
@@ -1154,46 +1162,51 @@ if (el.userModeBtn) {
   }
 
   function renderSavedDashboard(data) {
-    if (!el.dashboardViewResult) {
-      return;
-    }
-
-    if (!data || !data.ok) {
-      el.dashboardViewResult.textContent = (data && data.message) || 'โหลด Dashboard ไม่สำเร็จ';
-      el.dashboardViewResult.classList.add('empty');
-      return;
-    }
-
-    const dashboard = data.dashboard || {};
-    const dashboardName = dashboard['ชื่อ Dashboard'] || '-';
-    const dashboardDesc = dashboard['คำอธิบาย'] || '';
-    const source = data.source || {};
-
-    el.dashboardViewResult.classList.remove('empty');
-
-    el.dashboardViewResult.innerHTML = `
-      <div class="dashboard-title-box">
-        <h3>${escapeHtml(dashboardName)}</h3>
-        <p>
-          ${escapeHtml(dashboardDesc)}
-          ${dashboardDesc ? ' | ' : ''}
-          แหล่งข้อมูล: ${escapeHtml(source.sourceName || '')}
-          / ชีท: ${escapeHtml(source.sheetName || '')}
-          / อ่านข้อมูล ${Number(data.totalRowsRead || 0).toLocaleString()} แถว
-          / หลังกรอง ${Number(data.totalRowsAfterFilter || data.totalRowsRead || 0).toLocaleString()} แถว
-        </p>
-      </div>
-
-      <div class="dashboard-section-title">ตัวชี้วัด</div>
-      ${renderPreviewKpis(data.kpis || [])}
-
-      <div class="dashboard-section-title">กราฟ</div>
-      ${renderPreviewCharts(data.chartResults || [])}
-
-      <div class="dashboard-section-title">ตารางข้อมูล</div>
-      ${renderPreviewTable(data.table || { fields: [], rows: [] })}
-    `;
+  if (!el.dashboardViewResult) {
+    return;
   }
+
+  if (!data || !data.ok) {
+    el.dashboardViewResult.textContent = (data && data.message) || 'โหลด Dashboard ไม่สำเร็จ';
+    el.dashboardViewResult.classList.add('empty');
+    return;
+  }
+
+  disposeDashboardCharts();
+  chartRenderQueue = [];
+
+  const dashboard = data.dashboard || {};
+  const dashboardName = dashboard['ชื่อ Dashboard'] || '-';
+  const dashboardDesc = dashboard['คำอธิบาย'] || '';
+  const source = data.source || {};
+
+  el.dashboardViewResult.classList.remove('empty');
+
+  el.dashboardViewResult.innerHTML = `
+    <div class="dashboard-title-box">
+      <h3>${escapeHtml(dashboardName)}</h3>
+      <p>
+        ${escapeHtml(dashboardDesc)}
+        ${dashboardDesc ? ' | ' : ''}
+        แหล่งข้อมูล: ${escapeHtml(source.sourceName || '')}
+        / ชีท: ${escapeHtml(source.sheetName || '')}
+        / อ่านข้อมูล ${Number(data.totalRowsRead || 0).toLocaleString()} แถว
+        / หลังกรอง ${Number(data.totalRowsAfterFilter || data.totalRowsRead || 0).toLocaleString()} แถว
+      </p>
+    </div>
+
+    <div class="dashboard-section-title">ตัวชี้วัด</div>
+    ${renderPreviewKpis(data.kpis || [])}
+
+    <div class="dashboard-section-title">กราฟ</div>
+    ${renderPreviewCharts(data.chartResults || [])}
+
+    <div class="dashboard-section-title">ตารางข้อมูล</div>
+    ${renderPreviewTable(data.table || { fields: [], rows: [] })}
+  `;
+
+  mountQueuedCharts();
+}
 
   function renderDashboardFilters(filters, appliedFilters) {
     if (!el.dashboardFilterBox) {
@@ -1381,21 +1394,34 @@ if (el.userModeBtn) {
   }
 
   function renderPreviewCharts(charts) {
-    if (!charts.length) {
-      return '';
-    }
-
-    const html = charts.map(function (chart) {
-      return `
-        <div class="preview-chart">
-          <h4>${escapeHtml(chart.title || '-')}</h4>
-          ${renderSimpleBarChart(chart.data || [])}
-        </div>
-      `;
-    }).join('');
-
-    return `<div class="preview-chart-grid">${html}</div>`;
+  if (!charts || !charts.length) {
+    return '';
   }
+
+  const html = charts.map(function (chart) {
+    const id = 'echart_' + (++chartUid);
+    const type = String(chart.type || 'bar').toLowerCase();
+    const sizeClass = type === 'line' ? 'chart-large' : '';
+
+    chartRenderQueue.push({
+      id: id,
+      chart: chart
+    });
+
+    return `
+      <div class="preview-chart ${sizeClass}">
+        <h4>${escapeHtml(chart.title || '-')}</h4>
+        <div id="${escapeAttr(id)}" class="echart-box"></div>
+      </div>
+    `;
+  }).join('');
+
+  return `
+    <div class="preview-chart-grid">
+      ${html}
+    </div>
+  `;
+}
 
   function renderSimpleBarChart(items) {
     if (!items.length) {
@@ -1823,5 +1849,258 @@ function setAppMode(mode) {
   } else {
     setSystemStatus('โหมด Admin Console');
   }
+}
+  function mountQueuedCharts() {
+  if (!window.echarts) {
+    mountFallbackCharts();
+    return;
+  }
+
+  requestAnimationFrame(function () {
+    chartRenderQueue.forEach(function (item) {
+      const dom = document.getElementById(item.id);
+
+      if (!dom) {
+        return;
+      }
+
+      const chart = window.echarts.init(dom);
+      const option = buildEchartOption(item.chart);
+
+      chart.setOption(option);
+      chartInstances.push(chart);
+    });
+
+    window.addEventListener('resize', resizeDashboardCharts, { passive: true });
+  });
+}
+
+
+function disposeDashboardCharts() {
+  chartInstances.forEach(function (chart) {
+    try {
+      chart.dispose();
+    } catch (error) {
+      // ignore
+    }
+  });
+
+  chartInstances = [];
+}
+
+
+function resizeDashboardCharts() {
+  chartInstances.forEach(function (chart) {
+    try {
+      chart.resize();
+    } catch (error) {
+      // ignore
+    }
+  });
+}
+
+
+function buildEchartOption(chart) {
+  const type = String(chart.type || 'bar').toLowerCase();
+  const data = Array.isArray(chart.data) ? chart.data : [];
+
+  if (type === 'line') {
+    return buildLineChartOption(chart, data);
+  }
+
+  if (type === 'donut' || type === 'pie') {
+    return buildDonutChartOption(chart, data);
+  }
+
+  if (type === 'horizontal_bar') {
+    return buildHorizontalBarOption(chart, data);
+  }
+
+  return buildBarChartOption(chart, data);
+}
+
+
+function buildLineChartOption(chart, data) {
+  return {
+    tooltip: {
+      trigger: 'axis'
+    },
+    grid: {
+      left: 45,
+      right: 24,
+      top: 28,
+      bottom: 42
+    },
+    xAxis: {
+      type: 'category',
+      data: data.map(function (x) { return x.name; }),
+      axisLabel: {
+        rotate: data.length > 8 ? 35 : 0
+      }
+    },
+    yAxis: {
+      type: 'value'
+    },
+    series: [
+      {
+        name: chart.title || '',
+        type: 'line',
+        smooth: true,
+        symbolSize: 7,
+        areaStyle: {
+          opacity: 0.12
+        },
+        data: data.map(function (x) { return Number(x.value || 0); })
+      }
+    ]
+  };
+}
+
+
+function buildBarChartOption(chart, data) {
+  return {
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: {
+        type: 'shadow'
+      }
+    },
+    grid: {
+      left: 45,
+      right: 24,
+      top: 28,
+      bottom: 72
+    },
+    xAxis: {
+      type: 'category',
+      data: data.map(function (x) { return x.name; }),
+      axisLabel: {
+        rotate: data.length > 5 ? 35 : 0,
+        overflow: 'truncate'
+      }
+    },
+    yAxis: {
+      type: 'value'
+    },
+    series: [
+      {
+        name: chart.title || '',
+        type: 'bar',
+        barMaxWidth: 42,
+        data: data.map(function (x) { return Number(x.value || 0); })
+      }
+    ]
+  };
+}
+
+
+function buildHorizontalBarOption(chart, data) {
+  const sorted = data.slice().reverse();
+
+  return {
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: {
+        type: 'shadow'
+      }
+    },
+    grid: {
+      left: 90,
+      right: 28,
+      top: 24,
+      bottom: 28
+    },
+    xAxis: {
+      type: 'value'
+    },
+    yAxis: {
+      type: 'category',
+      data: sorted.map(function (x) { return x.name; }),
+      axisLabel: {
+        overflow: 'truncate',
+        width: 80
+      }
+    },
+    series: [
+      {
+        name: chart.title || '',
+        type: 'bar',
+        barMaxWidth: 24,
+        data: sorted.map(function (x) { return Number(x.value || 0); })
+      }
+    ]
+  };
+}
+
+
+function buildDonutChartOption(chart, data) {
+  return {
+    tooltip: {
+      trigger: 'item'
+    },
+    legend: {
+      bottom: 0,
+      type: 'scroll'
+    },
+    series: [
+      {
+        name: chart.title || '',
+        type: 'pie',
+        radius: ['45%', '70%'],
+        center: ['50%', '45%'],
+        avoidLabelOverlap: true,
+        label: {
+          formatter: '{b}: {c}'
+        },
+        data: data.map(function (x) {
+          return {
+            name: x.name || '(ว่าง)',
+            value: Number(x.value || 0)
+          };
+        })
+      }
+    ]
+  };
+}
+
+
+function mountFallbackCharts() {
+  chartRenderQueue.forEach(function (item) {
+    const dom = document.getElementById(item.id);
+
+    if (!dom) {
+      return;
+    }
+
+    dom.outerHTML = renderSimpleBarChart(item.chart.data || []);
+  });
+}
+  function renderSimpleBarChart(items) {
+  if (!items.length) {
+    return '<p class="empty">ไม่มีข้อมูลสำหรับกราฟ</p>';
+  }
+
+  const max = Math.max.apply(null, items.map(function (x) {
+    return Number(x.value || 0);
+  })) || 1;
+
+  const html = items.map(function (item) {
+    const value = Number(item.value || 0);
+    const percent = Math.max(2, Math.round((value / max) * 100));
+
+    return `
+      <div class="simple-bar-item">
+        <div class="simple-bar-label" title="${escapeAttr(item.name || '')}">
+          ${escapeHtml(item.name || '(ว่าง)')}
+        </div>
+        <div class="simple-bar-track">
+          <div class="simple-bar-fill" style="width:${percent}%"></div>
+        </div>
+        <div class="simple-bar-value">${formatNumber(value)}</div>
+      </div>
+    `;
+  }).join('');
+
+  return `<div class="simple-bar-list">${html}</div>`;
 }
 })();
