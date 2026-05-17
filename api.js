@@ -208,6 +208,13 @@ function dashboardView(payload) {
     body: payload
   });
 }
+function dashboardExport(payload) {
+  return request('/api/dashboard-export', {
+    method: 'POST',
+    body: payload
+  });
+}
+  
   window.AnalyticsAPI = {
     API_BASE,
     TOKEN_KEY,
@@ -234,8 +241,9 @@ function dashboardView(payload) {
     saveMapping,
 
     dashboardPreview,
-    createDashboardFromPreview,
-    dashboardView,
-    listDashboards
+createDashboardFromPreview,
+dashboardView,
+dashboardExport,
+listDashboards
   };
 })();
