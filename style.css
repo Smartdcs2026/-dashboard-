@@ -1234,3 +1234,37 @@ input {
     width: 100%;
   }
 }
+.echart-box {
+  width: 100%;
+  height: 320px;
+  min-height: 280px;
+}
+
+.preview-chart.chart-large .echart-box {
+  height: 380px;
+}
+
+.preview-chart.chart-small .echart-box {
+  height: 260px;
+}
+
+.preview-chart-empty {
+  min-height: 220px;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  font-size: 13px;
+  border: 1px dashed var(--border);
+  border-radius: 14px;
+  background: #f8fafc;
+}
+
+@media (max-width: 720px) {
+  .echart-box {
+    height: 280px;
+  }
+
+  .preview-chart.chart-large .echart-box {
+    height: 300px;
+  }
+}
