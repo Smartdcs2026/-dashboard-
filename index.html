@@ -282,11 +282,25 @@
               </label>
             </div>
 
-            <div class="actions-row">
-              <button id="createDashboardBtn" class="btn btn-secondary" type="button">
-                บันทึกเป็น Dashboard จริง
-              </button>
-              <span id="createDashboardMessage" class="mapping-message"></span>
+            <div id="dashboardFilterBox" class="dashboard-filter-box empty">
+  เมื่อเปิด Dashboard แล้ว ระบบจะแสดงตัวกรองที่ตั้งไว้ตรงนี้
+</div>
+
+<div class="actions-row">
+  <button id="openDashboardBtn" class="btn btn-primary" type="button">
+    เปิด Dashboard
+  </button>
+
+  <button id="applyDashboardFilterBtn" class="btn btn-secondary" type="button">
+    กรองข้อมูล Dashboard
+  </button>
+
+  <button id="resetDashboardFilterBtn" class="btn btn-ghost" type="button">
+    ล้างตัวกรอง
+  </button>
+
+  <span id="dashboardViewMessage" class="mapping-message"></span>
+</div>
             </div>
           </div>
 
