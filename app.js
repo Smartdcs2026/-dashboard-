@@ -59,11 +59,15 @@ dashboardViewMessage: document.getElementById('dashboardViewMessage'),
     userDisplayName: document.getElementById('userDisplayName'),
     userRole: document.getElementById('userRole'),
     systemStatusText: document.getElementById('systemStatusText'),
+    modeSwitcher: document.getElementById('modeSwitcher'),
+adminModeBtn: document.getElementById('adminModeBtn'),
+userModeBtn: document.getElementById('userModeBtn'),
 
     healthResult: document.getElementById('healthResult'),
     meResult: document.getElementById('meResult'),
     sourceResult: document.getElementById('sourceResult'),
     dashboardResult: document.getElementById('dashboardResult'),
+    
     
     debugLog: document.getElementById('debugLog')
   };
@@ -75,6 +79,7 @@ dashboardViewMessage: document.getElementById('dashboardViewMessage'),
   let lastHeadersData = null;
   let currentDashboardId = '';
   let currentDashboardFilters = [];
+  let currentMode = 'admin';
 
   document.addEventListener('DOMContentLoaded', init);
 
@@ -153,7 +158,17 @@ dashboardViewMessage: document.getElementById('dashboardViewMessage'),
     if (el.applyDashboardFilterBtn) {
       el.applyDashboardFilterBtn.addEventListener('click', handleApplyDashboardFilter);
     }
-   
+      if (el.adminModeBtn) {
+  el.adminModeBtn.addEventListener('click', function () {
+    setAppMode('admin');
+  });
+}
+
+if (el.userModeBtn) {
+  el.userModeBtn.addEventListener('click', function () {
+    setAppMode('user');
+  });
+}
 
     if (el.resetDashboardFilterBtn) {
       el.resetDashboardFilterBtn.addEventListener('click', handleResetDashboardFilter);
@@ -1455,22 +1470,33 @@ dashboardViewMessage: document.getElementById('dashboardViewMessage'),
     if (el.userRole) el.userRole.textContent = user.role || '-';
 
     if (user.mustChangePassword) {
-      setSystemStatus('เข้าสู่ระบบสำเร็จ - แนะนำให้เปลี่ยนรหัสผ่านเริ่มต้น');
-    } else {
-      setSystemStatus('เข้าสู่ระบบสำเร็จ');
-    }
+  setSystemStatus('เข้าสู่ระบบสำเร็จ - แนะนำให้เปลี่ยนรหัสผ่านเริ่มต้น');
+} else {
+  setSystemStatus('เข้าสู่ระบบสำเร็จ');
+}
+
+applyRoleUi(user);
+    
   }
 
-  function showLogin() {
-    if (el.loginView) el.loginView.classList.remove('hidden');
-    if (el.dashboardView) el.dashboardView.classList.add('hidden');
-  }
+ function showLogin() {
+  if (el.loginView) el.loginView.classList.remove('hidden');
+  if (el.dashboardView) el.dashboardView.classList.add('hidden');
 
-  function showDashboard() {
-    if (el.loginView) el.loginView.classList.add('hidden');
-    if (el.dashboardView) el.dashboardView.classList.remove('hidden');
-  }
+  document.body.classList.remove('mode-admin', 'mode-user', 'role-viewer-only');
 
+  if (el.modeSwitcher) {
+    el.modeSwitcher.classList.add('hidden');
+  }
+}
+ function showDashboard() {
+  if (el.loginView) el.loginView.classList.add('hidden');
+  if (el.dashboardView) el.dashboardView.classList.remove('hidden');
+
+  if (el.modeSwitcher) {
+    el.modeSwitcher.classList.remove('hidden');
+  }
+}
   function setButtonLoading(button, isLoading, text) {
     if (!button) return;
 
@@ -1752,5 +1778,50 @@ function downloadTextFile(filename, content, mimeType) {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
   }, 0);
+}
+  function applyRoleUi(user) {
+  const role = String(user && user.role ? user.role : '').trim();
+  const isAdminRole = ['Super Admin', 'Admin', 'Editor'].includes(role);
+
+  if (el.modeSwitcher) {
+    el.modeSwitcher.classList.remove('hidden');
+  }
+
+  document.body.classList.remove('role-viewer-only');
+
+  if (!isAdminRole) {
+    document.body.classList.add('role-viewer-only');
+    setAppMode('user');
+    return;
+  }
+
+  setAppMode('admin');
+}
+
+
+function setAppMode(mode) {
+  currentMode = mode === 'user' ? 'user' : 'admin';
+
+  document.body.classList.remove('mode-admin', 'mode-user');
+
+  if (currentMode === 'user') {
+    document.body.classList.add('mode-user');
+  } else {
+    document.body.classList.add('mode-admin');
+  }
+
+  if (el.adminModeBtn) {
+    el.adminModeBtn.classList.toggle('active', currentMode === 'admin');
+  }
+
+  if (el.userModeBtn) {
+    el.userModeBtn.classList.toggle('active', currentMode === 'user');
+  }
+
+  if (currentMode === 'user') {
+    setSystemStatus('โหมด User Dashboard');
+  } else {
+    setSystemStatus('โหมด Admin Console');
+  }
 }
 })();
