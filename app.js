@@ -52,6 +52,7 @@
     openDashboardBtn: document.getElementById('openDashboardBtn'),
     applyDashboardFilterBtn: document.getElementById('applyDashboardFilterBtn'),
     resetDashboardFilterBtn: document.getElementById('resetDashboardFilterBtn'),
+    exportDashboardBtn: document.getElementById('exportDashboardBtn'),
     dashboardViewMessage: document.getElementById('dashboardViewMessage'),
     dashboardViewResult: document.getElementById('dashboardViewResult'),
 
@@ -63,6 +64,7 @@
     meResult: document.getElementById('meResult'),
     sourceResult: document.getElementById('sourceResult'),
     dashboardResult: document.getElementById('dashboardResult'),
+    
     debugLog: document.getElementById('debugLog')
   };
 
@@ -151,6 +153,9 @@
     if (el.applyDashboardFilterBtn) {
       el.applyDashboardFilterBtn.addEventListener('click', handleApplyDashboardFilter);
     }
+    if (el.exportDashboardBtn) {
+  el.exportDashboardBtn.addEventListener('click', handleExportDashboard);
+}
 
     if (el.resetDashboardFilterBtn) {
       el.resetDashboardFilterBtn.addEventListener('click', handleResetDashboardFilter);
@@ -1667,4 +1672,83 @@
   function escapeAttr(value) {
     return escapeHtml(value).replaceAll('`', '&#096;');
   }
+  async function handleExportDashboard() {
+  const dashboardId = currentDashboardId || (el.dashboardSelect ? el.dashboardSelect.value : '');
+  const limit = el.dashboardLimit ? Number(el.dashboardLimit.value || 5000) : 5000;
+
+  if (!dashboardId) {
+    setDashboardViewMessage('กรุณาเลือก Dashboard ก่อน Export');
+    return;
+  }
+
+  if (!window.AnalyticsAPI.dashboardExport) {
+    setDashboardViewMessage('ยังไม่พบฟังก์ชัน dashboardExport ใน api.js');
+    return;
+  }
+
+  const filters = collectDashboardFilters();
+
+  setButtonLoading(el.exportDashboardBtn, true, 'กำลัง Export...');
+  setDashboardViewMessage('กำลังเตรียมไฟล์ Export...');
+
+  try {
+    const data = await window.AnalyticsAPI.dashboardExport({
+      dashboardId: dashboardId,
+      limit: limit,
+      filters: filters
+    });
+
+    downloadTextFile(
+      data.filename || 'dashboard_export.csv',
+      data.csv || '',
+      data.mimeType || 'text/csv;charset=utf-8'
+    );
+
+    setDashboardViewMessage(
+      'Export สำเร็จ ' +
+      Number(data.totalExportRows || 0).toLocaleString() +
+      ' แถว'
+    );
+
+    writeLog({
+      step: 'dashboard_export',
+      response: {
+        ...data,
+        csv: '[CSV_CONTENT_HIDDEN]'
+      }
+    });
+
+  } catch (error) {
+    setDashboardViewMessage(error.message);
+
+    writeLog({
+      step: 'dashboard_export_error',
+      message: error.message,
+      payload: error.payload || null
+    });
+
+  } finally {
+    setButtonLoading(el.exportDashboardBtn, false, 'Export CSV');
+  }
+}
+
+
+function downloadTextFile(filename, content, mimeType) {
+  const blob = new Blob([content], {
+    type: mimeType || 'text/plain;charset=utf-8'
+  });
+
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+
+  a.href = url;
+  a.download = filename || 'download.csv';
+  document.body.appendChild(a);
+  a.click();
+
+  setTimeout(function () {
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, 0);
+}
 })();
