@@ -199,22 +199,31 @@
     });
   }
 
+  function dashboardView(payload) {
+    return request('/api/dashboard-view', {
+      method: 'POST',
+      body: payload
+    });
+  }
+
+  function dashboardExport(payload) {
+    return request('/api/dashboard-export', {
+      method: 'POST',
+      body: payload
+    });
+  }
+
   function listDashboards() {
     return request('/api/dashboards');
   }
-function dashboardView(payload) {
-  return request('/api/dashboard-view', {
-    method: 'POST',
-    body: payload
-  });
-}
-function dashboardExport(payload) {
-  return request('/api/dashboard-export', {
-    method: 'POST',
-    body: payload
-  });
-}
-  
+
+  function auditLog(payload = {}) {
+    return request('/api/audit-log', {
+      method: 'POST',
+      body: payload
+    });
+  }
+
   window.AnalyticsAPI = {
     API_BASE,
     TOKEN_KEY,
@@ -227,6 +236,7 @@ function dashboardExport(payload) {
 
     health,
     setupStatus,
+
     login,
     me,
     logout,
@@ -241,9 +251,11 @@ function dashboardExport(payload) {
     saveMapping,
 
     dashboardPreview,
-createDashboardFromPreview,
-dashboardView,
-dashboardExport,
-listDashboards
+    createDashboardFromPreview,
+    dashboardView,
+    dashboardExport,
+
+    listDashboards,
+    auditLog
   };
 })();
