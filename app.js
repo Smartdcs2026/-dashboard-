@@ -55,6 +55,9 @@ dashboardLimit: document.getElementById('dashboardLimit'),
 openDashboardBtn: document.getElementById('openDashboardBtn'),
 dashboardViewMessage: document.getElementById('dashboardViewMessage'),
 dashboardViewResult: document.getElementById('dashboardViewResult'),
+    dashboardFilterBox: document.getElementById('dashboardFilterBox'),
+applyDashboardFilterBtn: document.getElementById('applyDashboardFilterBtn'),
+resetDashboardFilterBtn: document.getElementById('resetDashboardFilterBtn'),
     debugLog: document.getElementById('debugLog')
   };
 
@@ -63,6 +66,8 @@ dashboardViewResult: document.getElementById('dashboardViewResult'),
   let selectedSourceId = '';
   let selectedSheetName = '';
   let lastHeadersData = null;
+  let currentDashboardId = '';
+let currentDashboardFilters = [];
 
   document.addEventListener('DOMContentLoaded', init);
 
@@ -117,6 +122,13 @@ dashboardViewResult: document.getElementById('dashboardViewResult'),
 
 if (el.openDashboardBtn) {
   el.openDashboardBtn.addEventListener('click', handleOpenDashboard);
+}
+    if (el.applyDashboardFilterBtn) {
+  el.applyDashboardFilterBtn.addEventListener('click', handleApplyDashboardFilter);
+}
+
+if (el.resetDashboardFilterBtn) {
+  el.resetDashboardFilterBtn.addEventListener('click', handleResetDashboardFilter);
 }
     if (el.saveMappingBtn) {
       el.saveMappingBtn.addEventListener('click', handleSaveMapping);
@@ -1057,7 +1069,8 @@ function renderDashboardPreview(data) {
     <div class="preview-summary">
       <strong>${escapeHtml(data.sourceName || '')}</strong>
       <span> / ${escapeHtml(data.sheetName || '')}</span>
-      <span> / อ่านข้อมูล ${Number(data.totalRowsRead || 0).toLocaleString()} แถว</span>
+     / อ่านข้อมูล ${Number(data.totalRowsRead || 0).toLocaleString()} แถว
+/ หลังกรอง ${Number(data.totalRowsAfterFilter || data.totalRowsRead || 0).toLocaleString()} แถว
     </div>
 
     ${kpisHtml}
@@ -1326,12 +1339,16 @@ async function handleOpenDashboard() {
   setDashboardViewMessage('กำลังโหลด Dashboard...');
 
   try {
-    const data = await window.AnalyticsAPI.dashboardView({
-      dashboardId: dashboardId,
-      limit: limit
-    });
+    currentDashboardId = dashboardId;
+
+const data = await window.AnalyticsAPI.dashboardView({
+  dashboardId: dashboardId,
+  limit: limit,
+  filters: []
+});
 
     renderSavedDashboard(data);
+    renderDashboardFilters(data.filters || []);
     setDashboardViewMessage('โหลด Dashboard สำเร็จ');
 
     writeLog({
@@ -1406,5 +1423,249 @@ function setDashboardViewMessage(message) {
   if (el.dashboardViewMessage) {
     el.dashboardViewMessage.textContent = message || '';
   }
+}
+
+  async function handleApplyDashboardFilter() {
+  const dashboardId = currentDashboardId || (el.dashboardSelect ? el.dashboardSelect.value : '');
+  const limit = el.dashboardLimit ? Number(el.dashboardLimit.value || 1000) : 1000;
+
+  if (!dashboardId) {
+    setDashboardViewMessage('กรุณาเลือก Dashboard ก่อน');
+    return;
+  }
+
+  const filters = collectDashboardFilters();
+
+  el.applyDashboardFilterBtn.disabled = true;
+  el.applyDashboardFilterBtn.textContent = 'กำลังกรอง...';
+  setDashboardViewMessage('กำลังกรองข้อมูล...');
+
+  try {
+    const data = await window.AnalyticsAPI.dashboardView({
+      dashboardId: dashboardId,
+      limit: limit,
+      filters: filters
+    });
+
+    renderSavedDashboard(data);
+    renderDashboardFilters(data.filters || [], filters);
+
+    setDashboardViewMessage(
+      'กรองข้อมูลสำเร็จ: จาก ' +
+      Number(data.totalRowsRead || 0).toLocaleString() +
+      ' แถว เหลือ ' +
+      Number(data.totalRowsAfterFilter || 0).toLocaleString() +
+      ' แถว'
+    );
+
+    writeLog({
+      step: 'dashboard_filter',
+      filters: filters,
+      response: data
+    });
+
+  } catch (error) {
+    setDashboardViewMessage(error.message);
+
+    writeLog({
+      step: 'dashboard_filter_error',
+      message: error.message,
+      payload: error.payload || null
+    });
+
+  } finally {
+    el.applyDashboardFilterBtn.disabled = false;
+    el.applyDashboardFilterBtn.textContent = 'กรองข้อมูล Dashboard';
+  }
+}
+
+
+async function handleResetDashboardFilter() {
+  if (!el.dashboardFilterBox) {
+    return;
+  }
+
+  const inputs = el.dashboardFilterBox.querySelectorAll('input, select');
+
+  inputs.forEach(function (input) {
+    input.value = '';
+  });
+
+  await handleApplyDashboardFilter();
+}
+
+
+function renderDashboardFilters(filters, appliedFilters) {
+  if (!el.dashboardFilterBox) {
+    return;
+  }
+
+  currentDashboardFilters = filters || [];
+  appliedFilters = appliedFilters || [];
+
+  if (!filters || !filters.length) {
+    el.dashboardFilterBox.classList.add('empty');
+    el.dashboardFilterBox.textContent = 'Dashboard นี้ยังไม่มีตัวกรองที่ตั้งไว้';
+    return;
+  }
+
+  el.dashboardFilterBox.classList.remove('empty');
+
+  const html = filters.map(function (filter, index) {
+    const name = filter['ชื่อตัวกรอง'] || filter['คอลัมน์ที่ใช้กรอง'] || '-';
+    const column = filter['คอลัมน์ที่ใช้กรอง'] || '';
+    const type = filter['ประเภทตัวกรอง'] || 'text_search';
+    const applied = findAppliedFilter(appliedFilters, column);
+
+    if (type === 'date_range') {
+      return `
+        <label class="dashboard-filter-item" data-filter-index="${index}">
+          <span>${escapeHtml(name)}</span>
+          <div class="dashboard-filter-date-pair">
+            <input
+              type="date"
+              data-dashboard-filter-field="${escapeAttr(column)}"
+              data-dashboard-filter-type="date_range"
+              data-dashboard-filter-part="from"
+              value="${escapeAttr(applied.from || '')}"
+            >
+            <input
+              type="date"
+              data-dashboard-filter-field="${escapeAttr(column)}"
+              data-dashboard-filter-type="date_range"
+              data-dashboard-filter-part="to"
+              value="${escapeAttr(applied.to || '')}"
+            >
+          </div>
+        </label>
+      `;
+    }
+
+    if (type === 'number_range') {
+      return `
+        <label class="dashboard-filter-item" data-filter-index="${index}">
+          <span>${escapeHtml(name)}</span>
+          <div class="dashboard-filter-number-pair">
+            <input
+              type="number"
+              data-dashboard-filter-field="${escapeAttr(column)}"
+              data-dashboard-filter-type="number_range"
+              data-dashboard-filter-part="min"
+              placeholder="ต่ำสุด"
+              value="${escapeAttr(applied.min || '')}"
+            >
+            <input
+              type="number"
+              data-dashboard-filter-field="${escapeAttr(column)}"
+              data-dashboard-filter-type="number_range"
+              data-dashboard-filter-part="max"
+              placeholder="สูงสุด"
+              value="${escapeAttr(applied.max || '')}"
+            >
+          </div>
+        </label>
+      `;
+    }
+
+    return `
+      <label class="dashboard-filter-item" data-filter-index="${index}">
+        <span>${escapeHtml(name)}</span>
+        <input
+          type="text"
+          data-dashboard-filter-field="${escapeAttr(column)}"
+          data-dashboard-filter-type="${escapeAttr(type)}"
+          placeholder="ค้นหา / กรองค่า"
+          value="${escapeAttr(applied.value || '')}"
+        >
+      </label>
+    `;
+  }).join('');
+
+  el.dashboardFilterBox.innerHTML = `
+    <div class="dashboard-filter-grid">
+      ${html}
+    </div>
+  `;
+}
+
+
+function collectDashboardFilters() {
+  if (!el.dashboardFilterBox) {
+    return [];
+  }
+
+  const map = {};
+
+  const inputs = Array.from(
+    el.dashboardFilterBox.querySelectorAll('[data-dashboard-filter-field]')
+  );
+
+  inputs.forEach(function (input) {
+    const field = input.getAttribute('data-dashboard-filter-field') || '';
+    const type = input.getAttribute('data-dashboard-filter-type') || 'text_search';
+    const part = input.getAttribute('data-dashboard-filter-part') || '';
+    const value = input.value;
+
+    if (!field) {
+      return;
+    }
+
+    if (!map[field]) {
+      map[field] = {
+        field: field,
+        type: type,
+        value: ''
+      };
+    }
+
+    if (type === 'date_range') {
+      if (part === 'from') {
+        map[field].from = value;
+      } else if (part === 'to') {
+        map[field].to = value;
+      }
+      map[field].value = map[field].from || map[field].to || '';
+      return;
+    }
+
+    if (type === 'number_range') {
+      if (part === 'min') {
+        map[field].min = value;
+      } else if (part === 'max') {
+        map[field].max = value;
+      }
+      map[field].value = map[field].min || map[field].max || '';
+      return;
+    }
+
+    map[field].value = value;
+  });
+
+  return Object.keys(map)
+    .map(function (key) {
+      return map[key];
+    })
+    .filter(function (f) {
+      if (f.type === 'date_range') {
+        return String(f.from || '').trim() || String(f.to || '').trim();
+      }
+
+      if (f.type === 'number_range') {
+        return String(f.min || '').trim() || String(f.max || '').trim();
+      }
+
+      return String(f.value || '').trim();
+    });
+}
+
+
+function findAppliedFilter(appliedFilters, field) {
+  for (let i = 0; i < appliedFilters.length; i++) {
+    if (String(appliedFilters[i].field || '') === String(field || '')) {
+      return appliedFilters[i];
+    }
+  }
+
+  return {};
 }
 })();
