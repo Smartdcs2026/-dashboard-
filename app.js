@@ -51,9 +51,9 @@
     dashboardFilterBox: document.getElementById('dashboardFilterBox'),
     openDashboardBtn: document.getElementById('openDashboardBtn'),
     applyDashboardFilterBtn: document.getElementById('applyDashboardFilterBtn'),
-    resetDashboardFilterBtn: document.getElementById('resetDashboardFilterBtn'),
-    exportDashboardBtn: document.getElementById('exportDashboardBtn'),
-    dashboardViewMessage: document.getElementById('dashboardViewMessage'),
+  resetDashboardFilterBtn: document.getElementById('resetDashboardFilterBtn'),
+exportDashboardBtn: document.getElementById('exportDashboardBtn'),
+dashboardViewMessage: document.getElementById('dashboardViewMessage'),
     dashboardViewResult: document.getElementById('dashboardViewResult'),
 
     userDisplayName: document.getElementById('userDisplayName'),
@@ -153,13 +153,14 @@
     if (el.applyDashboardFilterBtn) {
       el.applyDashboardFilterBtn.addEventListener('click', handleApplyDashboardFilter);
     }
-    if (el.exportDashboardBtn) {
-  el.exportDashboardBtn.addEventListener('click', handleExportDashboard);
-}
+   
 
     if (el.resetDashboardFilterBtn) {
       el.resetDashboardFilterBtn.addEventListener('click', handleResetDashboardFilter);
     }
+     if (el.exportDashboardBtn) {
+  el.exportDashboardBtn.addEventListener('click', handleExportDashboard);
+}
   }
 
   function resetWorkingState() {
@@ -1706,7 +1707,7 @@
 
     setDashboardViewMessage(
       'Export สำเร็จ ' +
-      Number(data.totalExportRows || 0).toLocaleString() +
+      Number(data.totalExportRows || data.totalRowsAfterFilter || 0).toLocaleString() +
       ' แถว'
     );
 
@@ -1742,7 +1743,8 @@ function downloadTextFile(filename, content, mimeType) {
   const a = document.createElement('a');
 
   a.href = url;
-  a.download = filename || 'download.csv';
+  a.download = filename || 'dashboard_export.csv';
+
   document.body.appendChild(a);
   a.click();
 
