@@ -213,8 +213,86 @@
     });
   }
 
-  function listDashboards() {
+  function listDashboards(options = {}) {
+    const includeDeleted = !!options.includeDeleted;
+
+    if (includeDeleted) {
+      return request('/api/dashboards', {
+        query: {
+          includeDeleted: true
+        }
+      });
+    }
+
     return request('/api/dashboards');
+  }
+
+  function manageDashboard(payload) {
+    return request('/api/dashboards', {
+      method: 'POST',
+      body: payload
+    });
+  }
+
+  function updateDashboard(payload) {
+    payload = payload || {};
+
+    if (!payload.dashboardId) {
+      return Promise.reject(new Error('ไม่พบ dashboardId สำหรับแก้ไข Dashboard'));
+    }
+
+    return manageDashboard({
+      mode: 'update',
+      ...payload
+    });
+  }
+
+  function updateDashboardBasic(dashboardId, dashboardName, dashboardType, description) {
+    return updateDashboard({
+      dashboardId,
+      dashboardName,
+      dashboardType,
+      description
+    });
+  }
+
+  function setDashboardPublish(dashboardId, publish) {
+    return updateDashboard({
+      dashboardId,
+      publish: !!publish
+    });
+  }
+
+  function setDashboardExport(dashboardId, allowExport) {
+    return updateDashboard({
+      dashboardId,
+      allowExport: !!allowExport
+    });
+  }
+
+  function setDashboardHidden(dashboardId, hide) {
+    return updateDashboard({
+      dashboardId,
+      hide: !!hide
+    });
+  }
+
+  function setDashboardVisibility(dashboardId, visibility) {
+    return updateDashboard({
+      dashboardId,
+      visibility: visibility
+    });
+  }
+
+  function deleteDashboard(dashboardId) {
+    if (!dashboardId) {
+      return Promise.reject(new Error('ไม่พบ dashboardId สำหรับลบ Dashboard'));
+    }
+
+    return manageDashboard({
+      mode: 'delete',
+      dashboardId
+    });
   }
 
   function auditLog(payload = {}) {
@@ -256,6 +334,17 @@
     dashboardExport,
 
     listDashboards,
+
+    manageDashboard,
+    updateDashboard,
+    updateDashboardBasic,
+    setDashboardPublish,
+    setDashboardExport,
+    setDashboardHidden,
+    setDashboardVisibility,
+    deleteDashboard,
+
     auditLog
+    
   };
 })();
