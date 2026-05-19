@@ -977,13 +977,8 @@ applyRoleUi(currentUser);
   const totalRowsAfterFilter = Number(data.totalRowsAfterFilter || totalRowsRead || 0);
   const loadedAt = formatClientDateTime(new Date());
 
-  const kpisHtml = renderPreviewKpis({
-    kpis: data.kpis || []
-  });
-
-  const chartsHtml = renderPreviewCharts({
-    charts: data.chartResults || data.charts || []
-  });
+const kpisHtml = renderPreviewKpis(data.kpis || []);
+const chartsHtml = renderPreviewCharts(data.chartResults || data.charts || []);
 
   const tableHtml = renderPreviewTable(data.table || {
     fields: [],
