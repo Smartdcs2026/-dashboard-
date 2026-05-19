@@ -342,7 +342,8 @@ if (el.userModeBtn) {
       currentUser = data.user || null;
 
       renderUser(currentUser);
-      showDashboard();
+showDashboard();
+applyRoleUi(currentUser);
 
       writeLog({
         step: 'login_success',
@@ -1615,10 +1616,27 @@ applyRoleUi(user);
   if (el.loginView) el.loginView.classList.remove('hidden');
   if (el.dashboardView) el.dashboardView.classList.add('hidden');
 
-  document.body.classList.remove('mode-admin', 'mode-user', 'role-viewer-only');
+  document.body.classList.remove(
+    'mode-admin',
+    'mode-user',
+    'role-viewer-only',
+    'role-super-admin',
+    'role-admin',
+    'role-editor',
+    'role-user',
+    'role-viewer'
+  );
 
   if (el.modeSwitcher) {
     el.modeSwitcher.classList.add('hidden');
+  }
+
+  if (el.adminModeBtn) {
+    el.adminModeBtn.classList.remove('hidden', 'active');
+  }
+
+  if (el.userModeBtn) {
+    el.userModeBtn.classList.remove('hidden', 'active');
   }
 }
  function showDashboard() {
@@ -1627,6 +1645,10 @@ applyRoleUi(user);
 
   if (el.modeSwitcher) {
     el.modeSwitcher.classList.remove('hidden');
+  }
+
+  if (currentUser) {
+    applyRoleUi(currentUser);
   }
 }
   function setButtonLoading(button, isLoading, text) {
@@ -2382,16 +2404,54 @@ function downloadTextFile(filename, content, mimeType) {
   const role = String(user && user.role ? user.role : '').trim();
   const isAdminRole = ['Super Admin', 'Admin', 'Editor'].includes(role);
 
+  document.body.classList.remove(
+    'role-super-admin',
+    'role-admin',
+    'role-editor',
+    'role-user',
+    'role-viewer',
+    'role-viewer-only'
+  );
+
+  if (role === 'Super Admin') {
+    document.body.classList.add('role-super-admin');
+  } else if (role === 'Admin') {
+    document.body.classList.add('role-admin');
+  } else if (role === 'Editor') {
+    document.body.classList.add('role-editor');
+  } else if (role === 'User') {
+    document.body.classList.add('role-user');
+  } else if (role === 'Viewer') {
+    document.body.classList.add('role-viewer');
+  }
+
   if (el.modeSwitcher) {
     el.modeSwitcher.classList.remove('hidden');
   }
 
-  document.body.classList.remove('role-viewer-only');
-
   if (!isAdminRole) {
     document.body.classList.add('role-viewer-only');
+
+    if (el.adminModeBtn) {
+      el.adminModeBtn.classList.add('hidden');
+    }
+
+    if (el.userModeBtn) {
+      el.userModeBtn.classList.remove('hidden');
+    }
+
     setAppMode('user');
     return;
+  }
+
+  document.body.classList.remove('role-viewer-only');
+
+  if (el.adminModeBtn) {
+    el.adminModeBtn.classList.remove('hidden');
+  }
+
+  if (el.userModeBtn) {
+    el.userModeBtn.classList.remove('hidden');
   }
 
   setAppMode('admin');
@@ -2399,7 +2459,15 @@ function downloadTextFile(filename, content, mimeType) {
 
 
 function setAppMode(mode) {
-  currentMode = mode === 'user' ? 'user' : 'admin';
+  const nextMode = mode === 'user' ? 'user' : 'admin';
+  const role = String(currentUser && currentUser.role ? currentUser.role : '').trim();
+  const isAdminRole = ['Super Admin', 'Admin', 'Editor'].includes(role);
+
+  if (!isAdminRole && nextMode === 'admin') {
+    currentMode = 'user';
+  } else {
+    currentMode = nextMode;
+  }
 
   document.body.classList.remove('mode-admin', 'mode-user');
 
@@ -2419,8 +2487,28 @@ function setAppMode(mode) {
 
   if (currentMode === 'user') {
     setSystemStatus('โหมด User Dashboard');
+
+    setTimeout(function () {
+      scrollDashboardViewerIntoView();
+    }, 80);
   } else {
     setSystemStatus('โหมด Admin Console');
+  }
+}
+  function scrollDashboardViewerIntoView() {
+  const target = document.querySelector('.user-dashboard-section');
+
+  if (!target) {
+    return;
+  }
+
+  try {
+    target.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start'
+    });
+  } catch (error) {
+    target.scrollIntoView();
   }
 }
   function mountQueuedCharts() {
