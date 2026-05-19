@@ -938,41 +938,108 @@ if (el.userModeBtn) {
     }
   }
 
-  function renderDashboardPreview(data) {
-  if (!el.previewResult) {
-    return;
-  }
-
-  if (!data || !data.ok) {
-    setPreviewMessage((data && data.message) || 'ไม่สามารถสร้าง Preview ได้');
+  function renderDashboardView(data) {
+  if (!el.dashboardViewResult) {
     return;
   }
 
   disposeDashboardCharts();
-  chartRenderQueue = [];
 
-  el.previewResult.classList.remove('empty');
+  const dashboard = data.dashboard || {};
+  const source = data.source || {};
 
-  const kpisHtml = renderPreviewKpis(data.kpis || []);
-  const chartsHtml = renderPreviewCharts(data.charts || []);
-  const tableHtml = renderPreviewTable(data.table || { fields: [], rows: [] });
+  const dashboardName =
+    dashboard['ชื่อ Dashboard'] ||
+    dashboard.dashboardName ||
+    'Dashboard';
 
-  el.previewResult.innerHTML = `
-    <div class="preview-summary">
-      <strong>${escapeHtml(data.sourceName || '')}</strong>
-      <span> / ${escapeHtml(data.sheetName || '')}</span>
-      <span> / อ่านข้อมูล ${Number(data.totalRowsRead || 0).toLocaleString()} แถว</span>
-      <span> / หลังกรอง ${Number(data.totalRowsAfterFilter || data.totalRowsRead || 0).toLocaleString()} แถว</span>
+  const dashboardType =
+    dashboard['ประเภท Dashboard'] ||
+    dashboard.dashboardType ||
+    '-';
+
+  const sourceName =
+    source.sourceName ||
+    source['ชื่อแหล่งข้อมูล'] ||
+    '-';
+
+  const sheetName =
+    source.sheetName ||
+    dashboard['รหัสชีทย่อยหลัก'] ||
+    '-';
+
+  const totalRowsRead = Number(data.totalRowsRead || 0);
+  const totalRowsAfterFilter = Number(data.totalRowsAfterFilter || totalRowsRead || 0);
+  const loadedAt = formatClientDateTime(new Date());
+
+  const kpisHtml = renderPreviewKpis({
+    kpis: data.kpis || []
+  });
+
+  const chartsHtml = renderPreviewCharts({
+    charts: data.chartResults || data.charts || []
+  });
+
+  const tableHtml = renderPreviewTable(data.table || {
+    fields: [],
+    rows: []
+  });
+
+  el.dashboardViewResult.classList.remove('empty');
+
+  el.dashboardViewResult.innerHTML = `
+    <div class="dashboard-title-box dashboard-live-header">
+      <div class="dashboard-live-title-row">
+        <div>
+          <h3>${escapeHtml(dashboardName)}</h3>
+          <p>
+            ประเภท: ${escapeHtml(dashboardType)}
+            · แหล่งข้อมูล: ${escapeHtml(sourceName)}
+            · ชีท: ${escapeHtml(sheetName)}
+          </p>
+        </div>
+
+        <div class="dashboard-live-time">
+          <span>โหลดล่าสุด</span>
+          <strong>${escapeHtml(loadedAt)}</strong>
+        </div>
+      </div>
+
+      <div class="dashboard-live-meta-grid">
+        <div class="dashboard-live-meta-item">
+          <span>จำนวนแถวทั้งหมด</span>
+          <strong>${totalRowsRead.toLocaleString()}</strong>
+        </div>
+
+        <div class="dashboard-live-meta-item">
+          <span>หลังกรอง</span>
+          <strong>${totalRowsAfterFilter.toLocaleString()}</strong>
+        </div>
+
+        <div class="dashboard-live-meta-item">
+          <span>KPI</span>
+          <strong>${Number((data.kpis || []).length).toLocaleString()}</strong>
+        </div>
+
+        <div class="dashboard-live-meta-item">
+          <span>กราฟ</span>
+          <strong>${Number((data.chartResults || data.charts || []).length).toLocaleString()}</strong>
+        </div>
+      </div>
     </div>
 
-    ${kpisHtml}
-    ${chartsHtml}
-    ${tableHtml}
+    <div class="dashboard-section-title">ตัวชี้วัดสำคัญ</div>
+    ${kpisHtml || '<div class="preview-chart-empty">ยังไม่มี KPI สำหรับ Dashboard นี้</div>'}
+
+    <div class="dashboard-section-title">กราฟวิเคราะห์ข้อมูล</div>
+    ${chartsHtml || '<div class="preview-chart-empty">ยังไม่มีกราฟสำหรับ Dashboard นี้</div>'}
+
+    <div class="dashboard-section-title">ตารางข้อมูล</div>
+    ${tableHtml || '<div class="preview-chart-empty">ยังไม่มีข้อมูลตาราง</div>'}
   `;
 
   mountQueuedCharts();
 }
-
   async function handleCreateDashboardFromPreview() {
     if (!selectedSourceId || !selectedSheetName) {
       setCreateDashboardMessage('กรุณาเลือกแหล่งข้อมูลและชีทก่อน');
@@ -1805,12 +1872,15 @@ applyRoleUi(user);
     );
 
     writeLog({
-      step: 'dashboard_export',
-      response: {
-        ...data,
-        csv: '[CSV_CONTENT_HIDDEN]'
-      }
-    });
+  step: 'dashboard_export',
+  response: {
+    ok: data.ok,
+    filename: data.filename,
+    totalExportRows: data.totalExportRows,
+    totalRowsAfterFilter: data.totalRowsAfterFilter,
+    csv: '[CSV_CONTENT_HIDDEN]'
+  }
+});
 
   } catch (error) {
     setDashboardViewMessage(error.message);
@@ -2605,5 +2675,21 @@ function mountFallbackCharts() {
   }).join('');
 
   return `<div class="simple-bar-list">${html}</div>`;
+}
+  function formatClientDateTime(date) {
+  const d = date instanceof Date ? date : new Date();
+
+  const pad = function (n) {
+    return String(n).padStart(2, '0');
+  };
+
+  const day = pad(d.getDate());
+  const month = pad(d.getMonth() + 1);
+  const year = d.getFullYear();
+  const hour = pad(d.getHours());
+  const minute = pad(d.getMinutes());
+  const second = pad(d.getSeconds());
+
+  return day + '/' + month + '/' + year + ' ' + hour + ':' + minute + ':' + second;
 }
 })();
