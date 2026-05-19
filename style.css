@@ -2334,3 +2334,17 @@ input {
     width: 100%;
   }
 }
+/* =====================================================
+   REGENERATE DASHBOARD BUTTON
+   ===================================================== */
+
+#regenerateManageDashboardBtn {
+  min-width: 210px;
+}
+
+@media (max-width: 720px) {
+  #regenerateManageDashboardBtn {
+    width: 100%;
+    min-width: 0;
+  }
+}
