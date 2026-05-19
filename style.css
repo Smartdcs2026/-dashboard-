@@ -1649,3 +1649,332 @@ input {
     height: 260px !important;
   }
 }
+/* =====================================================
+   DASHBOARD MANAGEMENT
+   เพิ่มส่วนนี้ท้ายไฟล์ style.css
+   ===================================================== */
+
+.dashboard-management-section {
+  overflow: visible;
+}
+
+.dashboard-manage-box {
+  padding: 18px;
+  display: grid;
+  gap: 18px;
+}
+
+.dashboard-manage-box select,
+.dashboard-manage-box input[type="text"] {
+  width: 100%;
+  min-height: 46px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 0 14px;
+  font-size: 15px;
+  color: var(--text);
+  background: #ffffff;
+  outline: none;
+  transition: 0.18s ease;
+}
+
+.dashboard-manage-box select:focus,
+.dashboard-manage-box input[type="text"]:focus {
+  border-color: rgba(37, 99, 235, 0.72);
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+}
+
+.dashboard-toggle-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.toggle-card {
+  min-height: 86px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: #ffffff;
+  cursor: pointer;
+  transition: 0.18s ease;
+}
+
+.toggle-card:hover {
+  border-color: rgba(37, 99, 235, 0.45);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+}
+
+.toggle-card input {
+  width: 18px;
+  height: 18px;
+  margin-top: 3px;
+  flex: 0 0 auto;
+  accent-color: var(--primary);
+}
+
+.toggle-card span {
+  display: grid;
+  gap: 4px;
+}
+
+.toggle-card strong {
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.25;
+}
+
+.toggle-card small {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.permission-box {
+  padding: 14px;
+  border: 1px dashed var(--border);
+  border-radius: 18px;
+  background: #f8fafc;
+}
+
+.permission-title {
+  margin-bottom: 12px;
+  color: #334155;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.permission-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.permission-grid label {
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 10px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: #ffffff;
+  cursor: pointer;
+  transition: 0.18s ease;
+}
+
+.permission-grid label:hover {
+  border-color: rgba(37, 99, 235, 0.45);
+}
+
+.permission-grid input {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  accent-color: var(--primary);
+}
+
+.permission-grid span {
+  font-size: 13px;
+  font-weight: 600;
+  color: #334155;
+  white-space: nowrap;
+}
+
+.dashboard-manage-actions {
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.dashboard-manage-actions .btn {
+  min-width: 130px;
+}
+
+.btn-danger {
+  color: #ffffff;
+  background: var(--danger);
+  box-shadow: 0 12px 24px rgba(220, 38, 38, 0.18);
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: #b91c1c;
+}
+
+.dashboard-manage-summary {
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: #ffffff;
+  color: #334155;
+  font-size: 14px;
+  line-height: 1.65;
+  overflow: auto;
+}
+
+.dashboard-manage-summary.empty {
+  color: var(--muted);
+  background: #f8fafc;
+  border-style: dashed;
+}
+
+.dashboard-manage-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.dashboard-manage-summary-item {
+  min-height: 72px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: #f8fafc;
+}
+
+.dashboard-manage-summary-item span {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.dashboard-manage-summary-item strong {
+  display: block;
+  color: var(--text);
+  font-size: 14px;
+  word-break: break-word;
+}
+
+.dashboard-status-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.dashboard-status-pill.is-on {
+  color: #166534;
+  background: #dcfce7;
+}
+
+.dashboard-status-pill.is-off {
+  color: #991b1b;
+  background: #fee2e2;
+}
+
+.dashboard-status-pill.is-muted {
+  color: #475569;
+  background: #e2e8f0;
+}
+
+/* =====================================================
+   DASHBOARD MANAGEMENT RESPONSIVE
+   ===================================================== */
+
+@media (max-width: 1100px) {
+  .dashboard-toggle-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .permission-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .dashboard-manage-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .dashboard-manage-box {
+    padding: 14px;
+    gap: 14px;
+  }
+
+  .dashboard-toggle-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .toggle-card {
+    min-height: auto;
+    padding: 12px;
+    border-radius: 16px;
+  }
+
+  .permission-box {
+    padding: 12px;
+    border-radius: 16px;
+  }
+
+  .permission-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .permission-grid label {
+    min-height: 40px;
+    padding: 8px 9px;
+  }
+
+  .permission-grid span {
+    font-size: 12px;
+  }
+
+  .dashboard-manage-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .dashboard-manage-actions .btn {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .dashboard-manage-actions .mapping-message {
+    width: 100%;
+    min-height: 20px;
+  }
+
+  .dashboard-manage-summary {
+    padding: 12px;
+    border-radius: 16px;
+    font-size: 13px;
+  }
+
+  .dashboard-manage-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-manage-summary-item {
+    min-height: auto;
+    padding: 10px;
+  }
+}
+
+@media (max-width: 420px) {
+  .permission-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-manage-box select,
+  .dashboard-manage-box input[type="text"] {
+    min-height: 44px;
+    font-size: 14px;
+  }
+
+  .toggle-card strong {
+    font-size: 14px;
+  }
+
+  .toggle-card small {
+    font-size: 12px;
+  }
+}
