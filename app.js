@@ -65,6 +65,7 @@ dashboardViewMessage: document.getElementById('dashboardViewMessage'),
     manageDashboardExport: document.getElementById('manageDashboardExport'),
     manageDashboardHidden: document.getElementById('manageDashboardHidden'),
     saveManageDashboardBtn: document.getElementById('saveManageDashboardBtn'),
+    regenerateManageDashboardBtn: document.getElementById('regenerateManageDashboardBtn'),
     hideManageDashboardBtn: document.getElementById('hideManageDashboardBtn'),
     deleteManageDashboardBtn: document.getElementById('deleteManageDashboardBtn'),
     manageDashboardMessage: document.getElementById('manageDashboardMessage'),
@@ -209,7 +210,9 @@ if (el.userModeBtn) {
     if (el.saveManageDashboardBtn) {
       el.saveManageDashboardBtn.addEventListener('click', handleSaveManageDashboard);
     }
-
+   if (el.regenerateManageDashboardBtn) {
+  el.regenerateManageDashboardBtn.addEventListener('click', handleRegenerateManageDashboard);
+}
     if (el.hideManageDashboardBtn) {
       el.hideManageDashboardBtn.addEventListener('click', handleToggleManageDashboardHidden);
     }
@@ -2344,7 +2347,75 @@ applyRoleUi(user);
     }
   }
 
+   async function handleRegenerateManageDashboard() {
+  const dashboardId = el.manageDashboardSelect ? el.manageDashboardSelect.value : '';
 
+  if (!dashboardId) {
+    setManageDashboardMessage('กรุณาเลือก Dashboard ก่อน Regenerate');
+    return;
+  }
+
+  const dash = findManageDashboardById(dashboardId);
+  const dashboardName = dash ? String(dash['ชื่อ Dashboard'] || dashboardId) : dashboardId;
+
+  const confirmed = window.confirm(
+    'ยืนยัน Regenerate Dashboard จาก Mapping ล่าสุดหรือไม่?\n\n' +
+    dashboardName +
+    '\n\nระบบจะสร้าง KPI / กราฟ / ตัวกรอง / Layout ใหม่จาก Mapping ล่าสุด แต่จะคงชื่อ Dashboard, Publish, Export และสิทธิ์เดิมไว้'
+  );
+
+  if (!confirmed) {
+    return;
+  }
+
+  if (!window.AnalyticsAPI.regenerateDashboard) {
+    setManageDashboardMessage('ยังไม่พบฟังก์ชัน regenerateDashboard ใน api.js');
+    return;
+  }
+
+  setButtonLoading(el.regenerateManageDashboardBtn, true, 'กำลัง Regenerate...');
+  setManageDashboardMessage('กำลัง Regenerate Dashboard จาก Mapping ล่าสุด...');
+
+  try {
+    const data = await window.AnalyticsAPI.regenerateDashboard(dashboardId);
+
+    setManageDashboardMessage(
+      (data.message || 'Regenerate สำเร็จ') +
+      ' | KPI ' + Number(data.totalMetrics || 0).toLocaleString() +
+      ' | กราฟ ' + Number(data.totalCharts || 0).toLocaleString() +
+      ' | ตัวกรอง ' + Number(data.totalFilters || 0).toLocaleString()
+    );
+
+    writeLog({
+      step: 'manage_dashboard_regenerate',
+      response: data
+    });
+
+    await loadDashboardOptions();
+    await loadManageDashboards();
+
+    if (el.manageDashboardSelect) {
+      el.manageDashboardSelect.value = dashboardId;
+      handleSelectManageDashboard();
+    }
+
+    if (currentDashboardId === dashboardId) {
+      await handleRefreshDashboard();
+    }
+
+  } catch (error) {
+    setManageDashboardMessage(error.message);
+
+    writeLog({
+      step: 'manage_dashboard_regenerate_error',
+      message: error.message,
+      payload: error.payload || null
+    });
+
+  } finally {
+    setButtonLoading(el.regenerateManageDashboardBtn, false, 'Regenerate จาก Mapping ล่าสุด');
+  }
+}
   async function handleDeleteManageDashboard() {
     const dashboardId = el.manageDashboardSelect ? el.manageDashboardSelect.value : '';
 
