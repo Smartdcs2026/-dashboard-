@@ -2070,3 +2070,255 @@ input {
     font-size: 18px;
   }
 }
+/* =====================================================
+   USER / VIEWER MODE FINAL
+   ===================================================== */
+
+.mode-user .admin-only,
+.mode-user .admin-debug-only,
+.role-viewer-only .admin-only,
+.role-viewer-only .admin-debug-only {
+  display: none !important;
+}
+
+.role-viewer-only #adminModeBtn {
+  display: none !important;
+}
+
+.role-viewer-only #userModeBtn {
+  width: 100%;
+  pointer-events: none;
+}
+
+.mode-user .hero-card {
+  display: none !important;
+}
+
+.mode-user .main {
+  padding-top: 14px;
+}
+
+.mode-user .mode-switcher {
+  order: -1;
+}
+
+.mode-user .user-dashboard-section {
+  display: block !important;
+  border-radius: 24px;
+  overflow: hidden;
+}
+
+.mode-user .user-dashboard-section .panel-header {
+  align-items: flex-start;
+}
+
+.mode-user .dashboard-viewer-box {
+  padding: 16px;
+  background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
+}
+
+.mode-user .dashboard-filter-box {
+  margin-bottom: 14px;
+}
+
+.mode-user .dashboard-filter-grid {
+  gap: 10px;
+}
+
+.mode-user .actions-row {
+  flex-wrap: wrap;
+}
+
+.mode-user #dashboardViewResult {
+  min-height: 260px;
+}
+
+.mode-user .preview-kpi-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.mode-user .preview-kpi {
+  min-height: 112px;
+  border-radius: 20px;
+  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.045);
+}
+
+.mode-user .preview-kpi-title {
+  font-size: 13px;
+}
+
+.mode-user .preview-kpi-value {
+  font-size: 30px;
+}
+
+.mode-user .preview-chart-grid {
+  gap: 14px;
+}
+
+.mode-user .preview-chart {
+  border-radius: 22px;
+  min-height: 300px;
+  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.045);
+}
+
+.mode-user .preview-table-wrap {
+  width: 100%;
+  max-height: 520px;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.mode-user .preview-table {
+  min-width: 760px;
+}
+
+.mode-user .dashboard-live-meta-grid {
+  gap: 10px;
+}
+
+/* =====================================================
+   USER / VIEWER MOBILE
+   ===================================================== */
+
+@media (max-width: 900px) {
+  .mode-user .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+  }
+
+  .mode-user .main {
+    padding: 12px;
+    gap: 12px;
+  }
+
+  .mode-user .mode-switcher {
+    display: grid;
+    grid-template-columns: 1fr;
+    padding: 5px;
+  }
+
+  .mode-user .mode-btn {
+    width: 100%;
+  }
+
+  .mode-user .user-dashboard-section {
+    border-radius: 20px;
+  }
+
+  .mode-user .dashboard-viewer-box {
+    padding: 12px;
+  }
+
+  .mode-user .preview-kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .mode-user .preview-chart {
+    min-height: 280px;
+  }
+
+  .mode-user .echart-box {
+    height: 280px;
+    min-height: 260px;
+  }
+}
+
+@media (max-width: 560px) {
+  .mode-user .topbar {
+    gap: 10px;
+  }
+
+  .mode-user .topbar-left {
+    align-items: center;
+  }
+
+  .mode-user .topbar h2 {
+    font-size: 15px;
+  }
+
+  .mode-user .topbar p {
+    font-size: 12px;
+  }
+
+  .mode-user .topbar-right {
+    gap: 8px;
+  }
+
+  .mode-user .user-chip {
+    padding: 7px 9px;
+  }
+
+  .mode-user .user-chip span {
+    font-size: 13px;
+  }
+
+  .mode-user .user-chip small {
+    font-size: 11px;
+  }
+
+  .mode-user #logoutBtn {
+    min-height: 38px;
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+
+  .mode-user .panel-header {
+    padding: 14px;
+  }
+
+  .mode-user .panel-header h3 {
+    font-size: 16px;
+  }
+
+  .mode-user .panel-header p {
+    font-size: 12px;
+  }
+
+  .mode-user .dashboard-viewer-box .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .mode-user .actions-row {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .mode-user .actions-row .btn {
+    width: 100%;
+  }
+
+  .mode-user .preview-kpi-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .mode-user .preview-kpi {
+    min-height: auto;
+    padding: 14px;
+  }
+
+  .mode-user .preview-kpi-value {
+    font-size: 26px;
+  }
+
+  .mode-user .preview-chart {
+    min-height: 260px;
+    padding: 12px;
+  }
+
+  .mode-user .echart-box {
+    height: 250px;
+    min-height: 240px;
+  }
+
+  .mode-user .dashboard-section-title {
+    font-size: 14px;
+  }
+
+  .mode-user .preview-table {
+    min-width: 680px;
+    font-size: 12px;
+  }
+}
