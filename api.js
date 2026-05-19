@@ -283,7 +283,16 @@
       visibility: visibility
     });
   }
+function regenerateDashboard(dashboardId) {
+  if (!dashboardId) {
+    return Promise.reject(new Error('ไม่พบ dashboardId สำหรับ Regenerate Dashboard'));
+  }
 
+  return manageDashboard({
+    mode: 'regenerate',
+    dashboardId
+  });
+}
   function deleteDashboard(dashboardId) {
     if (!dashboardId) {
       return Promise.reject(new Error('ไม่พบ dashboardId สำหรับลบ Dashboard'));
@@ -341,8 +350,9 @@
     setDashboardPublish,
     setDashboardExport,
     setDashboardHidden,
-    setDashboardVisibility,
-    deleteDashboard,
+setDashboardVisibility,
+regenerateDashboard,
+deleteDashboard,
 
     auditLog
     
