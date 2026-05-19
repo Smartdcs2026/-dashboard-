@@ -1045,6 +1045,67 @@ applyRoleUi(currentUser);
 
   mountQueuedCharts();
 }
+
+  function renderDashboardPreview(data) {
+  if (!el.previewResult) {
+    return;
+  }
+
+  if (!data || data.ok === false) {
+    setPreviewMessage((data && data.message) || 'ไม่สามารถสร้าง Dashboard Preview ได้');
+    return;
+  }
+
+  disposeDashboardCharts();
+  chartRenderQueue = [];
+
+  const kpis = data.kpis || data.metrics || [];
+  const charts = data.charts || data.chartResults || [];
+  const table = data.table || {
+    fields: [],
+    rows: []
+  };
+
+  const sourceName =
+    data.sourceName ||
+    (data.source && data.source.sourceName) ||
+    '';
+
+  const sheetName =
+    data.sheetName ||
+    (data.source && data.source.sheetName) ||
+    selectedSheetName ||
+    '';
+
+  const totalRowsRead = Number(data.totalRowsRead || 0);
+  const totalRowsAfterFilter = Number(data.totalRowsAfterFilter || totalRowsRead || 0);
+
+  el.previewResult.classList.remove('empty');
+
+  el.previewResult.innerHTML = `
+    <div class="dashboard-title-box">
+      <h3>Dashboard Preview</h3>
+      <p>
+        แหล่งข้อมูล: ${escapeHtml(sourceName || '-')}
+        / ชีท: ${escapeHtml(sheetName || '-')}
+        / อ่านข้อมูล ${totalRowsRead.toLocaleString()} แถว
+        / หลังกรอง ${totalRowsAfterFilter.toLocaleString()} แถว
+      </p>
+    </div>
+
+    <div class="dashboard-section-title">ตัวชี้วัดตัวอย่าง</div>
+    ${renderPreviewKpis(kpis)}
+
+    <div class="dashboard-section-title">กราฟตัวอย่าง</div>
+    ${renderPreviewCharts(charts)}
+
+    <div class="dashboard-section-title">ตารางตัวอย่าง</div>
+    ${renderPreviewTable(table)}
+  `;
+
+  mountQueuedCharts();
+}
+  
   async function handleCreateDashboardFromPreview() {
     if (!selectedSourceId || !selectedSheetName) {
       setCreateDashboardMessage('กรุณาเลือกแหล่งข้อมูลและชีทก่อน');
