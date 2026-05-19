@@ -311,7 +311,145 @@
           </div>
         </section>
 
+      <!-- DASHBOARD MANAGEMENT -->
+<section class="panel admin-only dashboard-management-section">
+  <div class="panel-header">
+    <div>
+      <h3>จัดการ Dashboard ที่สร้างแล้ว</h3>
+      <p>
+        แก้ชื่อ Dashboard, ประเภท, Publish, Export, สิทธิ์การมองเห็น และลบแบบ Soft Delete
+      </p>
+    </div>
 
+    <div class="actions-row">
+      <button id="reloadManageDashboardsBtn" class="btn btn-secondary" type="button">
+        โหลดรายการ Dashboard
+      </button>
+    </div>
+  </div>
+
+  <div class="dashboard-manage-box">
+    <div class="form-grid">
+      <label class="field field-wide">
+        <span>เลือก Dashboard ที่ต้องการจัดการ</span>
+        <select id="manageDashboardSelect">
+          <option value="">ยังไม่มีรายการ Dashboard</option>
+        </select>
+      </label>
+
+      <label class="field">
+        <span>ชื่อ Dashboard</span>
+        <input
+          id="manageDashboardName"
+          type="text"
+          placeholder="ชื่อ Dashboard"
+        >
+      </label>
+
+      <label class="field">
+        <span>ประเภท Dashboard</span>
+        <select id="manageDashboardType">
+          <option value="Operation">Operation</option>
+          <option value="Performance">Performance</option>
+          <option value="Audit">Audit</option>
+          <option value="Vehicle">Vehicle</option>
+          <option value="Inventory">Inventory</option>
+          <option value="Incident">Incident / Error</option>
+          <option value="Custom">Custom</option>
+          <option value="Other">Other</option>
+        </select>
+      </label>
+
+      <label class="field field-wide">
+        <span>คำอธิบาย</span>
+        <input
+          id="manageDashboardDescription"
+          type="text"
+          placeholder="คำอธิบาย Dashboard"
+        >
+      </label>
+    </div>
+
+    <div class="dashboard-toggle-grid">
+      <label class="toggle-card">
+        <input id="manageDashboardPublish" type="checkbox">
+        <span>
+          <strong>Publish</strong>
+          <small>เปิดให้ผู้ใช้เห็น Dashboard นี้</small>
+        </span>
+      </label>
+
+      <label class="toggle-card">
+        <input id="manageDashboardExport" type="checkbox">
+        <span>
+          <strong>Export CSV</strong>
+          <small>อนุญาตให้ส่งออกข้อมูลได้</small>
+        </span>
+      </label>
+
+      <label class="toggle-card">
+        <input id="manageDashboardHidden" type="checkbox">
+        <span>
+          <strong>ซ่อน Dashboard</strong>
+          <small>ซ่อนจากผู้ใช้ทั่วไปโดยไม่ลบข้อมูล</small>
+        </span>
+      </label>
+    </div>
+
+    <div class="permission-box">
+      <div class="permission-title">
+        สิทธิ์ที่มองเห็น Dashboard
+      </div>
+
+      <div class="permission-grid">
+        <label>
+          <input class="manage-dashboard-role" type="checkbox" value="Super Admin">
+          <span>Super Admin</span>
+        </label>
+
+        <label>
+          <input class="manage-dashboard-role" type="checkbox" value="Admin">
+          <span>Admin</span>
+        </label>
+
+        <label>
+          <input class="manage-dashboard-role" type="checkbox" value="Editor">
+          <span>Editor</span>
+        </label>
+
+        <label>
+          <input class="manage-dashboard-role" type="checkbox" value="User">
+          <span>User</span>
+        </label>
+
+        <label>
+          <input class="manage-dashboard-role" type="checkbox" value="Viewer">
+          <span>Viewer</span>
+        </label>
+      </div>
+    </div>
+
+    <div class="actions-row dashboard-manage-actions">
+      <button id="saveManageDashboardBtn" class="btn btn-primary" type="button">
+        บันทึกการแก้ไข
+      </button>
+
+      <button id="hideManageDashboardBtn" class="btn btn-secondary" type="button">
+        ซ่อน / เปิดกลับ
+      </button>
+
+      <button id="deleteManageDashboardBtn" class="btn btn-danger" type="button">
+        Soft Delete
+      </button>
+
+      <span id="manageDashboardMessage" class="mapping-message"></span>
+    </div>
+
+    <div id="manageDashboardSummary" class="dashboard-manage-summary empty">
+      เลือก Dashboard เพื่อดูรายละเอียดและแก้ไข
+    </div>
+  </div>
+</section>
         <!-- DASHBOARD VIEWER -->
         <section class="panel user-dashboard-section">
   <div class="panel-header">
