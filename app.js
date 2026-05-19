@@ -52,6 +52,7 @@
     openDashboardBtn: document.getElementById('openDashboardBtn'),
     applyDashboardFilterBtn: document.getElementById('applyDashboardFilterBtn'),
   resetDashboardFilterBtn: document.getElementById('resetDashboardFilterBtn'),
+    refreshDashboardBtn: document.getElementById('refreshDashboardBtn'),
 exportDashboardBtn: document.getElementById('exportDashboardBtn'),
 dashboardViewMessage: document.getElementById('dashboardViewMessage'),
     dashboardViewResult: document.getElementById('dashboardViewResult'),
@@ -193,6 +194,9 @@ if (el.userModeBtn) {
     }
      if (el.exportDashboardBtn) {
   el.exportDashboardBtn.addEventListener('click', handleExportDashboard);
+}
+    if (el.refreshDashboardBtn) {
+  el.refreshDashboardBtn.addEventListener('click', handleRefreshDashboard);
 }
         if (el.reloadManageDashboardsBtn) {
       el.reloadManageDashboardsBtn.addEventListener('click', loadManageDashboards);
@@ -1147,7 +1151,48 @@ applyRoleUi(currentUser);
       });
     }
   }
+async function handleRefreshDashboard() {
+  const dashboardId = el.dashboardSelect ? el.dashboardSelect.value : '';
 
+  if (!dashboardId && !currentDashboardId) {
+    setDashboardViewMessage('กรุณาเลือก Dashboard ก่อน Refresh');
+    return;
+  }
+
+  if (!dashboardId && currentDashboardId && el.dashboardSelect) {
+    el.dashboardSelect.value = currentDashboardId;
+  }
+
+  setDashboardViewMessage('กำลัง Refresh Dashboard...');
+
+  if (el.refreshDashboardBtn) {
+    setButtonLoading(el.refreshDashboardBtn, true, 'กำลัง Refresh...');
+  }
+
+  try {
+    await handleOpenDashboard();
+
+    writeLog({
+      step: 'dashboard_refresh',
+      dashboardId: dashboardId || currentDashboardId,
+      status: 'success'
+    });
+
+  } catch (error) {
+    setDashboardViewMessage(error.message || 'Refresh Dashboard ไม่สำเร็จ');
+
+    writeLog({
+      step: 'dashboard_refresh_error',
+      message: error.message,
+      payload: error.payload || null
+    });
+
+  } finally {
+    if (el.refreshDashboardBtn) {
+      setButtonLoading(el.refreshDashboardBtn, false, 'Refresh');
+    }
+  }
+}
   async function handleOpenDashboard() {
     const dashboardId = el.dashboardSelect ? el.dashboardSelect.value : '';
     const limit = el.dashboardLimit ? Number(el.dashboardLimit.value || 1000) : 1000;
@@ -1893,11 +1938,12 @@ applyRoleUi(user);
       ' แถว'
     );
 
-    writeLog({
+   writeLog({
   step: 'dashboard_export',
   response: {
     ok: data.ok,
     filename: data.filename,
+    mimeType: data.mimeType,
     totalExportRows: data.totalExportRows,
     totalRowsAfterFilter: data.totalRowsAfterFilter,
     csv: '[CSV_CONTENT_HIDDEN]'
