@@ -2322,3 +2322,15 @@ input {
     font-size: 12px;
   }
 }
+/* =====================================================
+   DASHBOARD VIEWER ACTIONS RESPONSIVE
+   ===================================================== */
+
+@media (max-width: 560px) {
+  .mode-user #refreshDashboardBtn,
+  .mode-user #exportDashboardBtn,
+  .mode-user #applyDashboardFilterBtn,
+  .mode-user #resetDashboardFilterBtn {
+    width: 100%;
+  }
+}
