@@ -58,6 +58,10 @@ dashboardViewMessage: document.getElementById('dashboardViewMessage'),
     dashboardViewResult: document.getElementById('dashboardViewResult'),
         reloadManageDashboardsBtn: document.getElementById('reloadManageDashboardsBtn'),
     manageDashboardSelect: document.getElementById('manageDashboardSelect'),
+    manageDashboardSearch: document.getElementById('manageDashboardSearch'),
+manageDashboardTypeFilter: document.getElementById('manageDashboardTypeFilter'),
+manageDashboardStatusFilter: document.getElementById('manageDashboardStatusFilter'),
+manageDashboardCount: document.getElementById('manageDashboardCount'),
     manageDashboardName: document.getElementById('manageDashboardName'),
     manageDashboardType: document.getElementById('manageDashboardType'),
     manageDashboardDescription: document.getElementById('manageDashboardDescription'),
@@ -206,7 +210,17 @@ if (el.userModeBtn) {
     if (el.manageDashboardSelect) {
       el.manageDashboardSelect.addEventListener('change', handleSelectManageDashboard);
     }
+   if (el.manageDashboardSearch) {
+  el.manageDashboardSearch.addEventListener('input', renderFilteredManageDashboardOptions);
+}
 
+if (el.manageDashboardTypeFilter) {
+  el.manageDashboardTypeFilter.addEventListener('change', renderFilteredManageDashboardOptions);
+}
+
+if (el.manageDashboardStatusFilter) {
+  el.manageDashboardStatusFilter.addEventListener('change', renderFilteredManageDashboardOptions);
+}
     if (el.saveManageDashboardBtn) {
       el.saveManageDashboardBtn.addEventListener('click', handleSaveManageDashboard);
     }
@@ -2038,7 +2052,7 @@ applyRoleUi(user);
       const data = await window.AnalyticsAPI.listDashboards();
       manageDashboardsCache = data.dashboards || [];
 
-      renderManageDashboardOptions(manageDashboardsCache);
+      renderFilteredManageDashboardOptions();
 
       if (el.manageDashboardSummary) {
         el.manageDashboardSummary.classList.add('empty');
@@ -2064,35 +2078,141 @@ applyRoleUi(user);
       });
     }
   }
+  function renderFilteredManageDashboardOptions() {
+  const dashboards = getFilteredManageDashboards();
+  renderManageDashboardOptions(dashboards);
+  renderManageDashboardCount(dashboards.length, manageDashboardsCache.length);
+}
 
+
+function getFilteredManageDashboards() {
+  const keyword = el.manageDashboardSearch
+    ? String(el.manageDashboardSearch.value || '').trim().toLowerCase()
+    : '';
+
+  const typeFilter = el.manageDashboardTypeFilter
+    ? String(el.manageDashboardTypeFilter.value || '').trim()
+    : '';
+
+  const statusFilter = el.manageDashboardStatusFilter
+    ? String(el.manageDashboardStatusFilter.value || '').trim()
+    : '';
+
+  return (manageDashboardsCache || []).filter(function (dash) {
+    const id = String(dash['รหัส Dashboard'] || '').trim();
+    const name = String(dash['ชื่อ Dashboard'] || '').trim();
+    const type = String(dash['ประเภท Dashboard'] || '').trim();
+
+    const publish = toBool(dash['สถานะ Publish']);
+    const allowExport = toBool(dash['อนุญาต Export']);
+
+    const text = [
+      id,
+      name,
+      type,
+      String(dash['คำอธิบาย'] || ''),
+      String(dash['สิทธิ์ที่มองเห็น'] || '')
+    ].join(' ').toLowerCase();
+
+    if (keyword && text.indexOf(keyword) < 0) {
+      return false;
+    }
+
+    if (typeFilter && type !== typeFilter) {
+      return false;
+    }
+
+    if (statusFilter === 'published' && !publish) {
+      return false;
+    }
+
+    if (statusFilter === 'unpublished' && publish) {
+      return false;
+    }
+
+    if (statusFilter === 'export_on' && !allowExport) {
+      return false;
+    }
+
+    if (statusFilter === 'export_off' && allowExport) {
+      return false;
+    }
+
+    return true;
+  });
+}
+
+
+function renderManageDashboardCount(filteredCount, totalCount) {
+  if (!el.manageDashboardCount) {
+    return;
+  }
+
+  filteredCount = Number(filteredCount || 0);
+  totalCount = Number(totalCount || 0);
+
+  if (filteredCount === totalCount) {
+    el.manageDashboardCount.textContent =
+      'Dashboard ทั้งหมด ' + totalCount.toLocaleString() + ' รายการ';
+    return;
+  }
+
+  el.manageDashboardCount.textContent =
+    'พบ ' + filteredCount.toLocaleString() +
+    ' จากทั้งหมด ' + totalCount.toLocaleString() +
+    ' รายการ';
+}
 
   function renderManageDashboardOptions(dashboards) {
-    if (!el.manageDashboardSelect) {
-      return;
-    }
-
-    if (!dashboards || !dashboards.length) {
-      el.manageDashboardSelect.innerHTML = '<option value="">ยังไม่มี Dashboard</option>';
-      return;
-    }
-
-    el.manageDashboardSelect.innerHTML =
-      '<option value="">เลือก Dashboard ที่ต้องการจัดการ</option>' +
-      dashboards.map(function (dash) {
-        const id = String(dash['รหัส Dashboard'] || '').trim();
-        const name = String(dash['ชื่อ Dashboard'] || id).trim();
-        const type = String(dash['ประเภท Dashboard'] || '').trim();
-        const publish = toBool(dash['สถานะ Publish']) ? 'เผยแพร่' : 'ไม่เผยแพร่';
-
-        return (
-          '<option value="' + escapeAttr(id) + '">' +
-          escapeHtml(name) +
-          (type ? ' (' + escapeHtml(type) + ')' : '') +
-          ' - ' + publish +
-          '</option>'
-        );
-      }).join('');
+  if (!el.manageDashboardSelect) {
+    return;
   }
+
+  const currentValue = el.manageDashboardSelect.value || '';
+
+  if (!dashboards || !dashboards.length) {
+    el.manageDashboardSelect.innerHTML = '<option value="">ไม่พบ Dashboard ตามเงื่อนไข</option>';
+    selectedManageDashboard = null;
+
+    if (el.manageDashboardSummary) {
+      el.manageDashboardSummary.classList.add('empty');
+      el.manageDashboardSummary.textContent = 'ไม่พบ Dashboard ตามเงื่อนไขที่เลือก';
+    }
+
+    return;
+  }
+
+  el.manageDashboardSelect.innerHTML =
+    '<option value="">เลือก Dashboard ที่ต้องการจัดการ</option>' +
+    dashboards.map(function (dash) {
+      const id = String(dash['รหัส Dashboard'] || '').trim();
+      const name = String(dash['ชื่อ Dashboard'] || id).trim();
+      const type = String(dash['ประเภท Dashboard'] || '').trim();
+      const publish = toBool(dash['สถานะ Publish']);
+      const allowExport = toBool(dash['อนุญาต Export']);
+
+      const statusText = [
+        publish ? 'Published' : 'Unpublished',
+        allowExport ? 'Export On' : 'Export Off'
+      ].join(' / ');
+
+      return (
+        '<option value="' + escapeAttr(id) + '">' +
+        escapeHtml(name) +
+        (type ? ' (' + escapeHtml(type) + ')' : '') +
+        ' - ' + escapeHtml(statusText) +
+        '</option>'
+      );
+    }).join('');
+
+  const stillExists = dashboards.some(function (dash) {
+    return String(dash['รหัส Dashboard'] || '').trim() === currentValue;
+  });
+
+  if (currentValue && stillExists) {
+    el.manageDashboardSelect.value = currentValue;
+  }
+}
 
 
   function handleSelectManageDashboard() {
@@ -2191,7 +2311,21 @@ applyRoleUi(user);
     if (el.manageDashboardHidden) {
       el.manageDashboardHidden.checked = false;
     }
+    if (el.manageDashboardSearch) {
+  el.manageDashboardSearch.value = '';
+}
 
+if (el.manageDashboardTypeFilter) {
+  el.manageDashboardTypeFilter.value = '';
+}
+
+if (el.manageDashboardStatusFilter) {
+  el.manageDashboardStatusFilter.value = '';
+}
+
+if (el.manageDashboardCount) {
+  el.manageDashboardCount.textContent = 'Dashboard ทั้งหมด 0 รายการ';
+}
     setManageDashboardRoles('');
 
     if (el.manageDashboardSummary) {
