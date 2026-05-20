@@ -3,14 +3,15 @@
 
   const API_BASE = 'https://dashboard.somchaibutphon.workers.dev';
   const TOKEN_KEY = 'analytics_dashboard_token';
+
   const API_TIMEOUT = {
-  DEFAULT: 30000,
-  HEALTH: 15000,
-  LOGIN: 20000,
-  READ: 45000,
-  DASHBOARD: 90000,
-  EXPORT: 120000
-};
+    DEFAULT: 30000,
+    HEALTH: 15000,
+    LOGIN: 20000,
+    READ: 45000,
+    DASHBOARD: 90000,
+    EXPORT: 120000
+  };
 
   function getToken() {
     return localStorage.getItem(TOKEN_KEY) || '';
@@ -40,19 +41,22 @@
     const text = search.toString();
     return text ? '?' + text : '';
   }
-function fetchWithTimeout(url, fetchOptions, timeoutMs) {
-  const controller = new AbortController();
-  const timer = setTimeout(function () {
-    controller.abort();
-  }, timeoutMs || API_TIMEOUT.DEFAULT);
 
-  return fetch(url, {
-    ...fetchOptions,
-    signal: controller.signal
-  }).finally(function () {
-    clearTimeout(timer);
-  });
-}
+  function fetchWithTimeout(url, fetchOptions, timeoutMs) {
+    const controller = new AbortController();
+
+    const timer = setTimeout(function () {
+      controller.abort();
+    }, timeoutMs || API_TIMEOUT.DEFAULT);
+
+    return fetch(url, {
+      ...fetchOptions,
+      signal: controller.signal
+    }).finally(function () {
+      clearTimeout(timer);
+    });
+  }
+
   async function request(path, options = {}) {
     const token = getToken();
     const method = String(options.method || 'GET').toUpperCase();
@@ -88,20 +92,18 @@ function fetchWithTimeout(url, fetchOptions, timeoutMs) {
     let data;
 
     try {
-  response = await fetchWithTimeout(
-    url,
-    fetchOptions,
-    options.timeoutMs || API_TIMEOUT.DEFAULT
-  );
-} catch (error) {
-  if (error && error.name === 'AbortError') {
-    throw new Error(
-      'API ใช้เวลานานเกินกำหนด กรุณาลองใหม่อีกครั้ง หรือลดจำนวนแถวที่โหลด'
-    );
-  }
+      response = await fetchWithTimeout(
+        url,
+        fetchOptions,
+        options.timeoutMs || API_TIMEOUT.DEFAULT
+      );
+    } catch (error) {
+      if (error && error.name === 'AbortError') {
+        throw new Error('API ใช้เวลานานเกินกำหนด กรุณาลองใหม่อีกครั้ง หรือลดจำนวนแถวที่โหลด');
+      }
 
-  throw new Error('ไม่สามารถเชื่อมต่อ API ได้: ' + error.message);
-}
+      throw new Error('ไม่สามารถเชื่อมต่อ API ได้: ' + error.message);
+    }
 
     try {
       data = await response.json();
@@ -120,41 +122,46 @@ function fetchWithTimeout(url, fetchOptions, timeoutMs) {
     return data;
   }
 
- function health() {
-  return request('/api/health', {
-    timeoutMs: API_TIMEOUT.HEALTH
-  });
-}
-  function setupStatus() {
-  return request('/api/setup-status', {
-    timeoutMs: API_TIMEOUT.HEALTH
-  });
-}
-
- async function login(username, password) {
-  const data = await request('/api/login', {
-    method: 'POST',
-    timeoutMs: API_TIMEOUT.LOGIN,
-    body: {
-      username,
-      password
-    }
-  });
-
-  if (data.token) {
-    setToken(data.token);
+  function health() {
+    return request('/api/health', {
+      timeoutMs: API_TIMEOUT.HEALTH
+    });
   }
 
-  return data;
-}
+  function setupStatus() {
+    return request('/api/setup-status', {
+      timeoutMs: API_TIMEOUT.HEALTH
+    });
+  }
+
+  async function login(username, password) {
+    const data = await request('/api/login', {
+      method: 'POST',
+      timeoutMs: API_TIMEOUT.LOGIN,
+      body: {
+        username,
+        password
+      }
+    });
+
+    if (data.token) {
+      setToken(data.token);
+    }
+
+    return data;
+  }
+
   function me() {
-    return request('/api/me');
+    return request('/api/me', {
+      timeoutMs: API_TIMEOUT.READ
+    });
   }
 
   async function logout() {
     try {
       await request('/api/logout', {
         method: 'POST',
+        timeoutMs: API_TIMEOUT.READ,
         body: {}
       });
     } finally {
@@ -165,6 +172,7 @@ function fetchWithTimeout(url, fetchOptions, timeoutMs) {
   function changePassword(oldPassword, newPassword, confirmPassword) {
     return request('/api/change-password', {
       method: 'POST',
+      timeoutMs: API_TIMEOUT.READ,
       body: {
         oldPassword,
         newPassword,
@@ -174,114 +182,113 @@ function fetchWithTimeout(url, fetchOptions, timeoutMs) {
   }
 
   function listSources() {
-  return request('/api/sources', {
-    timeoutMs: API_TIMEOUT.READ
-  });
-}
+    return request('/api/sources', {
+      timeoutMs: API_TIMEOUT.READ
+    });
+  }
+
   function createSource(payload) {
     return request('/api/sources', {
       method: 'POST',
+      timeoutMs: API_TIMEOUT.READ,
       body: payload
     });
   }
 
- function listSources() {
-  return request('/api/sources', {
-    timeoutMs: API_TIMEOUT.READ
-  });
-}
   function listSourceSheets(payload) {
-  return request('/api/source-sheets', {
-    method: 'POST',
-    timeoutMs: API_TIMEOUT.READ,
-    body: payload
-  });
-}
+    return request('/api/source-sheets', {
+      method: 'POST',
+      timeoutMs: API_TIMEOUT.READ,
+      body: payload
+    });
+  }
+
   function readHeaders(payload) {
-  return request('/api/headers', {
-    method: 'POST',
-    timeoutMs: API_TIMEOUT.READ,
-    body: payload
-  });
-}
+    return request('/api/headers', {
+      method: 'POST',
+      timeoutMs: API_TIMEOUT.READ,
+      body: payload
+    });
+  }
 
   function getMapping(payload) {
-  return request('/api/mapping', {
-    method: 'POST',
-    timeoutMs: API_TIMEOUT.READ,
-    body: {
-      mode: 'get',
-      ...payload
-    }
-  });
-}
+    return request('/api/mapping', {
+      method: 'POST',
+      timeoutMs: API_TIMEOUT.READ,
+      body: {
+        mode: 'get',
+        ...payload
+      }
+    });
+  }
 
   function saveMapping(payload) {
-  return request('/api/mapping', {
-    method: 'POST',
-    timeoutMs: API_TIMEOUT.READ,
-    body: {
-      mode: 'save',
-      ...payload
-    }
-  });
-}
+    return request('/api/mapping', {
+      method: 'POST',
+      timeoutMs: API_TIMEOUT.READ,
+      body: {
+        mode: 'save',
+        ...payload
+      }
+    });
+  }
 
   function dashboardPreview(payload) {
-  return request('/api/dashboard-preview', {
-    method: 'POST',
-    timeoutMs: API_TIMEOUT.DASHBOARD,
-    body: payload
-  });
-}
+    return request('/api/dashboard-preview', {
+      method: 'POST',
+      timeoutMs: API_TIMEOUT.DASHBOARD,
+      body: payload
+    });
+  }
 
   function createDashboardFromPreview(payload) {
     return request('/api/dashboard-create', {
       method: 'POST',
+      timeoutMs: API_TIMEOUT.DASHBOARD,
       body: payload
     });
   }
 
   function dashboardView(payload) {
-  return request('/api/dashboard-view', {
-    method: 'POST',
-    timeoutMs: API_TIMEOUT.DASHBOARD,
-    body: payload
-  });
-}
-
-  function dashboardExport(payload) {
-  return request('/api/dashboard-export', {
-    method: 'POST',
-    timeoutMs: API_TIMEOUT.EXPORT,
-    body: payload
-  });
-}
-
- function listDashboards(options = {}) {
-  const includeDeleted = !!options.includeDeleted;
-
-  if (includeDeleted) {
-    return request('/api/dashboards', {
-      timeoutMs: API_TIMEOUT.READ,
-      query: {
-        includeDeleted: true
-      }
+    return request('/api/dashboard-view', {
+      method: 'POST',
+      timeoutMs: API_TIMEOUT.DASHBOARD,
+      body: payload
     });
   }
 
-  return request('/api/dashboards', {
-    timeoutMs: API_TIMEOUT.READ
-  });
-}
+  function dashboardExport(payload) {
+    return request('/api/dashboard-export', {
+      method: 'POST',
+      timeoutMs: API_TIMEOUT.EXPORT,
+      body: payload
+    });
+  }
 
-function manageDashboard(payload) {
-  return request('/api/dashboards', {
-    method: 'POST',
-    timeoutMs: API_TIMEOUT.READ,
-    body: payload
-  });
-}
+  function listDashboards(options = {}) {
+    const includeDeleted = !!options.includeDeleted;
+
+    if (includeDeleted) {
+      return request('/api/dashboards', {
+        timeoutMs: API_TIMEOUT.READ,
+        query: {
+          includeDeleted: true
+        }
+      });
+    }
+
+    return request('/api/dashboards', {
+      timeoutMs: API_TIMEOUT.READ
+    });
+  }
+
+  function manageDashboard(payload) {
+    return request('/api/dashboards', {
+      method: 'POST',
+      timeoutMs: API_TIMEOUT.READ,
+      body: payload
+    });
+  }
 
   function updateDashboard(payload) {
     payload = payload || {};
@@ -358,6 +365,7 @@ function manageDashboard(payload) {
   function auditLog(payload = {}) {
     return request('/api/audit-log', {
       method: 'POST',
+      timeoutMs: API_TIMEOUT.READ,
       body: payload
     });
   }
