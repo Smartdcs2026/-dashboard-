@@ -330,12 +330,53 @@
 
   <div class="dashboard-manage-box">
     <div class="form-grid">
-      <label class="field field-wide">
-        <span>เลือก Dashboard ที่ต้องการจัดการ</span>
-        <select id="manageDashboardSelect">
-          <option value="">ยังไม่มีรายการ Dashboard</option>
-        </select>
-      </label>
+     <div class="dashboard-manage-toolbar field-wide">
+  <label class="field">
+    <span>ค้นหา Dashboard</span>
+    <input
+      id="manageDashboardSearch"
+      type="text"
+      placeholder="ค้นหาจากชื่อ / ID / ประเภท"
+    >
+  </label>
+
+  <label class="field">
+    <span>กรองประเภท</span>
+    <select id="manageDashboardTypeFilter">
+      <option value="">ทุกประเภท</option>
+      <option value="Operation">Operation</option>
+      <option value="Performance">Performance</option>
+      <option value="Audit">Audit</option>
+      <option value="Vehicle">Vehicle</option>
+      <option value="Inventory">Inventory</option>
+      <option value="Incident">Incident / Error</option>
+      <option value="Custom">Custom</option>
+      <option value="Other">Other</option>
+    </select>
+  </label>
+
+  <label class="field">
+    <span>สถานะ</span>
+    <select id="manageDashboardStatusFilter">
+      <option value="">ทั้งหมด</option>
+      <option value="published">Published</option>
+      <option value="unpublished">Unpublished</option>
+      <option value="export_on">Export เปิด</option>
+      <option value="export_off">Export ปิด</option>
+    </select>
+  </label>
+</div>
+
+<div class="dashboard-manage-count" id="manageDashboardCount">
+  Dashboard ทั้งหมด 0 รายการ
+</div>
+
+<label class="field field-wide">
+  <span>เลือก Dashboard ที่ต้องการจัดการ</span>
+  <select id="manageDashboardSelect">
+    <option value="">ยังไม่มีรายการ Dashboard</option>
+  </select>
+</label>
 
       <label class="field">
         <span>ชื่อ Dashboard</span>
