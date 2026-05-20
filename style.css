@@ -2348,3 +2348,50 @@ input {
     min-width: 0;
   }
 }
+/* =====================================================
+   DASHBOARD MANAGEMENT FILTER TOOLBAR
+   ===================================================== */
+
+.dashboard-manage-toolbar {
+  display: grid;
+  grid-template-columns: minmax(260px, 2fr) minmax(180px, 1fr) minmax(180px, 1fr);
+  gap: 12px;
+  align-items: end;
+}
+
+.dashboard-manage-count {
+  display: inline-flex;
+  align-items: center;
+  min-height: 38px;
+  width: fit-content;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: #f8fafc;
+  color: #334155;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+@media (max-width: 900px) {
+  .dashboard-manage-toolbar {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .dashboard-manage-count {
+    width: 100%;
+    justify-content: center;
+    border-radius: 14px;
+  }
+}
+
+@media (max-width: 560px) {
+  .dashboard-manage-toolbar {
+    gap: 8px;
+  }
+
+  .dashboard-manage-count {
+    font-size: 12px;
+  }
+}
