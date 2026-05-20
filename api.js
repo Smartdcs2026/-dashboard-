@@ -283,16 +283,18 @@
       visibility: visibility
     });
   }
-function regenerateDashboard(dashboardId) {
-  if (!dashboardId) {
-    return Promise.reject(new Error('ไม่พบ dashboardId สำหรับ Regenerate Dashboard'));
+
+  function regenerateDashboard(dashboardId) {
+    if (!dashboardId) {
+      return Promise.reject(new Error('ไม่พบ dashboardId สำหรับ Regenerate Dashboard'));
+    }
+
+    return manageDashboard({
+      mode: 'regenerate',
+      dashboardId
+    });
   }
 
-  return manageDashboard({
-    mode: 'regenerate',
-    dashboardId
-  });
-}
   function deleteDashboard(dashboardId) {
     if (!dashboardId) {
       return Promise.reject(new Error('ไม่พบ dashboardId สำหรับลบ Dashboard'));
@@ -350,11 +352,10 @@ function regenerateDashboard(dashboardId) {
     setDashboardPublish,
     setDashboardExport,
     setDashboardHidden,
-setDashboardVisibility,
-regenerateDashboard,
-deleteDashboard,
+    setDashboardVisibility,
+    regenerateDashboard,
+    deleteDashboard,
 
     auditLog
-    
   };
 })();
