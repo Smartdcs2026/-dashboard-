@@ -510,22 +510,24 @@ applyRoleUi(currentUser);
         response: data
       });
 
-    } catch (error) {
-      if (el.sourceResult) {
-        el.sourceResult.textContent = error.message;
-      }
+   } catch (error) {
+  const message = getFriendlyErrorMessage(error);
 
-      if (el.sourcesList) {
-        el.sourcesList.textContent = error.message;
-        el.sourcesList.classList.add('empty');
-      }
+  if (handleAuthErrorIfNeeded(error)) {
+    return;
+  }
 
-      writeLog({
-        step: 'sources_error',
-        message: error.message,
-        payload: error.payload || null
-      });
-    }
+  if (el.sourceResult) {
+    el.sourceResult.textContent = message;
+  }
+
+  if (el.sourcesList) {
+    el.sourcesList.textContent = message;
+    el.sourcesList.classList.add('empty');
+  }
+
+  logApiError('sources_error', error);
+}
   }
 
   function renderSources(sources) {
@@ -674,15 +676,20 @@ applyRoleUi(currentUser);
       });
 
     } catch (error) {
-      el.headersResult.textContent = error.message;
-      el.headersResult.classList.add('empty');
+  const message = getFriendlyErrorMessage(error);
 
-      writeLog({
-        step: 'headers_error',
-        message: error.message,
-        payload: error.payload || null
-      });
-    }
+  if (handleAuthErrorIfNeeded(error)) {
+    return;
+  }
+
+  el.headersResult.textContent = message;
+  el.headersResult.classList.add('empty');
+
+  logApiError('headers_error', error, {
+    sourceId: sourceId,
+    sheetName: sheetName
+  });
+}
   }
 
   function renderHeaders(data) {
@@ -861,15 +868,13 @@ applyRoleUi(currentUser);
       });
 
     } catch (error) {
-      setMappingMessage(error.message);
+  showApiError(setMappingMessage, error, 'บันทึก Mapping ไม่สำเร็จ');
+  logApiError('save_mapping_error', error, {
+    sourceId: selectedSourceId,
+    sheetName: selectedSheetName
+  });
 
-      writeLog({
-        step: 'save_mapping_error',
-        message: error.message,
-        payload: error.payload || null
-      });
-
-    } finally {
+} finally {
       setButtonLoading(el.saveMappingBtn, false, 'บันทึก Mapping');
     }
   }
@@ -949,15 +954,13 @@ applyRoleUi(currentUser);
       });
 
     } catch (error) {
-      setPreviewMessage(error.message);
+  showApiError(setPreviewMessage, error, 'สร้าง Dashboard Preview ไม่สำเร็จ');
+  logApiError('dashboard_preview_error', error, {
+    sourceId: selectedSourceId,
+    sheetName: selectedSheetName
+  });
 
-      writeLog({
-        step: 'dashboard_preview_error',
-        message: error.message,
-        payload: error.payload || null
-      });
-
-    } finally {
+} finally {
       setButtonLoading(el.previewDashboardBtn, true, 'กำลังสร้าง Preview...');
 setPreviewMessage('กำลังสร้าง Dashboard Preview...');
 setPanelLoading(el.previewResult, 'กำลังสร้าง Dashboard Preview...');
@@ -1308,20 +1311,21 @@ setPanelLoading(el.dashboardViewResult, 'กำลังโหลด Dashboard..
       });
 
     } catch (error) {
-      setDashboardViewMessage(error.message);
+  const message = getFriendlyErrorMessage(error);
 
-      if (el.dashboardViewResult) {
-        el.dashboardViewResult.textContent = error.message;
-        el.dashboardViewResult.classList.add('empty');
-      }
+  showApiError(setDashboardViewMessage, error, 'เปิด Dashboard ไม่สำเร็จ');
 
-      writeLog({
-        step: 'dashboard_view_error',
-        message: error.message,
-        payload: error.payload || null
-      });
+  if (el.dashboardViewResult) {
+    el.dashboardViewResult.textContent = message;
+    el.dashboardViewResult.classList.add('empty');
+  }
 
-    } finally {
+  logApiError('dashboard_view_error', error, {
+    dashboardId: dashboardId,
+    limit: limit
+  });
+
+} finally {
       setButtonLoading(el.openDashboardBtn, false, 'เปิด Dashboard');
     }
   }
@@ -1366,15 +1370,13 @@ setPanelLoading(el.dashboardViewResult, 'กำลังโหลด Dashboard..
       });
 
     } catch (error) {
-      setDashboardViewMessage(error.message);
+  showApiError(setDashboardViewMessage, error, 'กรองข้อมูล Dashboard ไม่สำเร็จ');
+  logApiError('dashboard_filter_error', error, {
+    dashboardId: dashboardId,
+    filters: filters
+  });
 
-      writeLog({
-        step: 'dashboard_filter_error',
-        message: error.message,
-        payload: error.payload || null
-      });
-
-    } finally {
+} finally {
       setButtonLoading(el.applyDashboardFilterBtn, false, 'กรองข้อมูล Dashboard');
     }
   }
@@ -1933,6 +1935,85 @@ function setInlineLoading(target, message) {
     el.loginBtn.textContent = isLoading ? 'กำลังเข้าสู่ระบบ...' : 'เข้าสู่ระบบ';
   }
 
+  function getFriendlyErrorMessage(error) {
+  if (!error) {
+    return 'เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ';
+  }
+
+  const message = String(error.message || '').trim();
+
+  if (message) {
+    return message;
+  }
+
+  if (error.payload && error.payload.message) {
+    return String(error.payload.message);
+  }
+
+  return 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง';
+}
+
+
+function handleAuthErrorIfNeeded(error) {
+  if (!error) {
+    return false;
+  }
+
+  const message = String(error.message || '');
+  const rawMessage = String(error.rawMessage || '');
+
+  const isAuthError =
+    error.isAuthError ||
+    message.includes('เซสชันหมดอายุ') ||
+    rawMessage.includes('Token หมดอายุ') ||
+    rawMessage.includes('กรุณาเข้าสู่ระบบก่อนใช้งาน') ||
+    rawMessage.includes('Token ไม่ถูกต้อง');
+
+  if (!isAuthError) {
+    return false;
+  }
+
+  if (window.AnalyticsAPI && window.AnalyticsAPI.clearToken) {
+    window.AnalyticsAPI.clearToken();
+  }
+
+  setSystemStatus('เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่');
+
+  window.alert('เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่');
+
+  resetWorkingState();
+  showLogin();
+
+  return true;
+}
+
+
+function showApiError(targetSetter, error, fallbackMessage) {
+  if (handleAuthErrorIfNeeded(error)) {
+    return;
+  }
+
+  const message = getFriendlyErrorMessage(error) || fallbackMessage || 'เกิดข้อผิดพลาด';
+
+  if (typeof targetSetter === 'function') {
+    targetSetter(message);
+  } else {
+    setSystemStatus(message);
+  }
+}
+
+
+function logApiError(step, error, extra) {
+  writeLog({
+    step: step,
+    message: getFriendlyErrorMessage(error),
+    rawMessage: error && error.rawMessage ? error.rawMessage : '',
+    status: error && error.status ? error.status : '',
+    payload: error && error.payload ? error.payload : null,
+    extra: extra || null
+  });
+}
+
   function writeLog(data) {
     if (el.debugLog) {
       el.debugLog.textContent = JSON.stringify(data, null, 2);
@@ -2113,16 +2194,14 @@ function setInlineLoading(target, message) {
   }
 });
 
-  } catch (error) {
-    setDashboardViewMessage(error.message);
+ } catch (error) {
+  showApiError(setDashboardViewMessage, error, 'Export CSV ไม่สำเร็จ');
+  logApiError('dashboard_export_error', error, {
+    dashboardId: dashboardId,
+    limit: limit
+  });
 
-    writeLog({
-      step: 'dashboard_export_error',
-      message: error.message,
-      payload: error.payload || null
-    });
-
-  } finally {
+} finally {
   hideGlobalLoading();
   setButtonLoading(el.exportDashboardBtn, false, 'Export CSV');
 }
@@ -2633,15 +2712,12 @@ if (el.manageDashboardCount) {
     }
 
   } catch (error) {
-    setManageDashboardMessage(error.message);
+  showApiError(setManageDashboardMessage, error, 'Regenerate Dashboard ไม่สำเร็จ');
+  logApiError('manage_dashboard_regenerate_error', error, {
+    dashboardId: dashboardId
+  });
 
-    writeLog({
-      step: 'manage_dashboard_regenerate_error',
-      message: error.message,
-      payload: error.payload || null
-    });
-
-  } finally {
+} finally {
   hideGlobalLoading();
   setButtonLoading(el.regenerateManageDashboardBtn, false, 'Regenerate จาก Mapping ล่าสุด');
 }
