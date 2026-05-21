@@ -56,7 +56,69 @@
       clearTimeout(timer);
     });
   }
+function normalizeApiErrorMessage(message, status) {
+  const text = String(message || '').trim();
 
+  if (!text) {
+    return 'เกิดข้อผิดพลาดจาก API';
+  }
+
+  if (
+    text.includes('Token หมดอายุ') ||
+    text.includes('กรุณาเข้าสู่ระบบก่อนใช้งาน') ||
+    text.includes('Token ไม่ถูกต้อง')
+  ) {
+    return 'เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่';
+  }
+
+  if (
+    text.includes('ไม่มีสิทธิ์') ||
+    status === 401 ||
+    status === 403
+  ) {
+    return 'คุณไม่มีสิทธิ์ใช้งานส่วนนี้';
+  }
+
+  if (
+    text.includes('ยังไม่มี Mapping') ||
+    text.includes('ไม่มี Mapping')
+  ) {
+    return 'ยังไม่มี Mapping ของชีทนี้ กรุณาบันทึก Mapping ก่อน';
+  }
+
+  if (
+    text.includes('ไม่พบ Dashboard') ||
+    text.includes('Dashboard นี้')
+  ) {
+    return text;
+  }
+
+  if (
+    text.includes('ไม่พบชีท') ||
+    text.includes('ไม่สามารถเปิด Google Sheet') ||
+    text.includes('ไม่สามารถเปิดแหล่งข้อมูล')
+  ) {
+    return 'ไม่สามารถอ่านข้อมูลจาก Google Sheet ได้ กรุณาตรวจสอบชื่อชีท / สิทธิ์การเข้าถึง / Sheet ID';
+  }
+
+  if (
+    text.includes('Apps Script ตอบกลับไม่ใช่ JSON') ||
+    text.includes('Worker Error') ||
+    text.includes('เชื่อมต่อ Apps Script ไม่สำเร็จ')
+  ) {
+    return 'ระบบ API Gateway หรือ Apps Script มีปัญหา กรุณาลองใหม่อีกครั้ง';
+  }
+
+  if (
+    text.includes('API ใช้เวลานานเกินกำหนด') ||
+    text.includes('timeout') ||
+    text.includes('aborted')
+  ) {
+    return 'API ใช้เวลานานเกินกำหนด กรุณาลดจำนวนแถวที่โหลด หรือกดใหม่อีกครั้ง';
+  }
+
+  return text;
+}
   async function request(path, options = {}) {
     const token = getToken();
     const method = String(options.method || 'GET').toUpperCase();
@@ -98,9 +160,12 @@
         options.timeoutMs || API_TIMEOUT.DEFAULT
       );
     } catch (error) {
-      if (error && error.name === 'AbortError') {
-        throw new Error('API ใช้เวลานานเกินกำหนด กรุณาลองใหม่อีกครั้ง หรือลดจำนวนแถวที่โหลด');
-      }
+     if (error && error.name === 'AbortError') {
+  const err = new Error('API ใช้เวลานานเกินกำหนด กรุณาลดจำนวนแถวที่โหลด หรือกดใหม่อีกครั้ง');
+  err.status = 408;
+  err.isTimeout = true;
+  throw err;
+}
 
       throw new Error('ไม่สามารถเชื่อมต่อ API ได้: ' + error.message);
     }
@@ -112,12 +177,21 @@
     }
 
     if (!response.ok || data.ok === false) {
-      const message = data.message || 'API Error';
-      const err = new Error(message);
-      err.payload = data;
-      err.status = response.status;
-      throw err;
-    }
+  const rawMessage = data.message || 'API Error';
+  const message = normalizeApiErrorMessage(rawMessage, response.status);
+
+  const err = new Error(message);
+  err.rawMessage = rawMessage;
+  err.payload = data;
+  err.status = response.status;
+  err.isAuthError =
+    message.includes('เซสชันหมดอายุ') ||
+    rawMessage.includes('Token หมดอายุ') ||
+    rawMessage.includes('กรุณาเข้าสู่ระบบก่อนใช้งาน') ||
+    rawMessage.includes('Token ไม่ถูกต้อง');
+
+  throw err;
+}
 
     return data;
   }
@@ -386,9 +460,10 @@ function clearCache(payload = {}) {
     clearToken,
 
     request,
+  normalizeApiErrorMessage,
 
-    health,
-    setupStatus,
+  health,
+  setupStatus,
 
     login,
     me,
