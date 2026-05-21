@@ -926,46 +926,46 @@ applyRoleUi(currentUser);
   }
 
   async function handleDashboardPreview() {
-    if (!selectedSourceId || !selectedSheetName) {
-      setPreviewMessage('กรุณาเลือกแหล่งข้อมูลและชีทก่อน');
-      return;
-    }
-
-    if (!window.AnalyticsAPI.dashboardPreview) {
-      setPreviewMessage('ยังไม่พบฟังก์ชัน dashboardPreview ใน api.js');
-      return;
-    }
-
-    setButtonLoading(el.previewDashboardBtn, true, 'กำลังสร้าง Preview...');
-    setPreviewMessage('กำลังสร้าง Dashboard Preview...');
-  setPanelLoading(el.previewResult, 'กำลังสร้าง Dashboard Preview...');
-    try {
-      const data = await window.AnalyticsAPI.dashboardPreview({
-        sourceId: selectedSourceId,
-        sheetName: selectedSheetName,
-        limit: 1000
-      });
-
-      renderDashboardPreview(data);
-
-      writeLog({
-        step: 'dashboard_preview',
-        response: data
-      });
-
-    } catch (error) {
-  showApiError(setPreviewMessage, error, 'สร้าง Dashboard Preview ไม่สำเร็จ');
-  logApiError('dashboard_preview_error', error, {
-    sourceId: selectedSourceId,
-    sheetName: selectedSheetName
-  });
-
-} finally {
-      setButtonLoading(el.previewDashboardBtn, true, 'กำลังสร้าง Preview...');
-setPreviewMessage('กำลังสร้าง Dashboard Preview...');
-setPanelLoading(el.previewResult, 'กำลังสร้าง Dashboard Preview...');
-    }
+  if (!selectedSourceId || !selectedSheetName) {
+    setPreviewMessage('กรุณาเลือกแหล่งข้อมูลและชีทก่อน');
+    return;
   }
+
+  if (!window.AnalyticsAPI.dashboardPreview) {
+    setPreviewMessage('ยังไม่พบฟังก์ชัน dashboardPreview ใน api.js');
+    return;
+  }
+
+  setButtonLoading(el.previewDashboardBtn, true, 'กำลังสร้าง Preview...');
+  setPreviewMessage('กำลังสร้าง Dashboard Preview...');
+  setPanelLoading(el.previewResult, 'กำลังสร้าง Dashboard Preview...');
+
+  try {
+    const data = await window.AnalyticsAPI.dashboardPreview({
+      sourceId: selectedSourceId,
+      sheetName: selectedSheetName,
+      limit: 1000
+    });
+
+    renderDashboardPreview(data);
+
+    writeLog({
+      step: 'dashboard_preview',
+      response: data
+    });
+
+  } catch (error) {
+    showApiError(setPreviewMessage, error, 'สร้าง Dashboard Preview ไม่สำเร็จ');
+
+    logApiError('dashboard_preview_error', error, {
+      sourceId: selectedSourceId,
+      sheetName: selectedSheetName
+    });
+
+  } finally {
+    setButtonLoading(el.previewDashboardBtn, false, 'สร้าง Dashboard Preview');
+  }
+}
 
   function renderDashboardView(data) {
   if (!el.dashboardViewResult) {
@@ -1301,7 +1301,7 @@ setPanelLoading(el.dashboardViewResult, 'กำลังโหลด Dashboard..
         filters: []
       });
 
-      renderSavedDashboard(data);
+      renderDashboardView(data);
       renderDashboardFilters(data.filters || []);
       setDashboardViewMessage('โหลด Dashboard สำเร็จ');
 
@@ -1352,7 +1352,7 @@ setPanelLoading(el.dashboardViewResult, 'กำลังโหลด Dashboard..
         filters: filters
       });
 
-      renderSavedDashboard(data);
+      renderDashboardView(data);
       renderDashboardFilters(data.filters || [], filters);
 
       setDashboardViewMessage(
@@ -1909,13 +1909,18 @@ function setInlineLoading(target, message) {
     }
   }
 
-  function setPreviewMessage(message) {
-    if (el.previewResult && message) {
-      el.previewResult.textContent = message;
-      el.previewResult.classList.add('empty');
-    }
+function setPreviewMessage(message) {
+  if (!el.previewResult) {
+    return;
   }
 
+  if (!message) {
+    return;
+  }
+
+  el.previewResult.textContent = message;
+  el.previewResult.classList.add('empty');
+}
   function setCreateDashboardMessage(message) {
     if (el.createDashboardMessage) {
       el.createDashboardMessage.textContent = message || '';
