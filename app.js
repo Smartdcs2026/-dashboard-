@@ -86,6 +86,8 @@ userModeBtn: document.getElementById('userModeBtn'),
     meResult: document.getElementById('meResult'),
     sourceResult: document.getElementById('sourceResult'),
     dashboardResult: document.getElementById('dashboardResult'),
+    globalLoadingOverlay: document.getElementById('globalLoadingOverlay'),
+globalLoadingText: document.getElementById('globalLoadingText'),
     
     
     debugLog: document.getElementById('debugLog')
@@ -931,7 +933,7 @@ applyRoleUi(currentUser);
 
     setButtonLoading(el.previewDashboardBtn, true, 'กำลังสร้าง Preview...');
     setPreviewMessage('กำลังสร้าง Dashboard Preview...');
-
+  setPanelLoading(el.previewResult, 'กำลังสร้าง Dashboard Preview...');
     try {
       const data = await window.AnalyticsAPI.dashboardPreview({
         sourceId: selectedSourceId,
@@ -956,7 +958,9 @@ applyRoleUi(currentUser);
       });
 
     } finally {
-      setButtonLoading(el.previewDashboardBtn, false, 'สร้าง Dashboard Preview');
+      setButtonLoading(el.previewDashboardBtn, true, 'กำลังสร้าง Preview...');
+setPreviewMessage('กำลังสร้าง Dashboard Preview...');
+setPanelLoading(el.previewResult, 'กำลังสร้าง Dashboard Preview...');
     }
   }
 
@@ -1185,6 +1189,7 @@ const chartsHtml = renderPreviewCharts(data.chartResults || data.charts || []);
     }
 
     el.dashboardSelect.innerHTML = '<option value="">กำลังโหลด...</option>';
+    setDashboardViewMessage('กำลังโหลดรายการ Dashboard...');
 
     try {
       const data = await window.AnalyticsAPI.listDashboards();
@@ -1283,7 +1288,8 @@ async function handleRefreshDashboard() {
     currentDashboardId = dashboardId;
 
     setButtonLoading(el.openDashboardBtn, true, 'กำลังเปิด Dashboard...');
-    setDashboardViewMessage('กำลังโหลด Dashboard...');
+setDashboardViewMessage('กำลังโหลด Dashboard...');
+setPanelLoading(el.dashboardViewResult, 'กำลังโหลด Dashboard...');
 
     try {
       const data = await window.AnalyticsAPI.dashboardView({
@@ -1333,6 +1339,7 @@ async function handleRefreshDashboard() {
 
     setButtonLoading(el.applyDashboardFilterBtn, true, 'กำลังกรอง...');
     setDashboardViewMessage('กำลังกรองข้อมูล...');
+    setPanelLoading(el.dashboardViewResult, 'กำลังกรองข้อมูล Dashboard...');
 
     try {
       const data = await window.AnalyticsAPI.dashboardView({
@@ -1769,6 +1776,88 @@ applyRoleUi(user);
     applyRoleUi(currentUser);
   }
 }
+  function ensureGlobalLoadingOverlay() {
+  let overlay = document.getElementById('globalLoadingOverlay');
+
+  if (overlay) {
+    el.globalLoadingOverlay = overlay;
+    el.globalLoadingText = document.getElementById('globalLoadingText');
+    return overlay;
+  }
+
+  overlay = document.createElement('div');
+  overlay.id = 'globalLoadingOverlay';
+  overlay.className = 'global-loading-overlay hidden';
+  overlay.innerHTML = `
+    <div class="global-loading-card">
+      <div class="loading-spinner"></div>
+      <div id="globalLoadingText" class="global-loading-text">
+        กำลังประมวลผล...
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  el.globalLoadingOverlay = overlay;
+  el.globalLoadingText = document.getElementById('globalLoadingText');
+
+  return overlay;
+}
+
+
+function showGlobalLoading(message) {
+  const overlay = ensureGlobalLoadingOverlay();
+
+  if (el.globalLoadingText) {
+    el.globalLoadingText.textContent = message || 'กำลังประมวลผล...';
+  }
+
+  overlay.classList.remove('hidden');
+  document.body.classList.add('is-loading');
+}
+
+
+function hideGlobalLoading() {
+  const overlay = ensureGlobalLoadingOverlay();
+  overlay.classList.add('hidden');
+  document.body.classList.remove('is-loading');
+}
+
+
+function setPanelLoading(target, message) {
+  if (!target) {
+    return;
+  }
+
+  target.classList.remove('empty');
+  target.innerHTML = `
+    <div class="panel-loading-box">
+      <div class="loading-spinner small"></div>
+      <div>${escapeHtml(message || 'กำลังโหลดข้อมูล...')}</div>
+    </div>
+
+    <div class="skeleton-grid">
+      <div class="skeleton-card"></div>
+      <div class="skeleton-card"></div>
+      <div class="skeleton-card"></div>
+    </div>
+  `;
+}
+
+
+function setInlineLoading(target, message) {
+  if (!target) {
+    return;
+  }
+
+  target.innerHTML = `
+    <span class="inline-loading">
+      <span class="loading-spinner mini"></span>
+      ${escapeHtml(message || 'กำลังโหลด...')}
+    </span>
+  `;
+}
   function setButtonLoading(button, isLoading, text) {
     if (!button) return;
 
@@ -1991,6 +2080,7 @@ applyRoleUi(user);
 
   setButtonLoading(el.exportDashboardBtn, true, 'กำลัง Export...');
   setDashboardViewMessage('กำลังเตรียมไฟล์ Export...');
+    showGlobalLoading('กำลังเตรียมไฟล์ Export CSV...');
 
   try {
     const data = await window.AnalyticsAPI.dashboardExport({
@@ -2033,8 +2123,9 @@ applyRoleUi(user);
     });
 
   } finally {
-    setButtonLoading(el.exportDashboardBtn, false, 'Export CSV');
-  }
+  hideGlobalLoading();
+  setButtonLoading(el.exportDashboardBtn, false, 'Export CSV');
+}
 }
 
   async function loadManageDashboards() {
@@ -2046,6 +2137,9 @@ applyRoleUi(user);
     selectedManageDashboard = null;
 
     el.manageDashboardSelect.innerHTML = '<option value="">กำลังโหลด Dashboard...</option>';
+    if (el.manageDashboardSummary) {
+  setPanelLoading(el.manageDashboardSummary, 'กำลังโหลดรายการ Dashboard...');
+}
     resetManageDashboardForm(false);
 
     try {
@@ -2509,6 +2603,7 @@ if (el.manageDashboardCount) {
 
   setButtonLoading(el.regenerateManageDashboardBtn, true, 'กำลัง Regenerate...');
   setManageDashboardMessage('กำลัง Regenerate Dashboard จาก Mapping ล่าสุด...');
+     showGlobalLoading('กำลัง Regenerate Dashboard จาก Mapping ล่าสุด...');
 
   try {
     const data = await window.AnalyticsAPI.regenerateDashboard(dashboardId);
@@ -2547,8 +2642,9 @@ if (el.manageDashboardCount) {
     });
 
   } finally {
-    setButtonLoading(el.regenerateManageDashboardBtn, false, 'Regenerate จาก Mapping ล่าสุด');
-  }
+  hideGlobalLoading();
+  setButtonLoading(el.regenerateManageDashboardBtn, false, 'Regenerate จาก Mapping ล่าสุด');
+}
 }
   async function handleDeleteManageDashboard() {
     const dashboardId = el.manageDashboardSelect ? el.manageDashboardSelect.value : '';
