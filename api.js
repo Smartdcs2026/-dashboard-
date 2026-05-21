@@ -361,7 +361,13 @@
       dashboardId
     });
   }
-
+function clearCache(payload = {}) {
+  return request('/api/clear-cache', {
+    method: 'POST',
+    timeoutMs: API_TIMEOUT.READ,
+    body: payload
+  });
+}
   function auditLog(payload = {}) {
     return request('/api/audit-log', {
       method: 'POST',
@@ -413,6 +419,7 @@
     setDashboardVisibility,
     regenerateDashboard,
     deleteDashboard,
+    clearCache,
 
     auditLog
   };
