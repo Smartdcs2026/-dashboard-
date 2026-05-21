@@ -2537,3 +2537,22 @@ body.is-loading input {
     padding: 18px;
   }
 }
+.form-message,
+.mapping-message {
+  font-weight: 700;
+}
+
+.error-text {
+  color: var(--danger);
+  font-weight: 800;
+}
+
+.warning-text {
+  color: var(--warning);
+  font-weight: 800;
+}
+
+.success-text {
+  color: var(--success);
+  font-weight: 800;
+}
