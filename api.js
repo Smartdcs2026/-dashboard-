@@ -269,13 +269,18 @@ function normalizeApiErrorMessage(message, status) {
     });
   }
 
-  function listSourceSheets(payload) {
-    return request('/api/source-sheets', {
-      method: 'POST',
-      timeoutMs: API_TIMEOUT.READ,
-      body: payload
-    });
-  }
+ function listSourceSheets(payload) {
+  payload = payload || {};
+
+  return request('/api/source-sheets', {
+    method: 'POST',
+    timeoutMs: API_TIMEOUT.DASHBOARD,
+    body: {
+      ...payload,
+      includeMeta: false
+    }
+  });
+}
 
   function readHeaders(payload) {
     return request('/api/headers', {
