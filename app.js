@@ -607,47 +607,55 @@ applyRoleUi(currentUser);
   }
 
   function renderSourceSheets(sheets) {
-    if (!el.sourceSheetsList) return;
+  if (!el.sourceSheetsList) return;
 
-    el.sourceSheetsList.innerHTML = '';
+  el.sourceSheetsList.innerHTML = '';
 
-    if (!sheets || !sheets.length) {
-      el.sourceSheetsList.textContent = selectedSourceId
-        ? 'ไม่พบชีทในแหล่งข้อมูลนี้'
-        : 'กรุณาเลือกแหล่งข้อมูลก่อน';
+  if (!sheets || !sheets.length) {
+    el.sourceSheetsList.textContent = selectedSourceId
+      ? 'ไม่พบชีทในแหล่งข้อมูลนี้'
+      : 'กรุณาเลือกแหล่งข้อมูลก่อน';
 
-      el.sourceSheetsList.classList.add('empty');
-      return;
-    }
-
-    el.sourceSheetsList.classList.remove('empty');
-
-    sheets.forEach(function (sheet) {
-      const sheetName = sheet.sheetName || '';
-
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'sheet-item' + (sheetName === selectedSheetName ? ' active' : '');
-
-      btn.innerHTML = `
-        <div class="item-title">
-          <span>${escapeHtml(sheetName)}</span>
-          <span class="badge badge-muted">${Number(sheet.lastRow || 0).toLocaleString()} rows</span>
-        </div>
-        <div class="item-meta">
-          <div>คอลัมน์: ${Number(sheet.lastColumn || 0).toLocaleString()}</div>
-        </div>
-      `;
-
-      btn.addEventListener('click', function () {
-        selectedSheetName = sheetName;
-        renderSourceSheets(sheets);
-        readHeaders(selectedSourceId, selectedSheetName);
-      });
-
-      el.sourceSheetsList.appendChild(btn);
-    });
+    el.sourceSheetsList.classList.add('empty');
+    return;
   }
+
+  el.sourceSheetsList.classList.remove('empty');
+
+  sheets.forEach(function (sheet) {
+    const sheetName = sheet.sheetName || '';
+
+    const rowText = sheet.lastRow
+      ? Number(sheet.lastRow || 0).toLocaleString() + ' rows'
+      : 'เลือกชีท';
+
+    const metaText = sheet.lastColumn
+      ? 'คอลัมน์: ' + Number(sheet.lastColumn || 0).toLocaleString()
+      : 'กดเลือกเพื่ออ่านหัวคอลัมน์';
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'sheet-item' + (sheetName === selectedSheetName ? ' active' : '');
+
+    btn.innerHTML = `
+      <div class="item-title">
+        <span>${escapeHtml(sheetName)}</span>
+        <span class="badge badge-muted">${escapeHtml(rowText)}</span>
+      </div>
+      <div class="item-meta">
+        <div>${escapeHtml(metaText)}</div>
+      </div>
+    `;
+
+    btn.addEventListener('click', function () {
+      selectedSheetName = sheetName;
+      renderSourceSheets(sheets);
+      readHeaders(selectedSourceId, selectedSheetName);
+    });
+
+    el.sourceSheetsList.appendChild(btn);
+  });
+}
 
   async function readHeaders(sourceId, sheetName) {
     if (!el.headersResult) return;
