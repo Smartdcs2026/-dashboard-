@@ -2594,3 +2594,42 @@ body.is-loading input {
     width: 100%;
   }
 }
+
+/* =====================================================
+   RETRY BOX
+   ===================================================== */
+
+.retry-box {
+  display: grid;
+  gap: 10px;
+  padding: 18px;
+  border: 1px solid #fecaca;
+  border-radius: 18px;
+  background: #fff7f7;
+}
+
+.retry-title {
+  color: #991b1b;
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.retry-message {
+  color: #7f1d1d;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.retry-box .btn {
+  width: fit-content;
+}
+
+@media (max-width: 560px) {
+  .retry-box {
+    padding: 14px;
+  }
+
+  .retry-box .btn {
+    width: 100%;
+  }
+}
