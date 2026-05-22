@@ -988,7 +988,7 @@ applyRoleUi(currentUser);
     });
   }
 
-  async function handleDashboardPreview() {
+ async function handleDashboardPreview() {
   if (!selectedSourceId || !selectedSheetName) {
     setPreviewMessage('กรุณาเลือกแหล่งข้อมูลและชีทก่อน');
     return;
