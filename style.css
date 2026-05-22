@@ -2633,3 +2633,13 @@ body.is-loading input {
     width: 100%;
   }
 }
+/* =====================================================
+   EXPORT EXCEL BUTTON RESPONSIVE
+   ===================================================== */
+
+@media (max-width: 560px) {
+  .mode-user #exportDashboardExcelBtn,
+  #exportDashboardExcelBtn {
+    width: 100%;
+  }
+}
