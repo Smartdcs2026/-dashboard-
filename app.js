@@ -54,6 +54,7 @@
   resetDashboardFilterBtn: document.getElementById('resetDashboardFilterBtn'),
     refreshDashboardBtn: document.getElementById('refreshDashboardBtn'),
 exportDashboardBtn: document.getElementById('exportDashboardBtn'),
+    exportDashboardExcelBtn: document.getElementById('exportDashboardExcelBtn'),
 dashboardViewMessage: document.getElementById('dashboardViewMessage'),
     dashboardViewResult: document.getElementById('dashboardViewResult'),
         reloadManageDashboardsBtn: document.getElementById('reloadManageDashboardsBtn'),
@@ -201,6 +202,9 @@ if (el.userModeBtn) {
     }
      if (el.exportDashboardBtn) {
   el.exportDashboardBtn.addEventListener('click', handleExportDashboard);
+}
+    if (el.exportDashboardExcelBtn) {
+  el.exportDashboardExcelBtn.addEventListener('click', handleExportDashboardExcel);
 }
     if (el.refreshDashboardBtn) {
   el.refreshDashboardBtn.addEventListener('click', handleRefreshDashboard);
@@ -2275,6 +2279,94 @@ function logApiError(step, error, extra) {
 }
 }
 
+  async function handleExportDashboardExcel() {
+  const dashboardId = currentDashboardId || (el.dashboardSelect ? el.dashboardSelect.value : '');
+  const limit = el.dashboardLimit ? Number(el.dashboardLimit.value || 5000) : 5000;
+
+  if (!dashboardId) {
+    setDashboardViewMessage('กรุณาเลือก Dashboard ก่อน Export Excel');
+    return;
+  }
+
+  if (!window.XLSX) {
+    setDashboardViewMessage('ยังไม่พบไลบรารี Excel กรุณาตรวจสอบการโหลด SheetJS ใน index.html');
+    return;
+  }
+
+  const filters = collectDashboardFilters();
+
+  setButtonLoading(el.exportDashboardExcelBtn, true, 'กำลัง Export Excel...');
+  setDashboardViewMessage('กำลังเตรียมไฟล์ Excel...');
+  showGlobalLoading('กำลังสร้างไฟล์ Excel...');
+
+  try {
+    const data = await window.AnalyticsAPI.dashboardExport({
+      dashboardId: dashboardId,
+      limit: limit,
+      filters: filters
+    });
+
+    if (!data.csv) {
+      throw new Error('ไม่พบข้อมูล CSV สำหรับแปลงเป็น Excel');
+    }
+
+    const workbook = XLSX.read(data.csv, {
+      type: 'string'
+    });
+
+    const filename = buildExcelFilename(data.filename || 'dashboard-export.csv');
+
+    XLSX.writeFile(workbook, filename);
+
+    setDashboardViewMessage(
+      'Export Excel สำเร็จ: ' +
+      filename +
+      ' | ' +
+      Number(data.totalExportRows || data.totalRowsAfterFilter || 0).toLocaleString() +
+      ' แถว'
+    );
+
+    writeLog({
+      step: 'dashboard_export_excel',
+      response: {
+        ok: data.ok,
+        filename: filename,
+        sourceFilename: data.filename,
+        totalExportRows: data.totalExportRows,
+        totalRowsAfterFilter: data.totalRowsAfterFilter,
+        csv: '[CSV_CONTENT_HIDDEN]'
+      }
+    });
+
+  } catch (error) {
+    showApiError(setDashboardViewMessage, error, 'Export Excel ไม่สำเร็จ');
+
+    logApiError('dashboard_export_excel_error', error, {
+      dashboardId: dashboardId,
+      limit: limit,
+      filters: filters
+    });
+
+  } finally {
+    hideGlobalLoading();
+    setButtonLoading(el.exportDashboardExcelBtn, false, 'Export Excel');
+  }
+}
+
+
+function buildExcelFilename(filename) {
+  filename = String(filename || 'dashboard-export.csv').trim();
+
+  filename = filename
+    .replace(/\.csv$/i, '')
+    .replace(/[\\/:*?"<>|]/g, '_');
+
+  if (!filename) {
+    filename = 'dashboard-export';
+  }
+
+  return filename + '.xlsx';
+}
   async function loadManageDashboards() {
     if (!el.manageDashboardSelect) {
       return;
