@@ -579,32 +579,65 @@ applyRoleUi(currentUser);
   }
 
   async function loadSourceSheets(sourceId) {
-    if (!el.sourceSheetsList) return;
+  if (!el.sourceSheetsList) return;
 
-    el.sourceSheetsList.textContent = 'กำลังอ่านรายชื่อชีท...';
-    el.sourceSheetsList.classList.add('empty');
+  selectedSheetName = '';
+  renderHeaders(null);
 
-    try {
-      const data = await window.AnalyticsAPI.listSourceSheets({ sourceId });
+  el.sourceSheetsList.textContent = 'กำลังอ่านรายชื่อชีท...';
+  el.sourceSheetsList.classList.add('empty');
 
-      renderSourceSheets(data.sheets || []);
+  setSystemStatus('กำลังโหลดรายชื่อชีท');
 
-      writeLog({
-        step: 'source_sheets',
-        response: data
-      });
+  try {
+    const data = await window.AnalyticsAPI.listSourceSheets({
+      sourceId: sourceId,
+      includeMeta: false
+    });
 
-    } catch (error) {
-      el.sourceSheetsList.textContent = error.message;
-      el.sourceSheetsList.classList.add('empty');
+    renderSourceSheets(data.sheets || []);
 
-      writeLog({
-        step: 'source_sheets_error',
-        message: error.message,
-        payload: error.payload || null
+    setSystemStatus('โหลดรายชื่อชีทสำเร็จ');
+
+    writeLog({
+      step: 'source_sheets',
+      response: data
+    });
+
+  } catch (error) {
+    const message = getFriendlyErrorMessage(error);
+
+    if (handleAuthErrorIfNeeded(error)) {
+      return;
+    }
+
+    el.sourceSheetsList.innerHTML = `
+      <div class="retry-box">
+        <div class="retry-title">โหลดรายชื่อชีทไม่สำเร็จ</div>
+        <div class="retry-message">${escapeHtml(message)}</div>
+        <button id="retryLoadSourceSheetsBtn" class="btn btn-secondary" type="button">
+          ลองโหลดรายชื่อชีทอีกครั้ง
+        </button>
+      </div>
+    `;
+
+    el.sourceSheetsList.classList.remove('empty');
+
+    const retryBtn = document.getElementById('retryLoadSourceSheetsBtn');
+
+    if (retryBtn) {
+      retryBtn.addEventListener('click', function () {
+        loadSourceSheets(sourceId);
       });
     }
+
+    setSystemStatus('โหลดรายชื่อชีทไม่สำเร็จ');
+
+    logApiError('source_sheets_error', error, {
+      sourceId: sourceId
+    });
   }
+}
 
   function renderSourceSheets(sheets) {
   if (!el.sourceSheetsList) return;
@@ -658,47 +691,69 @@ applyRoleUi(currentUser);
 }
 
   async function readHeaders(sourceId, sheetName) {
-    if (!el.headersResult) return;
+  if (!el.headersResult) return;
 
-    el.headersResult.textContent = 'กำลังอ่านหัวคอลัมน์...';
-    el.headersResult.classList.add('empty');
-
-    setMappingMessage('');
-
-    if (el.saveMappingBtn) {
-      el.saveMappingBtn.disabled = true;
-    }
-
-    try {
-      const data = await window.AnalyticsAPI.readHeaders({
-        sourceId,
-        sheetName,
-        headerRow: 1
-      });
-
-      renderHeaders(data);
-
-      writeLog({
-        step: 'headers',
-        response: data
-      });
-
-    } catch (error) {
-  const message = getFriendlyErrorMessage(error);
-
-  if (handleAuthErrorIfNeeded(error)) {
-    return;
-  }
-
-  el.headersResult.textContent = message;
+  el.headersResult.textContent = 'กำลังอ่านหัวคอลัมน์...';
   el.headersResult.classList.add('empty');
 
-  logApiError('headers_error', error, {
-    sourceId: sourceId,
-    sheetName: sheetName
-  });
-}
+  setMappingMessage('');
+  setSystemStatus('กำลังอ่านหัวคอลัมน์');
+
+  if (el.saveMappingBtn) {
+    el.saveMappingBtn.disabled = true;
   }
+
+  try {
+    const data = await window.AnalyticsAPI.readHeaders({
+      sourceId: sourceId,
+      sheetName: sheetName,
+      headerRow: 1
+    });
+
+    renderHeaders(data);
+
+    setSystemStatus('อ่านหัวคอลัมน์สำเร็จ');
+
+    writeLog({
+      step: 'headers',
+      response: data
+    });
+
+  } catch (error) {
+    const message = getFriendlyErrorMessage(error);
+
+    if (handleAuthErrorIfNeeded(error)) {
+      return;
+    }
+
+    el.headersResult.innerHTML = `
+      <div class="retry-box">
+        <div class="retry-title">อ่านหัวคอลัมน์ไม่สำเร็จ</div>
+        <div class="retry-message">${escapeHtml(message)}</div>
+        <button id="retryReadHeadersBtn" class="btn btn-secondary" type="button">
+          ลองอ่านหัวคอลัมน์อีกครั้ง
+        </button>
+      </div>
+    `;
+
+    el.headersResult.classList.remove('empty');
+
+    const retryBtn = document.getElementById('retryReadHeadersBtn');
+
+    if (retryBtn) {
+      retryBtn.addEventListener('click', function () {
+        readHeaders(sourceId, sheetName);
+      });
+    }
+
+    setSystemStatus('อ่านหัวคอลัมน์ไม่สำเร็จ');
+
+    logApiError('headers_error', error, {
+      sourceId: sourceId,
+      sheetName: sheetName
+    });
+  }
+}
 
   function renderHeaders(data) {
     if (!el.headersResult) return;
