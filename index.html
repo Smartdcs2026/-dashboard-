@@ -539,7 +539,7 @@
                 เปิด Dashboard
               </button>
 
-            <button id="applyDashboardFilterBtn" class="btn btn-secondary" type="button">
+          <button id="applyDashboardFilterBtn" class="btn btn-secondary" type="button">
   กรองข้อมูล Dashboard
 </button>
 
@@ -554,6 +554,11 @@
 <button id="exportDashboardBtn" class="btn btn-secondary" type="button">
   Export CSV
 </button>
+
+<button id="exportDashboardExcelBtn" class="btn btn-secondary" type="button">
+  Export Excel
+</button>
+              
 
 <span id="dashboardViewMessage" class="mapping-message"></span>
             </div>
@@ -619,10 +624,11 @@
   </div>
 
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="./api.js?v=20260520-05"></script>
-<script src="./app.js?v=20260520-05"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="./api.js?v=20260521-04"></script>
+<script src="./app.js?v=20260521-04"></script>
 <script>
-  window.DASHBOARD_FRONTEND_VERSION = '20260520-01';
+  window.DASHBOARD_FRONTEND_VERSION = '20260521-04';
   console.log('Dashboard Frontend Version:', window.DASHBOARD_FRONTEND_VERSION);
 </script>
 </body>
