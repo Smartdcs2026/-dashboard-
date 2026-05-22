@@ -196,7 +196,47 @@ function normalizeApiErrorMessage(message, status) {
     return data;
   }
 
+function sleep(ms) {
+  return new Promise(function (resolve) {
+    setTimeout(resolve, ms);
+  });
+}
 
+
+async function requestWithRetry(path, options = {}) {
+  const retry = Number(options.retry || 0);
+  const retryDelay = Number(options.retryDelay || 800);
+
+  try {
+    return await request(path, options);
+  } catch (error) {
+    const shouldRetry =
+      retry > 0 &&
+      (
+        error.isTimeout ||
+        error.status === 408 ||
+        error.status === 429 ||
+        error.status === 500 ||
+        error.status === 502 ||
+        error.status === 503 ||
+        error.status === 504 ||
+        String(error.message || '').includes('API ใช้เวลานานเกินกำหนด') ||
+        String(error.message || '').includes('เชื่อมต่อ API')
+      );
+
+    if (!shouldRetry) {
+      throw error;
+    }
+
+    await sleep(retryDelay);
+
+    return requestWithRetry(path, {
+      ...options,
+      retry: retry - 1,
+      retryDelay: retryDelay + 700
+    });
+  }
+}
   function sleep(ms) {
   return new Promise(function (resolve) {
     setTimeout(resolve, ms);
@@ -508,10 +548,10 @@ function clearCache(payload = {}) {
     setToken,
     clearToken,
 
-    request,
-      requestWithRetry,
-  normalizeApiErrorMessage,
-
+   request,
+requestWithRetry,
+normalizeApiErrorMessage,
+    
   health,
   setupStatus,
 
