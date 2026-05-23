@@ -2279,7 +2279,7 @@ function logApiError(step, error, extra) {
 }
 }
 
-  async function handleExportDashboardExcel() {
+ async function handleExportDashboardExcel() {
   const dashboardId = currentDashboardId || (el.dashboardSelect ? el.dashboardSelect.value : '');
   const limit = el.dashboardLimit ? Number(el.dashboardLimit.value || 5000) : 5000;
 
@@ -2288,8 +2288,8 @@ function logApiError(step, error, extra) {
     return;
   }
 
-  if (!window.XLSX) {
-    setDashboardViewMessage('ยังไม่พบไลบรารี Excel กรุณาตรวจสอบการโหลด SheetJS ใน index.html');
+  if (!window.AnalyticsAPI || !window.AnalyticsAPI.dashboardExport) {
+    setDashboardViewMessage('ยังไม่พบฟังก์ชัน dashboardExport ใน api.js');
     return;
   }
 
@@ -2310,13 +2310,27 @@ function logApiError(step, error, extra) {
       throw new Error('ไม่พบข้อมูล CSV สำหรับแปลงเป็น Excel');
     }
 
-    const workbook = XLSX.read(data.csv, {
-      type: 'string'
-    });
-
     const filename = buildExcelFilename(data.filename || 'dashboard-export.csv');
 
-    XLSX.writeFile(workbook, filename);
+    /**
+     * วิธีหลัก: ใช้ SheetJS ถ้าโหลดสำเร็จ
+     */
+    if (window.XLSX && typeof window.XLSX.read === 'function' && typeof window.XLSX.writeFile === 'function') {
+      const workbook = window.XLSX.read(data.csv, {
+        type: 'string'
+      });
+
+      window.XLSX.writeFile(workbook, filename);
+    } else {
+      /**
+       * วิธีสำรอง: ถ้า SheetJS โหลดไม่ได้ ให้สร้างไฟล์ Excel-compatible .xls
+       * เปิดด้วย Microsoft Excel ได้ และรองรับภาษาไทย
+       */
+      downloadExcelCompatibleHtmlFile(
+        filename.replace(/\.xlsx$/i, '.xls'),
+        data.csv
+      );
+    }
 
     setDashboardViewMessage(
       'Export Excel สำเร็จ: ' +
@@ -2334,6 +2348,7 @@ function logApiError(step, error, extra) {
         sourceFilename: data.filename,
         totalExportRows: data.totalExportRows,
         totalRowsAfterFilter: data.totalRowsAfterFilter,
+        usedSheetJS: !!window.XLSX,
         csv: '[CSV_CONTENT_HIDDEN]'
       }
     });
@@ -2366,6 +2381,113 @@ function buildExcelFilename(filename) {
   }
 
   return filename + '.xlsx';
+}
+
+  function downloadExcelCompatibleHtmlFile(filename, csvText) {
+  const rows = parseCsvRows(csvText);
+
+  if (!rows.length) {
+    throw new Error('ไม่มีข้อมูลสำหรับ Export Excel');
+  }
+
+  const htmlRows = rows.map(function (row) {
+    const cells = row.map(function (cell) {
+      return '<td style="mso-number-format:\\@;">' + escapeHtmlForExcel(cell) + '</td>';
+    }).join('');
+
+    return '<tr>' + cells + '</tr>';
+  }).join('');
+
+  const html =
+    '<html xmlns:o="urn:schemas-microsoft-com:office:office" ' +
+    'xmlns:x="urn:schemas-microsoft-com:office:excel" ' +
+    'xmlns="http://www.w3.org/TR/REC-html40">' +
+    '<head>' +
+    '<meta charset="UTF-8">' +
+    '<!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet>' +
+    '<x:Name>Dashboard Export</x:Name>' +
+    '<x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions>' +
+    '</x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->' +
+    '</head>' +
+    '<body>' +
+    '<table border="1">' +
+    htmlRows +
+    '</table>' +
+    '</body>' +
+    '</html>';
+
+  downloadTextFile(
+    filename || 'dashboard-export.xls',
+    html,
+    'application/vnd.ms-excel;charset=utf-8'
+  );
+}
+
+
+function parseCsvRows(csvText) {
+  csvText = String(csvText || '').replace(/^\uFEFF/, '');
+
+  const rows = [];
+  let row = [];
+  let cell = '';
+  let insideQuote = false;
+
+  for (let i = 0; i < csvText.length; i++) {
+    const char = csvText[i];
+    const next = csvText[i + 1];
+
+    if (char === '"' && insideQuote && next === '"') {
+      cell += '"';
+      i++;
+      continue;
+    }
+
+    if (char === '"') {
+      insideQuote = !insideQuote;
+      continue;
+    }
+
+    if (char === ',' && !insideQuote) {
+      row.push(cell);
+      cell = '';
+      continue;
+    }
+
+    if ((char === '\n' || char === '\r') && !insideQuote) {
+      if (char === '\r' && next === '\n') {
+        i++;
+      }
+
+      row.push(cell);
+
+      if (row.some(function (v) { return String(v || '').trim() !== ''; })) {
+        rows.push(row);
+      }
+
+      row = [];
+      cell = '';
+      continue;
+    }
+
+    cell += char;
+  }
+
+  row.push(cell);
+
+  if (row.some(function (v) { return String(v || '').trim() !== ''; })) {
+    rows.push(row);
+  }
+
+  return rows;
+}
+
+
+function escapeHtmlForExcel(value) {
+  return String(value == null ? '' : value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 }
   async function loadManageDashboards() {
     if (!el.manageDashboardSelect) {
