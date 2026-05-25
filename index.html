@@ -610,6 +610,129 @@
             </button>
           </article>
         </section>
+
+
+        <!-- USER MANAGEMENT -->
+<section class="panel admin-only user-management-section">
+  <div class="panel-header">
+    <div>
+      <h3>จัดการผู้ใช้งานระบบ</h3>
+      <p>เพิ่มผู้ใช้ แก้สิทธิ์ Reset Password และเปิด/ปิดการใช้งาน</p>
+    </div>
+
+    <div class="actions-row">
+      <button id="reloadUsersBtn" class="btn btn-secondary" type="button">
+        โหลดรายชื่อผู้ใช้
+      </button>
+    </div>
+  </div>
+
+  <div class="user-manage-box">
+    <div class="form-grid">
+      <label class="field">
+        <span>ชื่อผู้ใช้</span>
+        <input id="userManageUsername" type="text" placeholder="เช่น user01">
+      </label>
+
+      <label class="field">
+        <span>ชื่อแสดงผล</span>
+        <input id="userManageDisplayName" type="text" placeholder="ชื่อที่แสดงในระบบ">
+      </label>
+
+      <label class="field">
+        <span>อีเมล</span>
+        <input id="userManageEmail" type="email" placeholder="example@email.com">
+      </label>
+
+      <label class="field">
+        <span>สิทธิ์หลัก</span>
+        <select id="userManageRole">
+          <option value="Viewer">Viewer</option>
+          <option value="User">User</option>
+          <option value="Editor">Editor</option>
+          <option value="Admin">Admin</option>
+          <option value="Super Admin">Super Admin</option>
+        </select>
+      </label>
+
+      <label class="field">
+        <span>สถานะ</span>
+        <select id="userManageStatus">
+          <option value="active">active</option>
+          <option value="inactive">inactive</option>
+        </select>
+      </label>
+
+      <label class="field">
+        <span>รหัสผ่านเริ่มต้น</span>
+        <input id="userManagePassword" type="text" placeholder="ว่างไว้เพื่อให้ระบบสร้างอัตโนมัติ">
+      </label>
+
+      <label class="field field-wide">
+        <span>Dashboard ที่ดูได้</span>
+        <input id="userManageDashboards" type="text" placeholder="เช่น DASH_xxx,DASH_yyy หรือเว้นว่างไว้ตาม Role">
+      </label>
+    </div>
+
+    <div class="user-permission-grid">
+      <label class="check-item">
+        <input id="userCanExport" type="checkbox">
+        <span>Export ได้</span>
+      </label>
+
+      <label class="check-item">
+        <input id="userCanAddSource" type="checkbox">
+        <span>เพิ่มแหล่งข้อมูลได้</span>
+      </label>
+
+      <label class="check-item">
+        <input id="userCanEditDashboard" type="checkbox">
+        <span>แก้ไข Dashboard ได้</span>
+      </label>
+
+      <label class="check-item">
+        <input id="userCanViewAuditLog" type="checkbox">
+        <span>ดู Audit Log ได้</span>
+      </label>
+
+      <label class="check-item">
+        <input id="userCanManageUser" type="checkbox">
+        <span>จัดการ User ได้</span>
+      </label>
+    </div>
+
+    <div class="actions-row">
+      <button id="createUserBtn" class="btn btn-primary" type="button">
+        เพิ่มผู้ใช้ใหม่
+      </button>
+
+      <button id="updateUserBtn" class="btn btn-secondary" type="button">
+        บันทึกการแก้ไข
+      </button>
+
+      <button id="resetUserPasswordBtn" class="btn btn-ghost" type="button">
+        Reset Password
+      </button>
+
+      <button id="clearUserFormBtn" class="btn btn-ghost" type="button">
+        ล้างฟอร์ม
+      </button>
+
+      <span id="userManageMessage" class="mapping-message"></span>
+    </div>
+  </div>
+
+  <div class="user-list-wrap">
+    <div class="user-list-header">
+      <h4>รายการผู้ใช้งาน</h4>
+      <span id="userManageCount">0 รายการ</span>
+    </div>
+
+    <div id="userManageList" class="user-manage-list empty">
+      กดโหลดรายชื่อผู้ใช้เพื่อแสดงรายการ
+    </div>
+  </div>
+</section>
 <!-- AUDIT LOG VIEWER -->
 <section class="panel admin-only audit-log-section">
   <div class="panel-header">
