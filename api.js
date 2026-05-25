@@ -484,6 +484,72 @@ function readHeaders(payload) {
       dashboardId
     });
   }
+
+  function listUsers() {
+  return request('/api/users', {
+    timeoutMs: API_TIMEOUT.READ
+  });
+}
+
+
+function createUser(payload) {
+  return request('/api/users', {
+    method: 'POST',
+    timeoutMs: API_TIMEOUT.READ,
+    body: {
+      mode: 'create',
+      ...payload
+    }
+  });
+}
+
+
+function updateUser(payload) {
+  return request('/api/users', {
+    method: 'POST',
+    timeoutMs: API_TIMEOUT.READ,
+    body: {
+      mode: 'update',
+      ...payload
+    }
+  });
+}
+
+
+function resetUserPassword(userId, newPassword) {
+  return request('/api/users', {
+    method: 'POST',
+    timeoutMs: API_TIMEOUT.READ,
+    body: {
+      mode: 'resetPassword',
+      userId: userId,
+      newPassword: newPassword || ''
+    }
+  });
+}
+
+
+function setUserStatus(userId, status) {
+  return request('/api/users', {
+    method: 'POST',
+    timeoutMs: API_TIMEOUT.READ,
+    body: {
+      mode: 'setStatus',
+      userId: userId,
+      status: status
+    }
+  });
+}
+
+
+function disableUser(userId) {
+  return setUserStatus(userId, 'inactive');
+}
+
+
+function enableUser(userId) {
+  return setUserStatus(userId, 'active');
+}
 function clearCache(payload = {}) {
   return request('/api/clear-cache', {
     method: 'POST',
@@ -543,9 +609,17 @@ normalizeApiErrorMessage,
     setDashboardHidden,
     setDashboardVisibility,
     regenerateDashboard,
-    deleteDashboard,
-    clearCache,
+deleteDashboard,
 
-    auditLog
+listUsers,
+createUser,
+updateUser,
+resetUserPassword,
+setUserStatus,
+disableUser,
+enableUser,
+
+clearCache,
+auditLog
   };
 })();
