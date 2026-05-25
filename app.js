@@ -75,6 +75,8 @@ manageDashboardCount: document.getElementById('manageDashboardCount'),
     deleteManageDashboardBtn: document.getElementById('deleteManageDashboardBtn'),
     manageDashboardMessage: document.getElementById('manageDashboardMessage'),
     manageDashboardSummary: document.getElementById('manageDashboardSummary'),
+    manageDashboardCardList: document.getElementById('manageDashboardCardList'),
+manageDashboardCardCount: document.getElementById('manageDashboardCardCount'),
 
     userDisplayName: document.getElementById('userDisplayName'),
     userRole: document.getElementById('userRole'),
@@ -2698,16 +2700,16 @@ function escapeHtmlForExcel(value) {
 
     try {
       const data = await window.AnalyticsAPI.listDashboards();
-      manageDashboardsCache = data.dashboards || [];
+manageDashboardsCache = data.dashboards || [];
 
-      renderFilteredManageDashboardOptions();
+renderFilteredManageDashboardOptions();
 
-      if (el.manageDashboardSummary) {
-        el.manageDashboardSummary.classList.add('empty');
-        el.manageDashboardSummary.textContent = manageDashboardsCache.length
-          ? 'เลือก Dashboard เพื่อดูรายละเอียดและแก้ไข'
-          : 'ยังไม่มี Dashboard ที่สร้างไว้';
-      }
+if (el.manageDashboardSummary) {
+  el.manageDashboardSummary.classList.add('empty');
+  el.manageDashboardSummary.textContent = manageDashboardsCache.length
+    ? 'เลือก Dashboard เพื่อดูรายละเอียดและแก้ไข'
+    : 'ยังไม่มี Dashboard ที่สร้างไว้';
+}
 
       writeLog({
         step: 'manage_dashboards_load',
@@ -2726,12 +2728,13 @@ function escapeHtmlForExcel(value) {
       });
     }
   }
-  function renderFilteredManageDashboardOptions() {
+ function renderFilteredManageDashboardOptions() {
   const dashboards = getFilteredManageDashboards();
+
   renderManageDashboardOptions(dashboards);
+  renderManageDashboardCards(dashboards);
   renderManageDashboardCount(dashboards.length, manageDashboardsCache.length);
 }
-
 
 function getFilteredManageDashboards() {
   const keyword = el.manageDashboardSearch
@@ -2809,6 +2812,192 @@ function renderManageDashboardCount(filteredCount, totalCount) {
     'พบ ' + filteredCount.toLocaleString() +
     ' จากทั้งหมด ' + totalCount.toLocaleString() +
     ' รายการ';
+}
+  function renderManageDashboardCards(dashboards) {
+  if (!el.manageDashboardCardList) {
+    return;
+  }
+
+  dashboards = dashboards || [];
+
+  if (el.manageDashboardCardCount) {
+    el.manageDashboardCardCount.textContent =
+      dashboards.length.toLocaleString() + ' รายการ';
+  }
+
+  if (!dashboards.length) {
+    el.manageDashboardCardList.classList.add('empty');
+    el.manageDashboardCardList.textContent = 'ไม่พบ Dashboard ตามเงื่อนไขที่เลือก';
+    return;
+  }
+
+  el.manageDashboardCardList.classList.remove('empty');
+
+  el.manageDashboardCardList.innerHTML = dashboards.map(function (dash) {
+    const dashboardId = String(dash['รหัส Dashboard'] || '').trim();
+    const name = String(dash['ชื่อ Dashboard'] || dashboardId).trim();
+    const type = String(dash['ประเภท Dashboard'] || '-').trim();
+    const description = String(dash['คำอธิบาย'] || '').trim();
+    const sourceId = String(dash['รหัสแหล่งข้อมูลหลัก'] || '-').trim();
+    const sheetName = String(dash['รหัสชีทย่อยหลัก'] || '-').trim();
+    const publish = toBool(dash['สถานะ Publish']);
+    const allowExport = toBool(dash['อนุญาต Export']);
+    const visibility = String(dash['สิทธิ์ที่มองเห็น'] || '-').trim();
+    const updatedAt = String(dash['วันที่แก้ไขล่าสุด'] || '-').trim();
+    const updatedBy = String(dash['แก้ไขโดย'] || '-').trim();
+
+    return `
+      <article class="dashboard-manage-card" data-dashboard-id="${escapeAttr(dashboardId)}">
+        <div class="dashboard-manage-card-head">
+          <div>
+            <h4>${escapeHtml(name || '-')}</h4>
+            <p>${escapeHtml(description || 'ไม่มีคำอธิบาย')}</p>
+          </div>
+
+          <span class="dashboard-type-pill">${escapeHtml(type || '-')}</span>
+        </div>
+
+        <div class="dashboard-manage-card-meta">
+          <div>
+            <span>Dashboard ID</span>
+            <strong>${escapeHtml(dashboardId || '-')}</strong>
+          </div>
+
+          <div>
+            <span>Source</span>
+            <strong>${escapeHtml(sourceId || '-')}</strong>
+          </div>
+
+          <div>
+            <span>Sheet</span>
+            <strong>${escapeHtml(sheetName || '-')}</strong>
+          </div>
+
+          <div>
+            <span>Visibility</span>
+            <strong>${escapeHtml(visibility || '-')}</strong>
+          </div>
+        </div>
+
+        <div class="dashboard-manage-card-status">
+          <span class="dashboard-status-pill ${publish ? 'is-on' : 'is-off'}">
+            ${publish ? 'Published' : 'Unpublished'}
+          </span>
+
+          <span class="dashboard-status-pill ${allowExport ? 'is-on' : 'is-off'}">
+            ${allowExport ? 'Export On' : 'Export Off'}
+          </span>
+
+          <span class="dashboard-status-pill is-muted">
+            Update: ${escapeHtml(updatedAt || '-')}
+          </span>
+
+          <span class="dashboard-status-pill is-muted">
+            By: ${escapeHtml(updatedBy || '-')}
+          </span>
+        </div>
+
+        <div class="dashboard-manage-card-actions">
+          <button class="btn btn-secondary btn-card-select-dashboard" type="button" data-dashboard-id="${escapeAttr(dashboardId)}">
+            เลือกแก้ไข
+          </button>
+
+          <button class="btn btn-ghost btn-card-open-dashboard" type="button" data-dashboard-id="${escapeAttr(dashboardId)}">
+            เปิดดู
+          </button>
+
+          <button class="btn btn-ghost btn-card-regenerate-dashboard" type="button" data-dashboard-id="${escapeAttr(dashboardId)}">
+            Regenerate
+          </button>
+        </div>
+      </article>
+    `;
+  }).join('');
+
+  bindManageDashboardCardActions();
+}
+
+
+function bindManageDashboardCardActions() {
+  if (!el.manageDashboardCardList) {
+    return;
+  }
+
+  el.manageDashboardCardList
+    .querySelectorAll('.btn-card-select-dashboard')
+    .forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        const dashboardId = btn.getAttribute('data-dashboard-id') || '';
+        selectManageDashboardFromCard(dashboardId);
+      });
+    });
+
+  el.manageDashboardCardList
+    .querySelectorAll('.btn-card-open-dashboard')
+    .forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        const dashboardId = btn.getAttribute('data-dashboard-id') || '';
+        openDashboardFromManageCard(dashboardId);
+      });
+    });
+
+  el.manageDashboardCardList
+    .querySelectorAll('.btn-card-regenerate-dashboard')
+    .forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        const dashboardId = btn.getAttribute('data-dashboard-id') || '';
+        selectManageDashboardFromCard(dashboardId);
+        handleRegenerateManageDashboard();
+      });
+    });
+}
+
+
+function selectManageDashboardFromCard(dashboardId) {
+  dashboardId = String(dashboardId || '').trim();
+
+  if (!dashboardId) {
+    setManageDashboardMessage('ไม่พบ Dashboard ID');
+    return;
+  }
+
+  if (el.manageDashboardSelect) {
+    el.manageDashboardSelect.value = dashboardId;
+  }
+
+  handleSelectManageDashboard();
+
+  const target = document.querySelector('.dashboard-management-section');
+
+  if (target) {
+    try {
+      target.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start'
+      });
+    } catch (err) {
+      target.scrollIntoView();
+    }
+  }
+}
+
+
+async function openDashboardFromManageCard(dashboardId) {
+  dashboardId = String(dashboardId || '').trim();
+
+  if (!dashboardId) {
+    setManageDashboardMessage('ไม่พบ Dashboard ID');
+    return;
+  }
+
+  if (el.dashboardSelect) {
+    el.dashboardSelect.value = dashboardId;
+  }
+
+  currentDashboardId = dashboardId;
+  setAppMode('user');
+
+  await handleOpenDashboard();
 }
 
   function renderManageDashboardOptions(dashboards) {
@@ -2980,7 +3169,14 @@ if (el.manageDashboardCount) {
       el.manageDashboardSummary.classList.add('empty');
       el.manageDashboardSummary.textContent = 'เลือก Dashboard เพื่อดูรายละเอียดและแก้ไข';
     }
+   if (el.manageDashboardCardList) {
+  el.manageDashboardCardList.classList.add('empty');
+  el.manageDashboardCardList.textContent = 'กดโหลดรายการ Dashboard เพื่อแสดงรายการ';
+}
 
+if (el.manageDashboardCardCount) {
+  el.manageDashboardCardCount.textContent = '0 รายการ';
+}
     setManageDashboardMessage('');
   }
 
