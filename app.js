@@ -89,7 +89,9 @@ userModeBtn: document.getElementById('userModeBtn'),
     dashboardResult: document.getElementById('dashboardResult'),
     globalLoadingOverlay: document.getElementById('globalLoadingOverlay'),
 globalLoadingText: document.getElementById('globalLoadingText'),
-    
+    reloadAuditLogBtn: document.getElementById('reloadAuditLogBtn'),
+auditLimitSelect: document.getElementById('auditLimitSelect'),
+auditLogResult: document.getElementById('auditLogResult'),
     
     debugLog: document.getElementById('debugLog')
   };
@@ -236,6 +238,9 @@ if (el.manageDashboardStatusFilter) {
     if (el.hideManageDashboardBtn) {
       el.hideManageDashboardBtn.addEventListener('click', handleToggleManageDashboardHidden);
     }
+    if (el.reloadAuditLogBtn) {
+  el.reloadAuditLogBtn.addEventListener('click', loadAuditLog);
+}
 
     if (el.deleteManageDashboardBtn) {
       el.deleteManageDashboardBtn.addEventListener('click', handleDeleteManageDashboard);
@@ -337,6 +342,9 @@ if (el.manageDashboardStatusFilter) {
             await loadSources();
       await loadDashboardOptions();
       await loadManageDashboards();
+      if (currentUser && ['Super Admin', 'Admin'].includes(String(currentUser.role || ''))) {
+  await loadAuditLog();
+}
     } catch (error) {
       window.AnalyticsAPI.clearToken();
       showLogin();
@@ -381,6 +389,9 @@ applyRoleUi(currentUser);
             await loadSources();
       await loadDashboardOptions();
       await loadManageDashboards();
+      if (currentUser && ['Super Admin', 'Admin'].includes(String(currentUser.role || ''))) {
+  await loadAuditLog();
+}
 
     } catch (error) {
       setLoginMessage(error.message || 'เข้าสู่ระบบไม่สำเร็จ');
@@ -2085,7 +2096,189 @@ function logApiError(step, error, extra) {
     extra: extra || null
   });
 }
+async function loadAuditLog() {
+  if (!el.auditLogResult) {
+    return;
+  }
 
+  const limit = el.auditLimitSelect ? Number(el.auditLimitSelect.value || 100) : 100;
+
+  el.auditLogResult.classList.remove('empty');
+  setPanelLoading(el.auditLogResult, 'กำลังโหลดประวัติการใช้งาน...');
+
+  if (el.reloadAuditLogBtn) {
+    setButtonLoading(el.reloadAuditLogBtn, true, 'กำลังโหลด...');
+  }
+
+  try {
+    const data = await window.AnalyticsAPI.auditLog({
+      limit: limit
+    });
+
+    renderAuditLog(data.logs || []);
+
+    writeLog({
+      step: 'audit_log',
+      response: {
+        ok: data.ok,
+        total: data.total
+      }
+    });
+
+  } catch (error) {
+    const message = getFriendlyErrorMessage(error);
+
+    if (handleAuthErrorIfNeeded(error)) {
+      return;
+    }
+
+    el.auditLogResult.classList.add('empty');
+    el.auditLogResult.textContent = message;
+
+    logApiError('audit_log_error', error, {
+      limit: limit
+    });
+
+  } finally {
+    if (el.reloadAuditLogBtn) {
+      setButtonLoading(el.reloadAuditLogBtn, false, 'โหลดประวัติ');
+    }
+  }
+}
+
+
+function renderAuditLog(logs) {
+  if (!el.auditLogResult) {
+    return;
+  }
+
+  if (!logs || !logs.length) {
+    el.auditLogResult.classList.add('empty');
+    el.auditLogResult.textContent = 'ยังไม่มีประวัติการใช้งาน';
+    return;
+  }
+
+  el.auditLogResult.classList.remove('empty');
+
+  const rowsHtml = logs.map(function (log) {
+    const time =
+      log['วันที่เวลา'] ||
+      log['Timestamp'] ||
+      log.timestamp ||
+      log.createdAt ||
+      '-';
+
+    const username =
+      log['ชื่อผู้ใช้'] ||
+      log.username ||
+      '-';
+
+    const role =
+      log['สิทธิ์'] ||
+      log.role ||
+      '-';
+
+    const action =
+      log['Action'] ||
+      log['การทำงาน'] ||
+      log.action ||
+      '-';
+
+    const status =
+      log['Status'] ||
+      log['สถานะ'] ||
+      log.status ||
+      '-';
+
+    const detail =
+      log['รายละเอียด'] ||
+      log.detail ||
+      '-';
+
+    const sourceId =
+      log['รหัสแหล่งข้อมูล'] ||
+      log.sourceId ||
+      '';
+
+    const dashboardId =
+      log['รหัส Dashboard'] ||
+      log.dashboardId ||
+      '';
+
+    return `
+      <tr>
+        <td>${escapeHtml(time)}</td>
+        <td>
+          <strong>${escapeHtml(username)}</strong>
+          <small>${escapeHtml(role)}</small>
+        </td>
+        <td>${renderAuditActionBadge(action)}</td>
+        <td>${renderAuditStatusBadge(status)}</td>
+        <td>
+          <div class="audit-detail">${escapeHtml(detail)}</div>
+          ${
+            sourceId || dashboardId
+              ? `<div class="audit-meta">
+                  ${sourceId ? 'Source: ' + escapeHtml(sourceId) : ''}
+                  ${sourceId && dashboardId ? ' · ' : ''}
+                  ${dashboardId ? 'Dashboard: ' + escapeHtml(dashboardId) : ''}
+                </div>`
+              : ''
+          }
+        </td>
+      </tr>
+    `;
+  }).join('');
+
+  el.auditLogResult.innerHTML = `
+    <div class="audit-table-wrap">
+      <table class="audit-table">
+        <thead>
+          <tr>
+            <th>เวลา</th>
+            <th>ผู้ใช้</th>
+            <th>Action</th>
+            <th>Status</th>
+            <th>รายละเอียด</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rowsHtml}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+
+function renderAuditActionBadge(action) {
+  const text = String(action || '-');
+  const lower = text.toLowerCase();
+
+  let cls = 'audit-badge muted';
+
+  if (lower.includes('login')) cls = 'audit-badge info';
+  if (lower.includes('error')) cls = 'audit-badge danger';
+  if (lower.includes('export')) cls = 'audit-badge warning';
+  if (lower.includes('create') || lower.includes('save') || lower.includes('update')) cls = 'audit-badge success';
+  if (lower.includes('delete')) cls = 'audit-badge danger';
+
+  return `<span class="${cls}">${escapeHtml(text)}</span>`;
+}
+
+
+function renderAuditStatusBadge(status) {
+  const text = String(status || '-');
+  const lower = text.toLowerCase();
+
+  let cls = 'audit-badge muted';
+
+  if (lower === 'success' || lower === 'สำเร็จ') cls = 'audit-badge success';
+  if (lower === 'fail' || lower === 'failed') cls = 'audit-badge warning';
+  if (lower === 'error') cls = 'audit-badge danger';
+
+  return `<span class="${cls}">${escapeHtml(text)}</span>`;
+}
   function writeLog(data) {
     if (el.debugLog) {
       el.debugLog.textContent = JSON.stringify(data, null, 2);
