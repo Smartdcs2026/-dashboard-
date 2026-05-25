@@ -2357,6 +2357,11 @@ function selectUserForEdit(userId) {
   if (el.userManageStatus) el.userManageStatus.value = user.status || 'active';
   if (el.userManagePassword) el.userManagePassword.value = '';
   if (el.userManageDashboards) el.userManageDashboards.value = user.dashboards || '';
+  setUserManageMessage(
+  'เลือกผู้ใช้แล้ว: ' +
+  (user.displayName || user.username || userId) +
+  ' | ช่อง Dashboard ที่ดูได้ ใช้รูปแบบ DASH_xxx,DASH_yyy'
+);
 
   if (el.userCanExport) el.userCanExport.checked = !!user.canExport;
   if (el.userCanAddSource) el.userCanAddSource.checked = !!user.canAddSource;
