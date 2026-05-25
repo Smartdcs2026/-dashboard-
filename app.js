@@ -78,6 +78,27 @@ manageDashboardCount: document.getElementById('manageDashboardCount'),
     manageDashboardCardList: document.getElementById('manageDashboardCardList'),
 manageDashboardCardCount: document.getElementById('manageDashboardCardCount'),
 
+    reloadUsersBtn: document.getElementById('reloadUsersBtn'),
+userManageUsername: document.getElementById('userManageUsername'),
+userManageDisplayName: document.getElementById('userManageDisplayName'),
+userManageEmail: document.getElementById('userManageEmail'),
+userManageRole: document.getElementById('userManageRole'),
+userManageStatus: document.getElementById('userManageStatus'),
+userManagePassword: document.getElementById('userManagePassword'),
+userManageDashboards: document.getElementById('userManageDashboards'),
+userCanExport: document.getElementById('userCanExport'),
+userCanAddSource: document.getElementById('userCanAddSource'),
+userCanEditDashboard: document.getElementById('userCanEditDashboard'),
+userCanViewAuditLog: document.getElementById('userCanViewAuditLog'),
+userCanManageUser: document.getElementById('userCanManageUser'),
+createUserBtn: document.getElementById('createUserBtn'),
+updateUserBtn: document.getElementById('updateUserBtn'),
+resetUserPasswordBtn: document.getElementById('resetUserPasswordBtn'),
+clearUserFormBtn: document.getElementById('clearUserFormBtn'),
+userManageMessage: document.getElementById('userManageMessage'),
+userManageCount: document.getElementById('userManageCount'),
+userManageList: document.getElementById('userManageList'),
+
     userDisplayName: document.getElementById('userDisplayName'),
     userRole: document.getElementById('userRole'),
     systemStatusText: document.getElementById('systemStatusText'),
@@ -111,6 +132,8 @@ auditLogResult: document.getElementById('auditLogResult'),
 let chartInstances = [];
 let chartUid = 0;
   let currentMode = 'admin';
+  let usersCache = [];
+let selectedManageUserId = '';
 
   document.addEventListener('DOMContentLoaded', init);
 
@@ -200,7 +223,25 @@ if (el.userModeBtn) {
     setAppMode('user');
   });
 }
+if (el.reloadUsersBtn) {
+  el.reloadUsersBtn.addEventListener('click', loadUsers);
+}
 
+if (el.createUserBtn) {
+  el.createUserBtn.addEventListener('click', handleCreateUser);
+}
+
+if (el.updateUserBtn) {
+  el.updateUserBtn.addEventListener('click', handleUpdateUser);
+}
+
+if (el.resetUserPasswordBtn) {
+  el.resetUserPasswordBtn.addEventListener('click', handleResetUserPassword);
+}
+
+if (el.clearUserFormBtn) {
+  el.clearUserFormBtn.addEventListener('click', resetUserForm);
+}
     if (el.resetDashboardFilterBtn) {
       el.resetDashboardFilterBtn.addEventListener('click', handleResetDashboardFilter);
     }
@@ -282,6 +323,19 @@ if (el.manageDashboardStatusFilter) {
     if (el.dashboardSelect) {
       el.dashboardSelect.innerHTML = '<option value="">ยังไม่มีรายการ Dashboard</option>';
     }
+
+    usersCache = [];
+selectedManageUserId = '';
+resetUserForm();
+
+if (el.userManageList) {
+  el.userManageList.classList.add('empty');
+  el.userManageList.textContent = 'กดโหลดรายชื่อผู้ใช้เพื่อแสดงรายการ';
+}
+
+if (el.userManageCount) {
+  el.userManageCount.textContent = '0 รายการ';
+}
         resetManageDashboardForm();
     setLoginMessage('');
     setSourceFormMessage('');
@@ -345,6 +399,9 @@ if (el.manageDashboardStatusFilter) {
       await loadDashboardOptions();
       await loadManageDashboards();
       if (currentUser && ['Super Admin', 'Admin'].includes(String(currentUser.role || ''))) {
+  await loadUsers();
+}
+      if (currentUser && ['Super Admin', 'Admin'].includes(String(currentUser.role || ''))) {
   await loadAuditLog();
 }
     } catch (error) {
@@ -391,6 +448,9 @@ applyRoleUi(currentUser);
             await loadSources();
       await loadDashboardOptions();
       await loadManageDashboards();
+      if (currentUser && ['Super Admin', 'Admin'].includes(String(currentUser.role || ''))) {
+  await loadUsers();
+}
       if (currentUser && ['Super Admin', 'Admin'].includes(String(currentUser.role || ''))) {
   await loadAuditLog();
 }
@@ -2097,6 +2157,455 @@ function logApiError(step, error, extra) {
     payload: error && error.payload ? error.payload : null,
     extra: extra || null
   });
+}
+
+  async function loadUsers() {
+  if (!el.userManageList) {
+    return;
+  }
+
+  el.userManageList.classList.remove('empty');
+  setPanelLoading(el.userManageList, 'กำลังโหลดรายชื่อผู้ใช้...');
+
+  if (el.reloadUsersBtn) {
+    setButtonLoading(el.reloadUsersBtn, true, 'กำลังโหลด...');
+  }
+
+  try {
+    const data = await window.AnalyticsAPI.listUsers();
+
+    usersCache = data.users || [];
+    renderUsers(usersCache);
+
+    setUserManageMessage('โหลดรายชื่อผู้ใช้สำเร็จ');
+
+    writeLog({
+      step: 'users_load',
+      response: {
+        ok: data.ok,
+        total: data.total
+      }
+    });
+
+  } catch (error) {
+    const message = getFriendlyErrorMessage(error);
+
+    if (handleAuthErrorIfNeeded(error)) {
+      return;
+    }
+
+    el.userManageList.classList.add('empty');
+    el.userManageList.textContent = message;
+
+    logApiError('users_load_error', error);
+
+  } finally {
+    if (el.reloadUsersBtn) {
+      setButtonLoading(el.reloadUsersBtn, false, 'โหลดรายชื่อผู้ใช้');
+    }
+  }
+}
+
+
+function renderUsers(users) {
+  if (!el.userManageList) {
+    return;
+  }
+
+  users = users || [];
+
+  if (el.userManageCount) {
+    el.userManageCount.textContent = users.length.toLocaleString() + ' รายการ';
+  }
+
+  if (!users.length) {
+    el.userManageList.classList.add('empty');
+    el.userManageList.textContent = 'ยังไม่มีผู้ใช้งาน';
+    return;
+  }
+
+  el.userManageList.classList.remove('empty');
+
+  el.userManageList.innerHTML = users.map(function (user) {
+    const active = String(user.status || '').toLowerCase() === 'active';
+
+    return `
+      <article class="user-card" data-user-id="${escapeAttr(user.userId || '')}">
+        <div class="user-card-head">
+          <div>
+            <h4>${escapeHtml(user.displayName || user.username || '-')}</h4>
+            <p>${escapeHtml(user.username || '-')} · ${escapeHtml(user.email || '-')}</p>
+          </div>
+
+          <span class="user-role-pill">${escapeHtml(user.role || '-')}</span>
+        </div>
+
+        <div class="user-card-meta">
+          <div>
+            <span>User ID</span>
+            <strong>${escapeHtml(user.userId || '-')}</strong>
+          </div>
+
+          <div>
+            <span>Status</span>
+            <strong class="${active ? 'success-text' : 'error-text'}">
+              ${escapeHtml(user.status || '-')}
+            </strong>
+          </div>
+
+          <div>
+            <span>Login</span>
+            <strong>${Number(user.loginCount || 0).toLocaleString()} ครั้ง</strong>
+          </div>
+
+          <div>
+            <span>Last Login</span>
+            <strong>${escapeHtml(user.lastLoginAt || '-')}</strong>
+          </div>
+        </div>
+
+        <div class="user-card-permissions">
+          ${renderUserPermissionBadge('Export', user.canExport)}
+          ${renderUserPermissionBadge('Add Source', user.canAddSource)}
+          ${renderUserPermissionBadge('Edit Dashboard', user.canEditDashboard)}
+          ${renderUserPermissionBadge('Audit Log', user.canViewAuditLog)}
+          ${renderUserPermissionBadge('Manage User', user.canManageUser)}
+          ${user.mustChangePassword ? '<span class="user-permission-badge warning">ต้องเปลี่ยนรหัสผ่าน</span>' : ''}
+        </div>
+
+        <div class="user-card-actions">
+          <button class="btn btn-secondary btn-select-user" type="button" data-user-id="${escapeAttr(user.userId || '')}">
+            เลือกแก้ไข
+          </button>
+
+          <button class="btn btn-ghost btn-reset-user-password" type="button" data-user-id="${escapeAttr(user.userId || '')}">
+            Reset Password
+          </button>
+
+          <button class="btn ${active ? 'btn-danger' : 'btn-primary'} btn-toggle-user-status" type="button" data-user-id="${escapeAttr(user.userId || '')}" data-status="${active ? 'inactive' : 'active'}">
+            ${active ? 'ปิดใช้งาน' : 'เปิดใช้งาน'}
+          </button>
+        </div>
+      </article>
+    `;
+  }).join('');
+
+  bindUserCardActions();
+}
+
+
+function renderUserPermissionBadge(label, value) {
+  return `
+    <span class="user-permission-badge ${value ? 'on' : 'off'}">
+      ${escapeHtml(label)}: ${value ? 'On' : 'Off'}
+    </span>
+  `;
+}
+
+
+function bindUserCardActions() {
+  if (!el.userManageList) {
+    return;
+  }
+
+  el.userManageList.querySelectorAll('.btn-select-user').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      const userId = btn.getAttribute('data-user-id') || '';
+      selectUserForEdit(userId);
+    });
+  });
+
+  el.userManageList.querySelectorAll('.btn-reset-user-password').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      const userId = btn.getAttribute('data-user-id') || '';
+      resetPasswordByUserId(userId);
+    });
+  });
+
+  el.userManageList.querySelectorAll('.btn-toggle-user-status').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      const userId = btn.getAttribute('data-user-id') || '';
+      const status = btn.getAttribute('data-status') || '';
+      setUserStatusById(userId, status);
+    });
+  });
+}
+
+
+function selectUserForEdit(userId) {
+  userId = String(userId || '').trim();
+
+  const user = usersCache.find(function (item) {
+    return String(item.userId || '') === userId;
+  });
+
+  if (!user) {
+    setUserManageMessage('ไม่พบผู้ใช้ที่เลือก');
+    return;
+  }
+
+  selectedManageUserId = userId;
+
+  if (el.userManageUsername) {
+    el.userManageUsername.value = user.username || '';
+    el.userManageUsername.disabled = true;
+  }
+
+  if (el.userManageDisplayName) el.userManageDisplayName.value = user.displayName || '';
+  if (el.userManageEmail) el.userManageEmail.value = user.email || '';
+  if (el.userManageRole) el.userManageRole.value = user.role || 'User';
+  if (el.userManageStatus) el.userManageStatus.value = user.status || 'active';
+  if (el.userManagePassword) el.userManagePassword.value = '';
+  if (el.userManageDashboards) el.userManageDashboards.value = user.dashboards || '';
+
+  if (el.userCanExport) el.userCanExport.checked = !!user.canExport;
+  if (el.userCanAddSource) el.userCanAddSource.checked = !!user.canAddSource;
+  if (el.userCanEditDashboard) el.userCanEditDashboard.checked = !!user.canEditDashboard;
+  if (el.userCanViewAuditLog) el.userCanViewAuditLog.checked = !!user.canViewAuditLog;
+  if (el.userCanManageUser) el.userCanManageUser.checked = !!user.canManageUser;
+
+  setUserManageMessage('เลือกผู้ใช้แล้ว: ' + (user.displayName || user.username || userId));
+
+  const target = document.querySelector('.user-management-section');
+
+  if (target) {
+    try {
+      target.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start'
+      });
+    } catch (err) {
+      target.scrollIntoView();
+    }
+  }
+}
+
+
+function collectUserPayload() {
+  return {
+    username: el.userManageUsername ? el.userManageUsername.value.trim() : '',
+    displayName: el.userManageDisplayName ? el.userManageDisplayName.value.trim() : '',
+    email: el.userManageEmail ? el.userManageEmail.value.trim() : '',
+    role: el.userManageRole ? el.userManageRole.value : 'User',
+    status: el.userManageStatus ? el.userManageStatus.value : 'active',
+    password: el.userManagePassword ? el.userManagePassword.value.trim() : '',
+    dashboards: el.userManageDashboards ? el.userManageDashboards.value.trim() : '',
+
+    canExport: el.userCanExport ? el.userCanExport.checked : false,
+    canAddSource: el.userCanAddSource ? el.userCanAddSource.checked : false,
+    canEditDashboard: el.userCanEditDashboard ? el.userCanEditDashboard.checked : false,
+    canViewAuditLog: el.userCanViewAuditLog ? el.userCanViewAuditLog.checked : false,
+    canManageUser: el.userCanManageUser ? el.userCanManageUser.checked : false
+  };
+}
+
+
+async function handleCreateUser() {
+  const payload = collectUserPayload();
+
+  if (!payload.username || !payload.displayName) {
+    setUserManageMessage('กรุณากรอกชื่อผู้ใช้และชื่อแสดงผล');
+    return;
+  }
+
+  setButtonLoading(el.createUserBtn, true, 'กำลังเพิ่มผู้ใช้...');
+  setUserManageMessage('');
+
+  try {
+    const data = await window.AnalyticsAPI.createUser(payload);
+
+    setUserManageMessage(
+      'เพิ่มผู้ใช้สำเร็จ: ' +
+      data.username +
+      ' | รหัสผ่านเริ่มต้น: ' +
+      data.temporaryPassword
+    );
+
+    window.alert(
+      'เพิ่มผู้ใช้สำเร็จ\n\n' +
+      'Username: ' + data.username + '\n' +
+      'Password: ' + data.temporaryPassword + '\n\n' +
+      'กรุณาจดรหัสผ่านนี้ไว้ ระบบจะแสดงครั้งเดียว'
+    );
+
+    resetUserForm();
+    await loadUsers();
+
+  } catch (error) {
+    showApiError(setUserManageMessage, error, 'เพิ่มผู้ใช้ไม่สำเร็จ');
+    logApiError('create_user_error', error, {
+      username: payload.username
+    });
+
+  } finally {
+    setButtonLoading(el.createUserBtn, false, 'เพิ่มผู้ใช้ใหม่');
+  }
+}
+
+
+async function handleUpdateUser() {
+  if (!selectedManageUserId) {
+    setUserManageMessage('กรุณาเลือกผู้ใช้ก่อนแก้ไข');
+    return;
+  }
+
+  const payload = collectUserPayload();
+  payload.userId = selectedManageUserId;
+
+  setButtonLoading(el.updateUserBtn, true, 'กำลังบันทึก...');
+  setUserManageMessage('');
+
+  try {
+    const data = await window.AnalyticsAPI.updateUser(payload);
+
+    setUserManageMessage(data.message || 'แก้ไขผู้ใช้สำเร็จ');
+
+    await loadUsers();
+
+  } catch (error) {
+    showApiError(setUserManageMessage, error, 'แก้ไขผู้ใช้ไม่สำเร็จ');
+    logApiError('update_user_error', error, {
+      userId: selectedManageUserId
+    });
+
+  } finally {
+    setButtonLoading(el.updateUserBtn, false, 'บันทึกการแก้ไข');
+  }
+}
+
+
+async function handleResetUserPassword() {
+  if (!selectedManageUserId) {
+    setUserManageMessage('กรุณาเลือกผู้ใช้ก่อน Reset Password');
+    return;
+  }
+
+  await resetPasswordByUserId(selectedManageUserId);
+}
+
+
+async function resetPasswordByUserId(userId) {
+  userId = String(userId || '').trim();
+
+  if (!userId) {
+    setUserManageMessage('ไม่พบ User ID');
+    return;
+  }
+
+  const user = usersCache.find(function (item) {
+    return String(item.userId || '') === userId;
+  });
+
+  const confirmed = window.confirm(
+    'ยืนยัน Reset Password ผู้ใช้นี้หรือไม่?\n\n' +
+    (user ? user.displayName + ' (' + user.username + ')' : userId)
+  );
+
+  if (!confirmed) {
+    return;
+  }
+
+  setButtonLoading(el.resetUserPasswordBtn, true, 'กำลัง Reset...');
+
+  try {
+    const data = await window.AnalyticsAPI.resetUserPassword(userId, '');
+
+    setUserManageMessage(
+      'Reset Password สำเร็จ: ' +
+      (data.username || userId) +
+      ' | Password: ' +
+      data.temporaryPassword
+    );
+
+    window.alert(
+      'Reset Password สำเร็จ\n\n' +
+      'Username: ' + (data.username || '') + '\n' +
+      'Password: ' + data.temporaryPassword + '\n\n' +
+      'กรุณาจดรหัสผ่านนี้ไว้ ระบบจะแสดงครั้งเดียว'
+    );
+
+    await loadUsers();
+
+  } catch (error) {
+    showApiError(setUserManageMessage, error, 'Reset Password ไม่สำเร็จ');
+    logApiError('reset_user_password_error', error, {
+      userId: userId
+    });
+
+  } finally {
+    setButtonLoading(el.resetUserPasswordBtn, false, 'Reset Password');
+  }
+}
+
+
+async function setUserStatusById(userId, status) {
+  userId = String(userId || '').trim();
+  status = String(status || '').trim();
+
+  if (!userId || !status) {
+    setUserManageMessage('ข้อมูล User ID หรือสถานะไม่ครบ');
+    return;
+  }
+
+  const user = usersCache.find(function (item) {
+    return String(item.userId || '') === userId;
+  });
+
+  const confirmed = window.confirm(
+    'ยืนยันเปลี่ยนสถานะผู้ใช้นี้เป็น ' + status + ' หรือไม่?\n\n' +
+    (user ? user.displayName + ' (' + user.username + ')' : userId)
+  );
+
+  if (!confirmed) {
+    return;
+  }
+
+  try {
+    const data = await window.AnalyticsAPI.setUserStatus(userId, status);
+
+    setUserManageMessage(data.message || 'เปลี่ยนสถานะผู้ใช้สำเร็จ');
+
+    await loadUsers();
+
+  } catch (error) {
+    showApiError(setUserManageMessage, error, 'เปลี่ยนสถานะผู้ใช้ไม่สำเร็จ');
+    logApiError('set_user_status_error', error, {
+      userId: userId,
+      status: status
+    });
+  }
+}
+
+
+function resetUserForm() {
+  selectedManageUserId = '';
+
+  if (el.userManageUsername) {
+    el.userManageUsername.value = '';
+    el.userManageUsername.disabled = false;
+  }
+
+  if (el.userManageDisplayName) el.userManageDisplayName.value = '';
+  if (el.userManageEmail) el.userManageEmail.value = '';
+  if (el.userManageRole) el.userManageRole.value = 'Viewer';
+  if (el.userManageStatus) el.userManageStatus.value = 'active';
+  if (el.userManagePassword) el.userManagePassword.value = '';
+  if (el.userManageDashboards) el.userManageDashboards.value = '';
+
+  if (el.userCanExport) el.userCanExport.checked = false;
+  if (el.userCanAddSource) el.userCanAddSource.checked = false;
+  if (el.userCanEditDashboard) el.userCanEditDashboard.checked = false;
+  if (el.userCanViewAuditLog) el.userCanViewAuditLog.checked = false;
+  if (el.userCanManageUser) el.userCanManageUser.checked = false;
+
+  setUserManageMessage('');
+}
+
+
+function setUserManageMessage(message) {
+  if (el.userManageMessage) {
+    el.userManageMessage.textContent = message || '';
+  }
 }
 async function loadAuditLog() {
   if (!el.auditLogResult) {
