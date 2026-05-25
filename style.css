@@ -2643,3 +2643,137 @@ body.is-loading input {
     width: 100%;
   }
 }
+/* =====================================================
+   AUDIT LOG VIEWER
+   ===================================================== */
+
+.audit-log-section {
+  overflow: hidden;
+}
+
+.compact-select {
+  min-height: 42px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 0 12px;
+  background: #ffffff;
+  color: var(--text);
+  font-size: 14px;
+  outline: none;
+}
+
+.audit-log-result {
+  padding: 16px;
+}
+
+.audit-table-wrap {
+  width: 100%;
+  max-height: 520px;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: #ffffff;
+  -webkit-overflow-scrolling: touch;
+}
+
+.audit-table {
+  width: 100%;
+  min-width: 860px;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.audit-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 12px;
+  border-bottom: 1px solid var(--border);
+  background: #f8fafc;
+  color: #334155;
+  text-align: left;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.audit-table td {
+  padding: 12px;
+  border-bottom: 1px solid #eef2f7;
+  vertical-align: top;
+  color: #334155;
+}
+
+.audit-table td small {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.audit-detail {
+  max-width: 520px;
+  line-height: 1.55;
+  word-break: break-word;
+}
+
+.audit-meta {
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.audit-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.audit-badge.success {
+  color: #166534;
+  background: #dcfce7;
+}
+
+.audit-badge.info {
+  color: #1d4ed8;
+  background: #dbeafe;
+}
+
+.audit-badge.warning {
+  color: #92400e;
+  background: #fef3c7;
+}
+
+.audit-badge.danger {
+  color: #991b1b;
+  background: #fee2e2;
+}
+
+.audit-badge.muted {
+  color: #475569;
+  background: #e2e8f0;
+}
+
+@media (max-width: 720px) {
+  .audit-log-result {
+    padding: 12px;
+  }
+
+  .audit-table {
+    min-width: 760px;
+    font-size: 12px;
+  }
+
+  .audit-table th,
+  .audit-table td {
+    padding: 10px;
+  }
+
+  .compact-select {
+    width: 100%;
+  }
+}
