@@ -600,7 +600,32 @@
             </button>
           </article>
         </section>
+<!-- AUDIT LOG VIEWER -->
+<section class="panel admin-only audit-log-section">
+  <div class="panel-header">
+    <div>
+      <h3>ประวัติการใช้งานระบบ</h3>
+      <p>ดูรายการ Login, Save Mapping, Create Dashboard, Export, Error และการจัดการ Dashboard</p>
+    </div>
 
+    <div class="actions-row">
+      <select id="auditLimitSelect" class="compact-select">
+        <option value="50">ล่าสุด 50 รายการ</option>
+        <option value="100" selected>ล่าสุด 100 รายการ</option>
+        <option value="200">ล่าสุด 200 รายการ</option>
+        <option value="500">ล่าสุด 500 รายการ</option>
+      </select>
+
+      <button id="reloadAuditLogBtn" class="btn btn-secondary" type="button">
+        โหลดประวัติ
+      </button>
+    </div>
+  </div>
+
+  <div id="auditLogResult" class="audit-log-result empty">
+    กดโหลดประวัติเพื่อดูรายการใช้งานล่าสุด
+  </div>
+</section>
 
         <!-- DEBUG LOG -->
        <section class="panel admin-debug-only">
