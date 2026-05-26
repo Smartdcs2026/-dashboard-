@@ -292,6 +292,26 @@ if (el.manageDashboardStatusFilter) {
     if (el.deleteManageDashboardBtn) {
       el.deleteManageDashboardBtn.addEventListener('click', handleDeleteManageDashboard);
     }
+
+    if (el.dashboardViewResult) {
+      el.dashboardViewResult.addEventListener('click', function (event) {
+        const btn = event.target.closest('[data-dashboard-table-page-action]');
+
+        if (!btn || btn.disabled) {
+          return;
+        }
+
+        const action = btn.getAttribute('data-dashboard-table-page-action');
+
+        if (action === 'prev') {
+          changeDashboardTablePage(-1);
+        }
+
+        if (action === 'next') {
+          changeDashboardTablePage(1);
+        }
+      });
+    }
   }
 
   function resetWorkingState() {
@@ -302,6 +322,8 @@ if (el.manageDashboardStatusFilter) {
     lastHeadersData = null;
     currentDashboardId = '';
     currentDashboardFilters = [];
+    currentDashboardTable = null;
+    currentDashboardTablePage = 1;
         manageDashboardsCache = [];
     selectedManageDashboard = null;
 
@@ -1564,6 +1586,13 @@ setPanelLoading(el.dashboardViewResult, 'กำลังโหลด Dashboard..
   const dashboardDesc = dashboard['คำอธิบาย'] || '';
   const source = data.source || {};
 
+  currentDashboardTable = data.table || {
+    fields: [],
+    rows: []
+  };
+
+  currentDashboardTablePage = 1;
+
   el.dashboardViewResult.classList.remove('empty');
 
   el.dashboardViewResult.innerHTML = `
@@ -1586,11 +1615,12 @@ setPanelLoading(el.dashboardViewResult, 'กำลังโหลด Dashboard..
     ${renderPreviewCharts(data.chartResults || [])}
 
     <div class="dashboard-section-title">ตารางข้อมูล</div>
-    ${renderPreviewTable(data.table || { fields: [], rows: [] })}
+    <div data-dashboard-table-section>
+      ${renderDashboardPagedTable(currentDashboardTable, currentDashboardTablePage)}
+    </div>
   `;
-   
+
   mountQueuedCharts();
-    bindDashboardTablePagination();
 }
 
   function renderDashboardFilters(filters, appliedFilters) {
@@ -1850,6 +1880,7 @@ function renderDashboardPagedTable(table, page) {
   }
 
   page = Math.max(1, Number(page || 1));
+
   const pageSize = DASHBOARD_TABLE_PAGE_SIZE;
   const totalRows = rows.length;
   const totalPages = Math.max(1, Math.ceil(totalRows / pageSize));
@@ -1868,8 +1899,17 @@ function renderDashboardPagedTable(table, page) {
 
   const rowsHtml = pageRows.map(function (row) {
     const cells = fields.map(function (field) {
-      const key = field.displayName || field.columnName;
-      return `<td>${escapeHtml(row[key] || '')}</td>`;
+      const displayKey = field.displayName || '';
+      const columnKey = field.columnName || '';
+
+      const value =
+        row[displayKey] !== undefined
+          ? row[displayKey]
+          : row[columnKey] !== undefined
+            ? row[columnKey]
+            : '';
+
+      return `<td>${escapeHtml(value)}</td>`;
     }).join('');
 
     return `<tr>${cells}</tr>`;
@@ -1884,9 +1924,9 @@ function renderDashboardPagedTable(table, page) {
 
       <div class="dashboard-table-pager">
         <button
-          id="dashboardTablePrevBtn"
           class="btn btn-ghost"
           type="button"
+          data-dashboard-table-page-action="prev"
           ${page <= 1 ? 'disabled' : ''}
         >
           ก่อนหน้า
@@ -1895,9 +1935,9 @@ function renderDashboardPagedTable(table, page) {
         <span>หน้า ${page.toLocaleString()} / ${totalPages.toLocaleString()}</span>
 
         <button
-          id="dashboardTableNextBtn"
           class="btn btn-ghost"
           type="button"
+          data-dashboard-table-page-action="next"
           ${page >= totalPages ? 'disabled' : ''}
         >
           ถัดไป
@@ -1915,20 +1955,27 @@ function renderDashboardPagedTable(table, page) {
     </div>
   `;
 }
+
+
   function bindDashboardTablePagination() {
-  const prevBtn = document.getElementById('dashboardTablePrevBtn');
-  const nextBtn = document.getElementById('dashboardTableNextBtn');
+  const prevBtn = el.dashboardViewResult
+    ? el.dashboardViewResult.querySelector('[data-dashboard-table-page-action="prev"]')
+    : null;
+
+  const nextBtn = el.dashboardViewResult
+    ? el.dashboardViewResult.querySelector('[data-dashboard-table-page-action="next"]')
+    : null;
 
   if (prevBtn) {
-    prevBtn.addEventListener('click', function () {
+    prevBtn.onclick = function () {
       changeDashboardTablePage(-1);
-    });
+    };
   }
 
   if (nextBtn) {
-    nextBtn.addEventListener('click', function () {
+    nextBtn.onclick = function () {
       changeDashboardTablePage(1);
-    });
+    };
   }
 }
 
@@ -1956,8 +2003,6 @@ function changeDashboardTablePage(direction) {
     currentDashboardTable,
     currentDashboardTablePage
   );
-
-  bindDashboardTablePagination();
 }
   function renderPreviewTable(table) {
     const fields = table.fields || [];
