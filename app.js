@@ -115,6 +115,8 @@ globalLoadingText: document.getElementById('globalLoadingText'),
     reloadAuditLogBtn: document.getElementById('reloadAuditLogBtn'),
 auditLimitSelect: document.getElementById('auditLimitSelect'),
 auditLogResult: document.getElementById('auditLogResult'),
+    runSystemCheckBtn: document.getElementById('runSystemCheckBtn'),
+systemCheckResult: document.getElementById('systemCheckResult'),
     
     debugLog: document.getElementById('debugLog')
   };
@@ -292,7 +294,9 @@ if (el.manageDashboardStatusFilter) {
     if (el.deleteManageDashboardBtn) {
       el.deleteManageDashboardBtn.addEventListener('click', handleDeleteManageDashboard);
     }
-
+ if (el.runSystemCheckBtn) {
+  el.runSystemCheckBtn.addEventListener('click', runSystemCheck);
+}
     if (el.dashboardViewResult) {
       el.dashboardViewResult.addEventListener('click', function (event) {
         const btn = event.target.closest('[data-dashboard-table-page-action]');
@@ -429,6 +433,9 @@ if (el.userManageCount) {
 }
       if (currentUser && ['Super Admin', 'Admin'].includes(String(currentUser.role || ''))) {
   await loadAuditLog();
+}
+      if (currentUser && ['Super Admin', 'Admin'].includes(String(currentUser.role || ''))) {
+  runSystemCheck();
 }
     } catch (error) {
       window.AnalyticsAPI.clearToken();
@@ -2970,12 +2977,191 @@ function renderAuditStatusBadge(status) {
 
   return `<span class="${cls}">${escapeHtml(text)}</span>`;
 }
+  async function runSystemCheck() {
+  if (!el.systemCheckResult) {
+    return;
+  }
+
+  el.systemCheckResult.classList.remove('empty');
+  setPanelLoading(el.systemCheckResult, 'กำลังตรวจสอบระบบ...');
+
+  if (el.runSystemCheckBtn) {
+    setButtonLoading(el.runSystemCheckBtn, true, 'กำลังตรวจ...');
+  }
+
+  const checks = [];
+
+  function addCheck(name, ok, detail) {
+    checks.push({
+      name: name,
+      ok: !!ok,
+      detail: detail || ''
+    });
+  }
+
+  try {
+    addCheck(
+      'Frontend Version',
+      !!window.DASHBOARD_FRONTEND_VERSION,
+      window.DASHBOARD_FRONTEND_VERSION || 'ไม่พบ version'
+    );
+
+    addCheck(
+      'AnalyticsAPI',
+      !!window.AnalyticsAPI,
+      window.AnalyticsAPI ? 'พร้อมใช้งาน' : 'ไม่พบ window.AnalyticsAPI'
+    );
+
+    addCheck(
+      'ECharts',
+      !!window.echarts,
+      window.echarts ? 'โหลด ECharts แล้ว' : 'ไม่พบ ECharts'
+    );
+
+    addCheck(
+      'SheetJS / XLSX',
+      !!window.XLSX,
+      window.XLSX ? 'โหลด SheetJS แล้ว' : 'ไม่พบ SheetJS ใช้ Export Excel แบบ fallback ได้'
+    );
+
+    addCheck(
+      'Token Key',
+      !!(window.AnalyticsAPI && window.AnalyticsAPI.TOKEN_KEY === 'analytics_dashboard_token'),
+      window.AnalyticsAPI ? window.AnalyticsAPI.TOKEN_KEY : 'ไม่พบ TOKEN_KEY'
+    );
+
+    addCheck(
+      'Dashboard Viewer Buttons',
+      !!(
+        el.openDashboardBtn &&
+        el.refreshDashboardBtn &&
+        el.applyDashboardFilterBtn &&
+        el.exportDashboardBtn &&
+        el.exportDashboardExcelBtn
+      ),
+      'Open / Refresh / Filter / Export CSV / Export Excel'
+    );
+
+    addCheck(
+      'Table Pagination Container',
+      !!el.dashboardViewResult,
+      el.dashboardViewResult ? 'พร้อมใช้งาน' : 'ไม่พบ dashboardViewResult'
+    );
+
+    addCheck(
+      'User Management UI',
+      !!(el.reloadUsersBtn && el.userManageList),
+      el.reloadUsersBtn && el.userManageList ? 'พร้อมใช้งาน' : 'ไม่พบ User Management UI'
+    );
+
+    addCheck(
+      'Audit Log UI',
+      !!(el.reloadAuditLogBtn && el.auditLogResult),
+      el.reloadAuditLogBtn && el.auditLogResult ? 'พร้อมใช้งาน' : 'ไม่พบ Audit Log UI'
+    );
+
+    if (window.AnalyticsAPI && window.AnalyticsAPI.health) {
+      try {
+        const health = await window.AnalyticsAPI.health();
+
+        addCheck(
+          'API Health',
+          !!health.ok,
+          health.message || 'API ตอบกลับแล้ว'
+        );
+      } catch (err) {
+        addCheck(
+          'API Health',
+          false,
+          getFriendlyErrorMessage(err)
+        );
+      }
+    }
+
+    if (window.AnalyticsAPI && window.AnalyticsAPI.setupStatus) {
+      try {
+        const setup = await window.AnalyticsAPI.setupStatus();
+
+        addCheck(
+          'Master Sheet Setup',
+          !!setup.ok,
+          setup.ok
+            ? 'โครงสร้างชีทครบถ้วน'
+            : 'ยังขาดชีท: ' + (setup.missingSheetNames || []).join(', ')
+        );
+      } catch (err) {
+        addCheck(
+          'Master Sheet Setup',
+          false,
+          getFriendlyErrorMessage(err)
+        );
+      }
+    }
+
+    renderSystemCheckResult(checks);
+
+    writeLog({
+      step: 'system_check',
+      checks: checks
+    });
+
+  } catch (error) {
+    el.systemCheckResult.classList.add('empty');
+    el.systemCheckResult.textContent = getFriendlyErrorMessage(error);
+
+    logApiError('system_check_error', error);
+
+  } finally {
+    if (el.runSystemCheckBtn) {
+      setButtonLoading(el.runSystemCheckBtn, false, 'Run System Check');
+    }
+  }
+}
+
+
+function renderSystemCheckResult(checks) {
+  if (!el.systemCheckResult) {
+    return;
+  }
+
+  checks = checks || [];
+
+  const passed = checks.filter(function (item) {
+    return item.ok;
+  }).length;
+
+  const total = checks.length;
+
+  const rowsHtml = checks.map(function (item) {
+    return `
+      <div class="system-check-item ${item.ok ? 'is-pass' : 'is-fail'}">
+        <div>
+          <strong>${escapeHtml(item.name)}</strong>
+          <span>${escapeHtml(item.detail || '-')}</span>
+        </div>
+
+        <b>${item.ok ? 'PASS' : 'FAIL'}</b>
+      </div>
+    `;
+  }).join('');
+
+  el.systemCheckResult.classList.remove('empty');
+  el.systemCheckResult.innerHTML = `
+    <div class="system-check-summary ${passed === total ? 'is-pass' : 'is-warn'}">
+      ผ่าน ${passed.toLocaleString()} / ${total.toLocaleString()} รายการ
+    </div>
+
+    <div class="system-check-list">
+      ${rowsHtml}
+    </div>
+  `;
+}
   function writeLog(data) {
     if (el.debugLog) {
       el.debugLog.textContent = JSON.stringify(data, null, 2);
     }
   }
-
+ 
   function clearLog() {
     if (el.debugLog) {
       el.debugLog.textContent = 'ยังไม่มีข้อมูล';
