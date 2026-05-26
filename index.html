@@ -762,6 +762,26 @@
   </div>
 </section>
 
+
+        <!-- SYSTEM CHECK -->
+<section class="panel admin-debug-only system-check-section">
+  <div class="panel-header">
+    <div>
+      <h3>ตรวจสอบระบบก่อนใช้งานจริง</h3>
+      <p>ตรวจ API, Version, Library, ปุ่มหลัก และสถานะ Frontend</p>
+    </div>
+
+    <div class="actions-row">
+      <button id="runSystemCheckBtn" class="btn btn-secondary" type="button">
+        Run System Check
+      </button>
+    </div>
+  </div>
+
+  <div id="systemCheckResult" class="system-check-result empty">
+    กด Run System Check เพื่อตรวจสอบระบบ
+  </div>
+</section>
         <!-- DEBUG LOG -->
        <section class="panel admin-debug-only">
   <div class="panel-header">
@@ -785,8 +805,8 @@
 
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="./api.js?v=20260522-09"></script>
-<script src="./app.js?v=20260522-09"></script>
+<script src="./api.js?v=20260522-10"></script>
+<script src="./app.js?v=20260522-10"></script>
 <script>
   window.DASHBOARD_FRONTEND_VERSION = '20260522-01';
   console.log('Dashboard Frontend Version:', window.DASHBOARD_FRONTEND_VERSION);
