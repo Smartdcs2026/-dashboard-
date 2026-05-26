@@ -1138,7 +1138,10 @@ applyRoleUi(currentUser);
     return;
   }
 
+  data = data || {};
+
   disposeDashboardCharts();
+  chartRenderQueue = [];
 
   const dashboard = data.dashboard || {};
   const source = data.source || {};
@@ -1166,20 +1169,23 @@ applyRoleUi(currentUser);
   const totalRowsRead = Number(data.totalRowsRead || 0);
   const totalRowsAfterFilter = Number(data.totalRowsAfterFilter || totalRowsRead || 0);
   const loadedAt = formatClientDateTime(new Date());
-    const limitWarning = String(data.limitWarning || '').trim();
-const tableLimit = Number(data.tableLimit || 0);
+  const limitWarning = String(data.limitWarning || '').trim();
+  const tableLimit = Number(data.tableLimit || 0);
 
-const kpisHtml = renderPreviewKpis(data.kpis || []);
-const chartsHtml = renderPreviewCharts(data.chartResults || data.charts || []);
+  const kpisHtml = renderPreviewKpis(data.kpis || []);
+  const chartsHtml = renderPreviewCharts(data.chartResults || data.charts || []);
 
- currentDashboardTable = data.table || {
-  fields: [],
-  rows: []
-};
+  currentDashboardTable = data.table || {
+    fields: [],
+    rows: []
+  };
 
-currentDashboardTablePage = 1;
+  currentDashboardTablePage = 1;
 
-const tableHtml = renderDashboardPagedTable(currentDashboardTable, currentDashboardTablePage);
+  const tableHtml = renderDashboardPagedTable(
+    currentDashboardTable,
+    currentDashboardTablePage
+  );
 
   el.dashboardViewResult.classList.remove('empty');
 
@@ -1222,6 +1228,18 @@ const tableHtml = renderDashboardPagedTable(currentDashboardTable, currentDashbo
           <strong>${Number((data.chartResults || data.charts || []).length).toLocaleString()}</strong>
         </div>
       </div>
+
+      ${limitWarning ? `
+        <div class="dashboard-warning-box">
+          ${escapeHtml(limitWarning)}
+        </div>
+      ` : ''}
+
+      ${tableLimit ? `
+        <div class="dashboard-note-box">
+          ตารางด้านล่างแสดงสูงสุด ${tableLimit.toLocaleString()} แถวแรก เพื่อให้หน้าเว็บทำงานเร็วขึ้น
+        </div>
+      ` : ''}
     </div>
 
     <div class="dashboard-section-title">ตัวชี้วัดสำคัญ</div>
@@ -1231,20 +1249,11 @@ const tableHtml = renderDashboardPagedTable(currentDashboardTable, currentDashbo
     ${chartsHtml || '<div class="preview-chart-empty">ยังไม่มีกราฟสำหรับ Dashboard นี้</div>'}
 
     <div class="dashboard-section-title">ตารางข้อมูล</div>
-<div data-dashboard-table-section>
-  ${tableHtml || '<div class="preview-chart-empty">ยังไม่มีข้อมูลตาราง</div>'}
-</div>
-${limitWarning ? `
-  <div class="dashboard-warning-box">
-    ${escapeHtml(limitWarning)}
-  </div>
-` : ''}
+    <div data-dashboard-table-section>
+      ${tableHtml || '<div class="preview-chart-empty">ยังไม่มีข้อมูลตาราง</div>'}
+    </div>
+  `;
 
-${tableLimit ? `
-  <div class="dashboard-note-box">
-    ตารางด้านล่างแสดงสูงสุด ${tableLimit.toLocaleString()} แถวแรก เพื่อให้หน้าเว็บทำงานเร็วขึ้น
-  </div>
-` : ''}
   mountQueuedCharts();
 }
 
@@ -1453,7 +1462,7 @@ async function handleRefreshDashboard() {
 
   } finally {
     if (el.refreshDashboardBtn) {
-      setButtonLoading(el.refreshDashboardBtn, false, 'Refresh');
+      setButtonLoading(el.refreshDashboardBtn, false, 'Refresh Dashboard');
     }
   }
 }
@@ -1965,29 +1974,6 @@ function renderDashboardPagedTable(table, page) {
       </table>
     </div>
   `;
-}
-
-
-  function bindDashboardTablePagination() {
-  const prevBtn = el.dashboardViewResult
-    ? el.dashboardViewResult.querySelector('[data-dashboard-table-page-action="prev"]')
-    : null;
-
-  const nextBtn = el.dashboardViewResult
-    ? el.dashboardViewResult.querySelector('[data-dashboard-table-page-action="next"]')
-    : null;
-
-  if (prevBtn) {
-    prevBtn.onclick = function () {
-      changeDashboardTablePage(-1);
-    };
-  }
-
-  if (nextBtn) {
-    nextBtn.onclick = function () {
-      changeDashboardTablePage(1);
-    };
-  }
 }
 
 
