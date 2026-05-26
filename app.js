@@ -4176,258 +4176,73 @@ function setAppMode(mode) {
   }
 }
   function mountQueuedCharts() {
-  if (!window.echarts) {
-    mountFallbackCharts();
-    return;
+    const queue = chartRenderQueue.slice();
+    chartRenderQueue = [];
+
+    if (!queue.length) {
+      return;
+    }
+
+    if (!window.echarts) {
+      mountFallbackCharts(queue);
+      return;
+    }
+
+    requestAnimationFrame(function () {
+      queue.forEach(function (item) {
+        const container = document.getElementById(item.id);
+
+        if (!container) {
+          return;
+        }
+
+        renderEChartByType(container, item.chart);
+      });
+
+      window.removeEventListener('resize', resizeDashboardCharts);
+      window.addEventListener('resize', resizeDashboardCharts, { passive: true });
+    });
   }
 
-  requestAnimationFrame(function () {
-    chartRenderQueue.forEach(function (item) {
+
+  function disposeDashboardCharts() {
+    chartInstances.forEach(function (chart) {
+      try {
+        chart.dispose();
+      } catch (error) {
+        // ignore
+      }
+    });
+
+    chartInstances = [];
+    chartRenderQueue = [];
+  }
+
+
+  function resizeDashboardCharts() {
+    chartInstances.forEach(function (chart) {
+      try {
+        chart.resize();
+      } catch (error) {
+        // ignore
+      }
+    });
+  }
+
+
+  function mountFallbackCharts(queue) {
+    (queue || chartRenderQueue || []).forEach(function (item) {
       const dom = document.getElementById(item.id);
 
       if (!dom) {
         return;
       }
 
-      const chart = window.echarts.init(dom);
-      const option = buildEchartOption(item.chart);
-
-      chart.setOption(option);
-      chartInstances.push(chart);
+      dom.outerHTML = renderSimpleBarChart((item.chart && item.chart.data) || []);
     });
-
-    window.addEventListener('resize', resizeDashboardCharts, { passive: true });
-  });
-}
-
-
-function disposeDashboardCharts() {
-  chartInstances.forEach(function (chart) {
-    try {
-      chart.dispose();
-    } catch (error) {
-      // ignore
-    }
-  });
-
-  chartInstances = [];
-}
-
-
-function resizeDashboardCharts() {
-  chartInstances.forEach(function (chart) {
-    try {
-      chart.resize();
-    } catch (error) {
-      // ignore
-    }
-  });
-}
-
-
-function buildEchartOption(chart) {
-  const type = String(chart.type || 'bar').toLowerCase();
-  const data = Array.isArray(chart.data) ? chart.data : [];
-
-  if (type === 'line') {
-    return buildLineChartOption(chart, data);
   }
 
-  if (type === 'donut' || type === 'pie') {
-    return buildDonutChartOption(chart, data);
-  }
 
-  if (type === 'horizontal_bar') {
-    return buildHorizontalBarOption(chart, data);
-  }
-
-  return buildBarChartOption(chart, data);
-}
-
-
-function buildLineChartOption(chart, data) {
-  return {
-    tooltip: {
-      trigger: 'axis'
-    },
-    grid: {
-      left: 45,
-      right: 24,
-      top: 28,
-      bottom: 42
-    },
-    xAxis: {
-      type: 'category',
-      data: data.map(function (x) { return x.name; }),
-      axisLabel: {
-        rotate: data.length > 8 ? 35 : 0
-      }
-    },
-    yAxis: {
-      type: 'value'
-    },
-    series: [
-      {
-        name: chart.title || '',
-        type: 'line',
-        smooth: true,
-        symbolSize: 7,
-        areaStyle: {
-          opacity: 0.12
-        },
-        data: data.map(function (x) { return Number(x.value || 0); })
-      }
-    ]
-  };
-}
-
-
-function buildBarChartOption(chart, data) {
-  return {
-    tooltip: {
-      trigger: 'axis',
-      axisPointer: {
-        type: 'shadow'
-      }
-    },
-    grid: {
-      left: 45,
-      right: 24,
-      top: 28,
-      bottom: 72
-    },
-    xAxis: {
-      type: 'category',
-      data: data.map(function (x) { return x.name; }),
-      axisLabel: {
-        rotate: data.length > 5 ? 35 : 0,
-        overflow: 'truncate'
-      }
-    },
-    yAxis: {
-      type: 'value'
-    },
-    series: [
-      {
-        name: chart.title || '',
-        type: 'bar',
-        barMaxWidth: 42,
-        data: data.map(function (x) { return Number(x.value || 0); })
-      }
-    ]
-  };
-}
-
-
-function buildHorizontalBarOption(chart, data) {
-  const sorted = data.slice().reverse();
-
-  return {
-    tooltip: {
-      trigger: 'axis',
-      axisPointer: {
-        type: 'shadow'
-      }
-    },
-    grid: {
-      left: 90,
-      right: 28,
-      top: 24,
-      bottom: 28
-    },
-    xAxis: {
-      type: 'value'
-    },
-    yAxis: {
-      type: 'category',
-      data: sorted.map(function (x) { return x.name; }),
-      axisLabel: {
-        overflow: 'truncate',
-        width: 80
-      }
-    },
-    series: [
-      {
-        name: chart.title || '',
-        type: 'bar',
-        barMaxWidth: 24,
-        data: sorted.map(function (x) { return Number(x.value || 0); })
-      }
-    ]
-  };
-}
-
-
-function buildDonutChartOption(chart, data) {
-  return {
-    tooltip: {
-      trigger: 'item'
-    },
-    legend: {
-      bottom: 0,
-      type: 'scroll'
-    },
-    series: [
-      {
-        name: chart.title || '',
-        type: 'pie',
-        radius: ['45%', '70%'],
-        center: ['50%', '45%'],
-        avoidLabelOverlap: true,
-        label: {
-          formatter: '{b}: {c}'
-        },
-        data: data.map(function (x) {
-          return {
-            name: x.name || '(ว่าง)',
-            value: Number(x.value || 0)
-          };
-        })
-      }
-    ]
-  };
-}
-
-
-function mountFallbackCharts() {
-  chartRenderQueue.forEach(function (item) {
-    const dom = document.getElementById(item.id);
-
-    if (!dom) {
-      return;
-    }
-
-    dom.outerHTML = renderSimpleBarChart(item.chart.data || []);
-  });
-}
-  function renderSimpleBarChart(items) {
-  if (!items.length) {
-    return '<p class="empty">ไม่มีข้อมูลสำหรับกราฟ</p>';
-  }
-
-  const max = Math.max.apply(null, items.map(function (x) {
-    return Number(x.value || 0);
-  })) || 1;
-
-  const html = items.map(function (item) {
-    const value = Number(item.value || 0);
-    const percent = Math.max(2, Math.round((value / max) * 100));
-
-    return `
-      <div class="simple-bar-item">
-        <div class="simple-bar-label" title="${escapeAttr(item.name || '')}">
-          ${escapeHtml(item.name || '(ว่าง)')}
-        </div>
-        <div class="simple-bar-track">
-          <div class="simple-bar-fill" style="width:${percent}%"></div>
-        </div>
-        <div class="simple-bar-value">${formatNumber(value)}</div>
-      </div>
-    `;
-  }).join('');
-
-  return `<div class="simple-bar-list">${html}</div>`;
-}
   function formatClientDateTime(date) {
   const d = date instanceof Date ? date : new Date();
 
@@ -4443,5 +4258,519 @@ function mountFallbackCharts() {
   const second = pad(d.getSeconds());
 
   return day + '/' + month + '/' + year + ' ' + hour + ':' + minute + ':' + second;
+}
+  function renderEChartByType(container, chart) {
+  if (!container || !chart) {
+    return;
+  }
+
+  if (!window.echarts) {
+    container.innerHTML = '<div class="empty">ยังไม่พบ ECharts library</div>';
+    return;
+  }
+
+  const type = String(chart.type || chart.chartType || '').trim().toLowerCase();
+  const title = String(chart.title || chart.name || chart.chartName || 'Chart');
+  const data = Array.isArray(chart.data) ? chart.data : [];
+
+  container.innerHTML = '';
+
+  const chartInstance = echarts.init(container);
+  chartInstances.push(chartInstance);
+
+  let option;
+
+  if (type === 'gauge') {
+    option = buildGaugeOption(title, data, chart);
+  } else if (type === 'area') {
+    option = buildAreaOption(title, data, chart);
+  } else if (type === 'stacked_bar' || type === 'stackedbar') {
+    option = buildStackedBarOption(title, data, chart);
+  } else if (type === 'radar') {
+    option = buildRadarOption(title, data, chart);
+  } else if (type === 'heatmap') {
+    option = buildHeatmapOption(title, data, chart);
+  } else if (type === 'pie') {
+    option = buildPieOption(title, data, chart, false);
+  } else if (type === 'donut' || type === 'doughnut') {
+    option = buildPieOption(title, data, chart, true);
+  } else if (type === 'horizontal_bar' || type === 'horizontalbar') {
+    option = buildHorizontalBarOption(title, data, chart);
+  } else if (type === 'line') {
+    option = buildLineOption(title, data, chart);
+  } else {
+    option = buildBarOption(title, data, chart);
+  }
+
+  chartInstance.setOption(option);
+
+  window.addEventListener('resize', function () {
+    chartInstance.resize();
+  });
+}
+  function buildBaseTooltip() {
+  return {
+    trigger: 'item',
+    confine: true
+  };
+}
+
+
+function normalizeChartData(data) {
+  return (data || []).map(function (item) {
+    if (Array.isArray(item)) {
+      return {
+        name: String(item[0] || ''),
+        value: Number(item[1] || 0)
+      };
+    }
+
+    return {
+      name: String(item.name || item.label || item.category || ''),
+      value: Number(item.value || item.count || item.total || 0),
+      group: String(item.group || item.series || ''),
+      x: String(item.x || item.name || item.label || ''),
+      y: String(item.y || item.value || '')
+    };
+  });
+}
+
+
+function buildBarOption(title, data, chart) {
+  const rows = normalizeChartData(data);
+  const names = rows.map(function (x) { return x.name; });
+  const values = rows.map(function (x) { return x.value; });
+
+  return {
+    title: {
+      text: title,
+      left: 'center',
+      textStyle: {
+        fontSize: 14,
+        fontWeight: 700
+      }
+    },
+    tooltip: {
+      trigger: 'axis',
+      confine: true
+    },
+    grid: {
+      left: 42,
+      right: 20,
+      top: 56,
+      bottom: 56
+    },
+    xAxis: {
+      type: 'category',
+      data: names,
+      axisLabel: {
+        rotate: names.length > 6 ? 35 : 0
+      }
+    },
+    yAxis: {
+      type: 'value'
+    },
+    series: [
+      {
+        type: 'bar',
+        data: values,
+        barMaxWidth: 46
+      }
+    ]
+  };
+}
+
+
+function buildHorizontalBarOption(title, data, chart) {
+  const rows = normalizeChartData(data).slice().reverse();
+  const names = rows.map(function (x) { return x.name; });
+  const values = rows.map(function (x) { return x.value; });
+
+  return {
+    title: {
+      text: title,
+      left: 'center',
+      textStyle: {
+        fontSize: 14,
+        fontWeight: 700
+      }
+    },
+    tooltip: {
+      trigger: 'axis',
+      confine: true
+    },
+    grid: {
+      left: 110,
+      right: 22,
+      top: 56,
+      bottom: 24
+    },
+    xAxis: {
+      type: 'value'
+    },
+    yAxis: {
+      type: 'category',
+      data: names
+    },
+    series: [
+      {
+        type: 'bar',
+        data: values,
+        barMaxWidth: 34
+      }
+    ]
+  };
+}
+
+
+function buildLineOption(title, data, chart) {
+  const rows = normalizeChartData(data);
+  const names = rows.map(function (x) { return x.name; });
+  const values = rows.map(function (x) { return x.value; });
+
+  return {
+    title: {
+      text: title,
+      left: 'center',
+      textStyle: {
+        fontSize: 14,
+        fontWeight: 700
+      }
+    },
+    tooltip: {
+      trigger: 'axis',
+      confine: true
+    },
+    grid: {
+      left: 42,
+      right: 22,
+      top: 56,
+      bottom: 48
+    },
+    xAxis: {
+      type: 'category',
+      data: names
+    },
+    yAxis: {
+      type: 'value'
+    },
+    series: [
+      {
+        type: 'line',
+        data: values,
+        smooth: true
+      }
+    ]
+  };
+}
+
+
+function buildAreaOption(title, data, chart) {
+  const rows = normalizeChartData(data);
+  const names = rows.map(function (x) { return x.name; });
+  const values = rows.map(function (x) { return x.value; });
+
+  return {
+    title: {
+      text: title,
+      left: 'center',
+      textStyle: {
+        fontSize: 14,
+        fontWeight: 700
+      }
+    },
+    tooltip: {
+      trigger: 'axis',
+      confine: true
+    },
+    grid: {
+      left: 42,
+      right: 22,
+      top: 56,
+      bottom: 48
+    },
+    xAxis: {
+      type: 'category',
+      boundaryGap: false,
+      data: names
+    },
+    yAxis: {
+      type: 'value'
+    },
+    series: [
+      {
+        type: 'line',
+        data: values,
+        smooth: true,
+        areaStyle: {}
+      }
+    ]
+  };
+}
+
+
+function buildPieOption(title, data, chart, donut) {
+  const rows = normalizeChartData(data);
+
+  return {
+    title: {
+      text: title,
+      left: 'center',
+      textStyle: {
+        fontSize: 14,
+        fontWeight: 700
+      }
+    },
+    tooltip: buildBaseTooltip(),
+    legend: {
+      bottom: 0,
+      type: 'scroll'
+    },
+    series: [
+      {
+        type: 'pie',
+        radius: donut ? ['42%', '68%'] : '68%',
+        center: ['50%', '48%'],
+        data: rows.map(function (x) {
+          return {
+            name: x.name,
+            value: x.value
+          };
+        }),
+        label: {
+          formatter: '{b}: {d}%'
+        }
+      }
+    ]
+  };
+}
+
+
+function buildGaugeOption(title, data, chart) {
+  const rows = normalizeChartData(data);
+  const first = rows[0] || {};
+  const value = Number(first.value || chart.value || 0);
+  const max = Number(chart.max || chart.target || 100) || 100;
+
+  return {
+    title: {
+      text: title,
+      left: 'center',
+      textStyle: {
+        fontSize: 14,
+        fontWeight: 700
+      }
+    },
+    tooltip: buildBaseTooltip(),
+    series: [
+      {
+        type: 'gauge',
+        min: 0,
+        max: max,
+        progress: {
+          show: true
+        },
+        detail: {
+          valueAnimation: true,
+          formatter: function (v) {
+            return Number(v || 0).toLocaleString();
+          }
+        },
+        data: [
+          {
+            value: value,
+            name: first.name || 'Value'
+          }
+        ]
+      }
+    ]
+  };
+}
+
+
+function buildStackedBarOption(title, data, chart) {
+  const rows = normalizeChartData(data);
+  const categories = [];
+  const groups = [];
+
+  rows.forEach(function (item) {
+    if (categories.indexOf(item.x || item.name) < 0) {
+      categories.push(item.x || item.name);
+    }
+
+    if (groups.indexOf(item.group || 'รายการ') < 0) {
+      groups.push(item.group || 'รายการ');
+    }
+  });
+
+  const series = groups.map(function (group) {
+    return {
+      name: group,
+      type: 'bar',
+      stack: 'total',
+      data: categories.map(function (cat) {
+        const found = rows.find(function (item) {
+          return (item.x || item.name) === cat && (item.group || 'รายการ') === group;
+        });
+
+        return found ? found.value : 0;
+      })
+    };
+  });
+
+  return {
+    title: {
+      text: title,
+      left: 'center',
+      textStyle: {
+        fontSize: 14,
+        fontWeight: 700
+      }
+    },
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: {
+        type: 'shadow'
+      },
+      confine: true
+    },
+    legend: {
+      bottom: 0,
+      type: 'scroll'
+    },
+    grid: {
+      left: 42,
+      right: 22,
+      top: 56,
+      bottom: 70
+    },
+    xAxis: {
+      type: 'category',
+      data: categories
+    },
+    yAxis: {
+      type: 'value'
+    },
+    series: series
+  };
+}
+
+
+function buildRadarOption(title, data, chart) {
+  const rows = normalizeChartData(data).slice(0, 8);
+  const maxValue = Math.max.apply(null, rows.map(function (x) {
+    return x.value;
+  }).concat([100]));
+
+  return {
+    title: {
+      text: title,
+      left: 'center',
+      textStyle: {
+        fontSize: 14,
+        fontWeight: 700
+      }
+    },
+    tooltip: buildBaseTooltip(),
+    radar: {
+      radius: '62%',
+      indicator: rows.map(function (x) {
+        return {
+          name: x.name,
+          max: maxValue
+        };
+      })
+    },
+    series: [
+      {
+        type: 'radar',
+        data: [
+          {
+            value: rows.map(function (x) { return x.value; }),
+            name: title
+          }
+        ]
+      }
+    ]
+  };
+}
+
+
+function buildHeatmapOption(title, data, chart) {
+  const rows = normalizeChartData(data);
+
+  const xLabels = [];
+  const yLabels = [];
+
+  rows.forEach(function (item) {
+    const x = item.x || item.name || '';
+    const y = item.group || 'รายการ';
+
+    if (xLabels.indexOf(x) < 0) xLabels.push(x);
+    if (yLabels.indexOf(y) < 0) yLabels.push(y);
+  });
+
+  const heatData = rows.map(function (item) {
+    const x = item.x || item.name || '';
+    const y = item.group || 'รายการ';
+
+    return [
+      xLabels.indexOf(x),
+      yLabels.indexOf(y),
+      item.value
+    ];
+  });
+
+  return {
+    title: {
+      text: title,
+      left: 'center',
+      textStyle: {
+        fontSize: 14,
+        fontWeight: 700
+      }
+    },
+    tooltip: {
+      position: 'top',
+      confine: true
+    },
+    grid: {
+      left: 90,
+      right: 24,
+      top: 56,
+      bottom: 60
+    },
+    xAxis: {
+      type: 'category',
+      data: xLabels,
+      splitArea: {
+        show: true
+      }
+    },
+    yAxis: {
+      type: 'category',
+      data: yLabels,
+      splitArea: {
+        show: true
+      }
+    },
+    visualMap: {
+      min: 0,
+      max: Math.max.apply(null, rows.map(function (x) { return x.value; }).concat([1])),
+      calculable: true,
+      orient: 'horizontal',
+      left: 'center',
+      bottom: 6
+    },
+    series: [
+      {
+        type: 'heatmap',
+        data: heatData,
+        label: {
+          show: true
+        }
+      }
+    ]
+  };
 }
 })();
