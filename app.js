@@ -1166,6 +1166,8 @@ applyRoleUi(currentUser);
   const totalRowsRead = Number(data.totalRowsRead || 0);
   const totalRowsAfterFilter = Number(data.totalRowsAfterFilter || totalRowsRead || 0);
   const loadedAt = formatClientDateTime(new Date());
+    const limitWarning = String(data.limitWarning || '').trim();
+const tableLimit = Number(data.tableLimit || 0);
 
 const kpisHtml = renderPreviewKpis(data.kpis || []);
 const chartsHtml = renderPreviewCharts(data.chartResults || data.charts || []);
@@ -1232,8 +1234,17 @@ const tableHtml = renderDashboardPagedTable(currentDashboardTable, currentDashbo
 <div data-dashboard-table-section>
   ${tableHtml || '<div class="preview-chart-empty">ยังไม่มีข้อมูลตาราง</div>'}
 </div>
-  `;
+${limitWarning ? `
+  <div class="dashboard-warning-box">
+    ${escapeHtml(limitWarning)}
+  </div>
+` : ''}
 
+${tableLimit ? `
+  <div class="dashboard-note-box">
+    ตารางด้านล่างแสดงสูงสุด ${tableLimit.toLocaleString()} แถวแรก เพื่อให้หน้าเว็บทำงานเร็วขึ้น
+  </div>
+` : ''}
   mountQueuedCharts();
 }
 
