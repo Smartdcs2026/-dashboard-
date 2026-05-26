@@ -3276,3 +3276,51 @@ body.is-loading input {
     min-height: 280px;
   }
 }
+/* =====================================================
+   DASHBOARD VIEWER ACTIONS
+   ===================================================== */
+
+.dashboard-viewer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin-top: 12px;
+}
+
+.dashboard-viewer-actions .btn {
+  min-height: 42px;
+}
+
+.dashboard-viewer-message {
+  flex: 1 1 260px;
+  min-width: 220px;
+}
+
+#refreshDashboardBtn {
+  font-weight: 900;
+}
+
+@media (max-width: 720px) {
+  .dashboard-viewer-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .dashboard-viewer-actions .btn,
+  .dashboard-viewer-message {
+    width: 100%;
+  }
+
+  .dashboard-viewer-message {
+    grid-column: 1 / -1;
+    min-width: 0;
+  }
+}
+
+@media (max-width: 420px) {
+  .dashboard-viewer-actions {
+    grid-template-columns: 1fr;
+  }
+}
