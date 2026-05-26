@@ -544,34 +544,36 @@
               เมื่อเปิด Dashboard แล้ว ระบบจะแสดงตัวกรองที่ตั้งไว้ตรงนี้
             </div>
 
-            <div class="actions-row">
-              <button id="openDashboardBtn" class="btn btn-primary" type="button">
-                เปิด Dashboard
-              </button>
+           <div class="dashboard-viewer-actions">
+  <button id="openDashboardBtn" class="btn btn-primary" type="button">
+    เปิด Dashboard
+  </button>
 
-          <button id="applyDashboardFilterBtn" class="btn btn-secondary" type="button">
-  กรองข้อมูล Dashboard
-</button>
+  <button id="refreshDashboardBtn" class="btn btn-secondary" type="button">
+    Refresh Dashboard
+  </button>
 
-<button id="resetDashboardFilterBtn" class="btn btn-ghost" type="button">
-  ล้างตัวกรอง
-</button>
+  <button id="applyDashboardFilterBtn" class="btn btn-secondary" type="button">
+    กรองข้อมูล Dashboard
+  </button>
 
-<button id="refreshDashboardBtn" class="btn btn-ghost" type="button">
-  Refresh
-</button>
+  <button id="resetDashboardFilterBtn" class="btn btn-ghost" type="button">
+    ล้างตัวกรอง
+  </button>
 
-<button id="exportDashboardBtn" class="btn btn-secondary" type="button">
-  Export CSV
-</button>
+  <button id="exportDashboardBtn" class="btn btn-secondary" type="button">
+    Export CSV
+  </button>
 
-<button id="exportDashboardExcelBtn" class="btn btn-secondary" type="button">
-  Export Excel
-</button>
+  <button id="exportDashboardExcelBtn" class="btn btn-secondary" type="button">
+    Export Excel
+  </button>
+
+  <span id="dashboardViewMessage" class="mapping-message dashboard-viewer-message"></span>
+</div>
               
 
-<span id="dashboardViewMessage" class="mapping-message"></span>
-            </div>
+
           </div>
 
           <div id="dashboardViewResult" class="preview-box empty">
