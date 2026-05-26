@@ -135,6 +135,10 @@ let chartUid = 0;
   let usersCache = [];
 let selectedManageUserId = '';
 
+  let currentDashboardTable = null;
+let currentDashboardTablePage = 1;
+const DASHBOARD_TABLE_PAGE_SIZE = 50;
+
   document.addEventListener('DOMContentLoaded', init);
 
   async function init() {
@@ -1144,10 +1148,14 @@ applyRoleUi(currentUser);
 const kpisHtml = renderPreviewKpis(data.kpis || []);
 const chartsHtml = renderPreviewCharts(data.chartResults || data.charts || []);
 
-  const tableHtml = renderPreviewTable(data.table || {
-    fields: [],
-    rows: []
-  });
+ currentDashboardTable = data.table || {
+  fields: [],
+  rows: []
+};
+
+currentDashboardTablePage = 1;
+
+const tableHtml = renderDashboardPagedTable(currentDashboardTable, currentDashboardTablePage);
 
   el.dashboardViewResult.classList.remove('empty');
 
@@ -1199,7 +1207,9 @@ const chartsHtml = renderPreviewCharts(data.chartResults || data.charts || []);
     ${chartsHtml || '<div class="preview-chart-empty">ยังไม่มีกราฟสำหรับ Dashboard นี้</div>'}
 
     <div class="dashboard-section-title">ตารางข้อมูล</div>
-    ${tableHtml || '<div class="preview-chart-empty">ยังไม่มีข้อมูลตาราง</div>'}
+<div data-dashboard-table-section>
+  ${tableHtml || '<div class="preview-chart-empty">ยังไม่มีข้อมูลตาราง</div>'}
+</div>
   `;
 
   mountQueuedCharts();
@@ -1578,8 +1588,9 @@ setPanelLoading(el.dashboardViewResult, 'กำลังโหลด Dashboard..
     <div class="dashboard-section-title">ตารางข้อมูล</div>
     ${renderPreviewTable(data.table || { fields: [], rows: [] })}
   `;
-
+   
   mountQueuedCharts();
+    bindDashboardTablePagination();
 }
 
   function renderDashboardFilters(filters, appliedFilters) {
@@ -1825,7 +1836,129 @@ setPanelLoading(el.dashboardViewResult, 'กำลังโหลด Dashboard..
 
     return `<div class="simple-bar-list">${html}</div>`;
   }
+function renderDashboardPagedTable(table, page) {
+  table = table || {
+    fields: [],
+    rows: []
+  };
 
+  const fields = table.fields || [];
+  const rows = table.rows || [];
+
+  if (!fields.length || !rows.length) {
+    return '<div class="preview-chart-empty">ยังไม่มีข้อมูลตาราง</div>';
+  }
+
+  page = Math.max(1, Number(page || 1));
+  const pageSize = DASHBOARD_TABLE_PAGE_SIZE;
+  const totalRows = rows.length;
+  const totalPages = Math.max(1, Math.ceil(totalRows / pageSize));
+
+  if (page > totalPages) {
+    page = totalPages;
+  }
+
+  const start = (page - 1) * pageSize;
+  const end = Math.min(start + pageSize, totalRows);
+  const pageRows = rows.slice(start, end);
+
+  const headersHtml = fields.map(function (field) {
+    return `<th>${escapeHtml(field.displayName || field.columnName || '')}</th>`;
+  }).join('');
+
+  const rowsHtml = pageRows.map(function (row) {
+    const cells = fields.map(function (field) {
+      const key = field.displayName || field.columnName;
+      return `<td>${escapeHtml(row[key] || '')}</td>`;
+    }).join('');
+
+    return `<tr>${cells}</tr>`;
+  }).join('');
+
+  return `
+    <div class="dashboard-table-toolbar">
+      <div>
+        แสดง ${Number(start + 1).toLocaleString()}-${Number(end).toLocaleString()}
+        จาก ${Number(totalRows).toLocaleString()} แถว
+      </div>
+
+      <div class="dashboard-table-pager">
+        <button
+          id="dashboardTablePrevBtn"
+          class="btn btn-ghost"
+          type="button"
+          ${page <= 1 ? 'disabled' : ''}
+        >
+          ก่อนหน้า
+        </button>
+
+        <span>หน้า ${page.toLocaleString()} / ${totalPages.toLocaleString()}</span>
+
+        <button
+          id="dashboardTableNextBtn"
+          class="btn btn-ghost"
+          type="button"
+          ${page >= totalPages ? 'disabled' : ''}
+        >
+          ถัดไป
+        </button>
+      </div>
+    </div>
+
+    <div class="preview-table-wrap">
+      <table class="preview-table">
+        <thead>
+          <tr>${headersHtml}</tr>
+        </thead>
+        <tbody>${rowsHtml}</tbody>
+      </table>
+    </div>
+  `;
+}
+  function bindDashboardTablePagination() {
+  const prevBtn = document.getElementById('dashboardTablePrevBtn');
+  const nextBtn = document.getElementById('dashboardTableNextBtn');
+
+  if (prevBtn) {
+    prevBtn.addEventListener('click', function () {
+      changeDashboardTablePage(-1);
+    });
+  }
+
+  if (nextBtn) {
+    nextBtn.addEventListener('click', function () {
+      changeDashboardTablePage(1);
+    });
+  }
+}
+
+
+function changeDashboardTablePage(direction) {
+  if (!currentDashboardTable || !el.dashboardViewResult) {
+    return;
+  }
+
+  const rows = currentDashboardTable.rows || [];
+  const totalPages = Math.max(1, Math.ceil(rows.length / DASHBOARD_TABLE_PAGE_SIZE));
+
+  currentDashboardTablePage = Math.max(
+    1,
+    Math.min(totalPages, currentDashboardTablePage + Number(direction || 0))
+  );
+
+  const tableSection = el.dashboardViewResult.querySelector('[data-dashboard-table-section]');
+
+  if (!tableSection) {
+    return;
+  }
+
+  tableSection.innerHTML = renderDashboardPagedTable(
+    currentDashboardTable,
+    currentDashboardTablePage
+  );
+
+  bindDashboardTablePagination();
+}
   function renderPreviewTable(table) {
     const fields = table.fields || [];
     const rows = table.rows || [];
