@@ -3006,11 +3006,7 @@
     setUserManageMessage('');
   }
 
-  function setUserManageMessage(message) {
-    if (el.userManageMessage) {
-      el.userManageMessage.textContent = message || '';
-    }
-  }
+
           response: data
       });
 
