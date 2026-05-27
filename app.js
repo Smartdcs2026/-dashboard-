@@ -404,8 +404,7 @@
     if (el.reloadManageDashboardsBtn) {
       el.reloadManageDashboardsBtn.addEventListener('click', loadManageDashboards);
     }
-
-    if (el.manageDashboardSelect) {
+        if (el.manageDashboardSelect) {
       el.manageDashboardSelect.addEventListener('change', handleSelectManageDashboard);
     }
 
@@ -528,6 +527,10 @@
     setApiStatus('กำลังตรวจสอบสถานะระบบ...', 'muted');
 
     try {
+      if (!window.AnalyticsAPI) {
+        throw new Error('ไม่พบ AnalyticsAPI กรุณาตรวจสอบ api.js ว่าโหลดก่อน app.js หรือไม่');
+      }
+
       const health = await window.AnalyticsAPI.health();
       const setup = await window.AnalyticsAPI.setupStatus();
 
@@ -547,7 +550,7 @@
       });
 
     } catch (error) {
-      setApiStatus(error.message, 'error');
+      setApiStatus(error.message || 'เชื่อมต่อ API ไม่สำเร็จ', 'error');
 
       if (el.healthResult) {
         el.healthResult.textContent = 'เชื่อมต่อ API ไม่สำเร็จ';
@@ -584,9 +587,6 @@
 
       if (currentUser && ['Super Admin', 'Admin'].includes(String(currentUser.role || ''))) {
         await loadAuditLog();
-      }
-
-      if (currentUser && ['Super Admin', 'Admin'].includes(String(currentUser.role || ''))) {
         runSystemCheck();
       }
 
@@ -626,7 +626,11 @@
       showDashboard();
       applyRoleUi(currentUser);
 
-      showToast('success', 'เข้าสู่ระบบสำเร็จ', currentUser ? (currentUser.displayName || currentUser.username || '') : '');
+      showToast(
+        'success',
+        'เข้าสู่ระบบสำเร็จ',
+        currentUser ? (currentUser.displayName || currentUser.username || '') : ''
+      );
 
       writeLog({
         step: 'login_success',
@@ -640,9 +644,6 @@
 
       if (currentUser && ['Super Admin', 'Admin'].includes(String(currentUser.role || ''))) {
         await loadUsers();
-      }
-
-      if (currentUser && ['Super Admin', 'Admin'].includes(String(currentUser.role || ''))) {
         await loadAuditLog();
       }
 
@@ -743,7 +744,7 @@
       await loadSources();
 
     } catch (error) {
-      setSourceFormMessage(error.message);
+      setSourceFormMessage(error.message || 'เพิ่มแหล่งข้อมูลไม่สำเร็จ');
       showToast('error', 'เพิ่มแหล่งข้อมูลไม่สำเร็จ', error.message || '');
 
       writeLog({
@@ -803,7 +804,6 @@
       logApiError('sources_error', error);
     }
   }
-
   function renderSources(sources) {
     if (!el.sourcesList) return;
 
@@ -919,7 +919,8 @@
       });
     }
   }
-    function renderSourceSheets(sheets) {
+
+  function renderSourceSheets(sheets) {
     if (!el.sourceSheetsList) return;
 
     el.sourceSheetsList.innerHTML = '';
@@ -1228,8 +1229,7 @@
       setButtonLoading(el.saveMappingBtn, false, 'บันทึก Mapping');
     }
   }
-
-  function collectMappingFields() {
+   function collectMappingFields() {
     const rows = Array.from(
       el.headersResult.querySelectorAll('.mapping-card[data-map-row]')
     );
@@ -1318,6 +1318,360 @@
     } finally {
       setButtonLoading(el.previewDashboardBtn, false, 'สร้าง Dashboard Preview');
     }
+  }
+
+  function renderDashboardPreview(data) {
+    if (!el.previewResult) {
+      return;
+    }
+
+    if (!data || data.ok === false) {
+      setPreviewMessage((data && data.message) || 'ไม่สามารถสร้าง Dashboard Preview ได้');
+      return;
+    }
+
+    disposeDashboardCharts();
+    chartRenderQueue = [];
+
+    const kpis = data.kpis || data.metrics || [];
+    const charts = data.charts || data.chartResults || [];
+    const table = data.table || {
+      fields: [],
+      rows: []
+    };
+
+    const sourceName =
+      data.sourceName ||
+      (data.source && data.source.sourceName) ||
+      '';
+
+    const sheetName =
+      data.sheetName ||
+      (data.source && data.source.sheetName) ||
+      selectedSheetName ||
+      '';
+
+    const totalRowsRead = Number(data.totalRowsRead || 0);
+    const totalRowsAfterFilter = Number(data.totalRowsAfterFilter || totalRowsRead || 0);
+
+    el.previewResult.classList.remove('empty');
+
+    el.previewResult.innerHTML = `
+      <div class="dashboard-title-box">
+        <h3>Dashboard Preview</h3>
+        <p>
+          แหล่งข้อมูล: ${escapeHtml(sourceName || '-')}
+          / ชีท: ${escapeHtml(sheetName || '-')}
+          / อ่านข้อมูล ${totalRowsRead.toLocaleString()} แถว
+          / หลังกรอง ${totalRowsAfterFilter.toLocaleString()} แถว
+        </p>
+      </div>
+
+      <div class="dashboard-section-title">ตัวชี้วัดตัวอย่าง</div>
+      ${renderPreviewKpis(kpis)}
+
+      <div class="dashboard-section-title">กราฟตัวอย่าง</div>
+      ${renderPreviewCharts(charts)}
+
+      <div class="dashboard-section-title">ตารางตัวอย่าง</div>
+      ${renderPreviewTable(table)}
+    `;
+
+    mountQueuedCharts();
+  }
+
+  async function handleCreateDashboardFromPreview() {
+    if (!selectedSourceId || !selectedSheetName) {
+      setCreateDashboardMessage('กรุณาเลือกแหล่งข้อมูลและชีทก่อน');
+      showToast('warning', 'ยังเลือกข้อมูลไม่ครบ', 'กรุณาเลือกแหล่งข้อมูลและชีทก่อน');
+      return;
+    }
+
+    const dashboardName = el.dashboardName ? el.dashboardName.value.trim() : '';
+    const dashboardType = el.dashboardType ? el.dashboardType.value : 'Custom';
+
+    if (!dashboardName) {
+      setCreateDashboardMessage('กรุณากรอกชื่อ Dashboard');
+      showToast('warning', 'ยังไม่ได้ตั้งชื่อ Dashboard', 'กรุณากรอกชื่อ Dashboard ก่อนบันทึก');
+      return;
+    }
+
+    if (!window.AnalyticsAPI.createDashboardFromPreview) {
+      setCreateDashboardMessage('ยังไม่พบฟังก์ชัน createDashboardFromPreview ใน api.js');
+      showToast('error', 'ไม่พบ API', 'ยังไม่พบฟังก์ชัน createDashboardFromPreview ใน api.js');
+      return;
+    }
+
+    setButtonLoading(el.createDashboardBtn, true, 'กำลังบันทึก Dashboard...');
+    setCreateDashboardMessage('');
+
+    try {
+      const builderPayload = getDashboardBuilderPayload();
+
+      const data = await window.AnalyticsAPI.createDashboardFromPreview({
+        sourceId: selectedSourceId,
+        sheetName: selectedSheetName,
+        dashboardName: dashboardName,
+        dashboardType: dashboardType,
+        description: 'สร้างจาก Mapping ผ่าน Admin Console',
+        builderConfig: builderPayload
+      });
+
+      setCreateDashboardMessage(
+        'สร้าง Dashboard สำเร็จ: ' + data.dashboardId +
+        ' | KPI ' + data.totalMetrics +
+        ' | กราฟ ' + data.totalCharts +
+        ' | ตัวกรอง ' + data.totalFilters
+      );
+
+      showToast('success', 'สร้าง Dashboard สำเร็จ', data.dashboardId || dashboardName);
+
+      writeLog({
+        step: 'create_dashboard_from_preview',
+        response: data,
+        builderConfig: getDashboardBuilderPayload()
+      });
+
+      await loadDashboards();
+      await loadDashboardOptions();
+      await loadManageDashboards();
+
+    } catch (error) {
+      setCreateDashboardMessage(error.message || 'สร้าง Dashboard ไม่สำเร็จ');
+      showToast('error', 'สร้าง Dashboard ไม่สำเร็จ', error.message || '');
+
+      writeLog({
+        step: 'create_dashboard_from_preview_error',
+        message: error.message,
+        payload: error.payload || null
+      });
+
+    } finally {
+      setButtonLoading(el.createDashboardBtn, false, 'บันทึกเป็น Dashboard จริง');
+    }
+  }
+
+  async function loadDashboardOptions() {
+    if (!el.dashboardSelect) {
+      return;
+    }
+
+    el.dashboardSelect.innerHTML = '<option value="">กำลังโหลด...</option>';
+    setDashboardViewMessage('กำลังโหลดรายการ Dashboard...');
+
+    try {
+      const data = await window.AnalyticsAPI.listDashboards();
+      const dashboards = data.dashboards || [];
+
+      if (!dashboards.length) {
+        el.dashboardSelect.innerHTML = '<option value="">ยังไม่มี Dashboard</option>';
+        setDashboardViewMessage('ยังไม่มี Dashboard ที่บันทึกไว้');
+        return;
+      }
+
+      el.dashboardSelect.innerHTML =
+        '<option value="">เลือก Dashboard</option>' +
+        dashboards.map(function (dash) {
+          const id = dash['รหัส Dashboard'] || '';
+          const name = dash['ชื่อ Dashboard'] || id;
+          const type = dash['ประเภท Dashboard'] || '';
+
+          return `<option value="${escapeAttr(id)}">${escapeHtml(name)} (${escapeHtml(type)})</option>`;
+        }).join('');
+
+      setDashboardViewMessage('โหลด Dashboard แล้ว ' + dashboards.length + ' รายการ');
+
+      writeLog({
+        step: 'dashboard_options',
+        response: data
+      });
+
+    } catch (error) {
+      el.dashboardSelect.innerHTML = '<option value="">โหลด Dashboard ไม่สำเร็จ</option>';
+      setDashboardViewMessage(error.message || 'โหลด Dashboard ไม่สำเร็จ');
+      showToast('error', 'โหลด Dashboard ไม่สำเร็จ', error.message || '');
+
+      writeLog({
+        step: 'dashboard_options_error',
+        message: error.message,
+        payload: error.payload || null
+      });
+    }
+  }
+
+  async function handleRefreshDashboard() {
+    const dashboardId = el.dashboardSelect ? el.dashboardSelect.value : '';
+
+    if (!dashboardId && !currentDashboardId) {
+      setDashboardViewMessage('กรุณาเลือก Dashboard ก่อน Refresh');
+      showToast('warning', 'กรุณาเลือก Dashboard', 'เลือก Dashboard ก่อน Refresh');
+      return;
+    }
+
+    if (!dashboardId && currentDashboardId && el.dashboardSelect) {
+      el.dashboardSelect.value = currentDashboardId;
+    }
+
+    setDashboardViewMessage('กำลัง Refresh Dashboard...');
+
+    if (el.refreshDashboardBtn) {
+      setButtonLoading(el.refreshDashboardBtn, true, 'กำลัง Refresh...');
+    }
+
+    try {
+      await handleOpenDashboard();
+
+      writeLog({
+        step: 'dashboard_refresh',
+        dashboardId: dashboardId || currentDashboardId,
+        status: 'success'
+      });
+
+    } catch (error) {
+      setDashboardViewMessage(error.message || 'Refresh Dashboard ไม่สำเร็จ');
+      showToast('error', 'Refresh Dashboard ไม่สำเร็จ', error.message || '');
+
+      writeLog({
+        step: 'dashboard_refresh_error',
+        message: error.message,
+        payload: error.payload || null
+      });
+
+    } finally {
+      if (el.refreshDashboardBtn) {
+        setButtonLoading(el.refreshDashboardBtn, false, 'Refresh Dashboard');
+      }
+    }
+  }
+
+  async function handleOpenDashboard() {
+    const dashboardId = el.dashboardSelect ? el.dashboardSelect.value : '';
+    const limit = el.dashboardLimit ? Number(el.dashboardLimit.value || 1000) : 1000;
+
+    if (!dashboardId) {
+      setDashboardViewMessage('กรุณาเลือก Dashboard');
+      showToast('warning', 'กรุณาเลือก Dashboard', '');
+      return;
+    }
+
+    if (!window.AnalyticsAPI.dashboardView) {
+      setDashboardViewMessage('ยังไม่พบฟังก์ชัน dashboardView ใน api.js');
+      showToast('error', 'ไม่พบ API', 'ยังไม่พบฟังก์ชัน dashboardView ใน api.js');
+      return;
+    }
+
+    currentDashboardId = dashboardId;
+
+    setButtonLoading(el.openDashboardBtn, true, 'กำลังเปิด Dashboard...');
+    setDashboardViewMessage('กำลังโหลด Dashboard...');
+    setPanelLoading(el.dashboardViewResult, 'กำลังโหลด Dashboard...');
+
+    try {
+      const data = await window.AnalyticsAPI.dashboardView({
+        dashboardId: dashboardId,
+        limit: limit,
+        filters: []
+      });
+
+      renderDashboardView(data);
+      renderDashboardFilters(data.filters || []);
+      setDashboardViewMessage('โหลด Dashboard สำเร็จ');
+      showToast('success', 'โหลด Dashboard สำเร็จ', '');
+
+      writeLog({
+        step: 'dashboard_view',
+        response: data
+      });
+
+    } catch (error) {
+      const message = getFriendlyErrorMessage(error);
+
+      showApiError(setDashboardViewMessage, error, 'เปิด Dashboard ไม่สำเร็จ');
+
+      if (el.dashboardViewResult) {
+        el.dashboardViewResult.textContent = message;
+        el.dashboardViewResult.classList.add('empty');
+      }
+
+      logApiError('dashboard_view_error', error, {
+        dashboardId: dashboardId,
+        limit: limit
+      });
+
+    } finally {
+      setButtonLoading(el.openDashboardBtn, false, 'เปิด Dashboard');
+    }
+  }
+    async function handleApplyDashboardFilter() {
+    const dashboardId = currentDashboardId || (el.dashboardSelect ? el.dashboardSelect.value : '');
+    const limit = el.dashboardLimit ? Number(el.dashboardLimit.value || 1000) : 1000;
+
+    if (!dashboardId) {
+      setDashboardViewMessage('กรุณาเลือก Dashboard ก่อน');
+      showToast('warning', 'กรุณาเลือก Dashboard', 'เลือก Dashboard ก่อนใช้ Filter');
+      return;
+    }
+
+    const filters = collectDashboardFilters();
+
+    setButtonLoading(el.applyDashboardFilterBtn, true, 'กำลังกรอง...');
+    setDashboardViewMessage('กำลังกรองข้อมูล...');
+    setPanelLoading(el.dashboardViewResult, 'กำลังกรองข้อมูล Dashboard...');
+
+    try {
+      const data = await window.AnalyticsAPI.dashboardView({
+        dashboardId: dashboardId,
+        limit: limit,
+        filters: filters
+      });
+
+      renderDashboardView(data);
+      renderDashboardFilters(data.filters || [], filters);
+
+      setDashboardViewMessage(
+        'กรองข้อมูลสำเร็จ: จาก ' +
+        Number(data.totalRowsRead || 0).toLocaleString() +
+        ' แถว เหลือ ' +
+        Number(data.totalRowsAfterFilter || 0).toLocaleString() +
+        ' แถว'
+      );
+
+      showToast(
+        'success',
+        'กรองข้อมูลสำเร็จ',
+        'เหลือ ' + Number(data.totalRowsAfterFilter || 0).toLocaleString() + ' แถว'
+      );
+
+      writeLog({
+        step: 'dashboard_filter',
+        filters: filters,
+        response: data
+      });
+
+    } catch (error) {
+      showApiError(setDashboardViewMessage, error, 'กรองข้อมูล Dashboard ไม่สำเร็จ');
+      logApiError('dashboard_filter_error', error, {
+        dashboardId: dashboardId,
+        filters: filters
+      });
+
+    } finally {
+      setButtonLoading(el.applyDashboardFilterBtn, false, 'กรองข้อมูล Dashboard');
+    }
+  }
+
+  async function handleResetDashboardFilter() {
+    if (!el.dashboardFilterBox) {
+      return;
+    }
+
+    const inputs = el.dashboardFilterBox.querySelectorAll('input, select');
+
+    inputs.forEach(function (input) {
+      input.value = '';
+    });
+
+    await handleApplyDashboardFilter();
   }
 
   function renderDashboardView(data) {
@@ -1443,413 +1797,8 @@
 
     mountQueuedCharts();
   }
-    function renderDashboardPreview(data) {
-    if (!el.previewResult) {
-      return;
-    }
 
-    if (!data || data.ok === false) {
-      setPreviewMessage((data && data.message) || 'ไม่สามารถสร้าง Dashboard Preview ได้');
-      return;
-    }
-
-    disposeDashboardCharts();
-    chartRenderQueue = [];
-
-    const kpis = data.kpis || data.metrics || [];
-    const charts = data.charts || data.chartResults || [];
-    const table = data.table || {
-      fields: [],
-      rows: []
-    };
-
-    const sourceName =
-      data.sourceName ||
-      (data.source && data.source.sourceName) ||
-      '';
-
-    const sheetName =
-      data.sheetName ||
-      (data.source && data.source.sheetName) ||
-      selectedSheetName ||
-      '';
-
-    const totalRowsRead = Number(data.totalRowsRead || 0);
-    const totalRowsAfterFilter = Number(data.totalRowsAfterFilter || totalRowsRead || 0);
-
-    el.previewResult.classList.remove('empty');
-
-    el.previewResult.innerHTML = `
-      <div class="dashboard-title-box">
-        <h3>Dashboard Preview</h3>
-        <p>
-          แหล่งข้อมูล: ${escapeHtml(sourceName || '-')}
-          / ชีท: ${escapeHtml(sheetName || '-')}
-          / อ่านข้อมูล ${totalRowsRead.toLocaleString()} แถว
-          / หลังกรอง ${totalRowsAfterFilter.toLocaleString()} แถว
-        </p>
-      </div>
-
-      <div class="dashboard-section-title">ตัวชี้วัดตัวอย่าง</div>
-      ${renderPreviewKpis(kpis)}
-
-      <div class="dashboard-section-title">กราฟตัวอย่าง</div>
-      ${renderPreviewCharts(charts)}
-
-      <div class="dashboard-section-title">ตารางตัวอย่าง</div>
-      ${renderPreviewTable(table)}
-    `;
-
-    mountQueuedCharts();
-  }
-
-  async function handleCreateDashboardFromPreview() {
-    if (!selectedSourceId || !selectedSheetName) {
-      setCreateDashboardMessage('กรุณาเลือกแหล่งข้อมูลและชีทก่อน');
-      showToast('warning', 'ยังเลือกข้อมูลไม่ครบ', 'กรุณาเลือกแหล่งข้อมูลและชีทก่อน');
-      return;
-    }
-
-    const dashboardName = el.dashboardName ? el.dashboardName.value.trim() : '';
-    const dashboardType = el.dashboardType ? el.dashboardType.value : 'Custom';
-
-    if (!dashboardName) {
-      setCreateDashboardMessage('กรุณากรอกชื่อ Dashboard');
-      showToast('warning', 'ยังไม่ได้ตั้งชื่อ Dashboard', 'กรุณากรอกชื่อ Dashboard ก่อนบันทึก');
-      return;
-    }
-
-    if (!window.AnalyticsAPI.createDashboardFromPreview) {
-      setCreateDashboardMessage('ยังไม่พบฟังก์ชัน createDashboardFromPreview ใน api.js');
-      showToast('error', 'ไม่พบ API', 'ยังไม่พบฟังก์ชัน createDashboardFromPreview ใน api.js');
-      return;
-    }
-
-    setButtonLoading(el.createDashboardBtn, true, 'กำลังบันทึก Dashboard...');
-    setCreateDashboardMessage('');
-
-    try {
-      const builderPayload = getDashboardBuilderPayload();
-
-      const data = await window.AnalyticsAPI.createDashboardFromPreview({
-        sourceId: selectedSourceId,
-        sheetName: selectedSheetName,
-        dashboardName: dashboardName,
-        dashboardType: dashboardType,
-        description: 'สร้างจาก Mapping ผ่าน Admin Console',
-        builderConfig: builderPayload
-      });
-
-      setCreateDashboardMessage(
-        'สร้าง Dashboard สำเร็จ: ' + data.dashboardId +
-        ' | KPI ' + data.totalMetrics +
-        ' | กราฟ ' + data.totalCharts +
-        ' | ตัวกรอง ' + data.totalFilters
-      );
-
-      showToast('success', 'สร้าง Dashboard สำเร็จ', data.dashboardId || dashboardName);
-
-      writeLog({
-        step: 'create_dashboard_from_preview',
-        response: data,
-        builderConfig: getDashboardBuilderPayload()
-      });
-
-      await loadDashboards();
-      await loadDashboardOptions();
-      await loadManageDashboards();
-
-    } catch (error) {
-      setCreateDashboardMessage(error.message);
-      showToast('error', 'สร้าง Dashboard ไม่สำเร็จ', error.message || '');
-
-      writeLog({
-        step: 'create_dashboard_from_preview_error',
-        message: error.message,
-        payload: error.payload || null
-      });
-
-    } finally {
-      setButtonLoading(el.createDashboardBtn, false, 'บันทึกเป็น Dashboard จริง');
-    }
-  }
-
-  async function loadDashboardOptions() {
-    if (!el.dashboardSelect) {
-      return;
-    }
-
-    el.dashboardSelect.innerHTML = '<option value="">กำลังโหลด...</option>';
-    setDashboardViewMessage('กำลังโหลดรายการ Dashboard...');
-
-    try {
-      const data = await window.AnalyticsAPI.listDashboards();
-      const dashboards = data.dashboards || [];
-
-      if (!dashboards.length) {
-        el.dashboardSelect.innerHTML = '<option value="">ยังไม่มี Dashboard</option>';
-        setDashboardViewMessage('ยังไม่มี Dashboard ที่บันทึกไว้');
-        return;
-      }
-
-      el.dashboardSelect.innerHTML =
-        '<option value="">เลือก Dashboard</option>' +
-        dashboards.map(function (dash) {
-          const id = dash['รหัส Dashboard'] || '';
-          const name = dash['ชื่อ Dashboard'] || id;
-          const type = dash['ประเภท Dashboard'] || '';
-
-          return `<option value="${escapeAttr(id)}">${escapeHtml(name)} (${escapeHtml(type)})</option>`;
-        }).join('');
-
-      setDashboardViewMessage('โหลด Dashboard แล้ว ' + dashboards.length + ' รายการ');
-
-      writeLog({
-        step: 'dashboard_options',
-        response: data
-      });
-
-    } catch (error) {
-      el.dashboardSelect.innerHTML = '<option value="">โหลด Dashboard ไม่สำเร็จ</option>';
-      setDashboardViewMessage(error.message);
-      showToast('error', 'โหลด Dashboard ไม่สำเร็จ', error.message || '');
-
-      writeLog({
-        step: 'dashboard_options_error',
-        message: error.message,
-        payload: error.payload || null
-      });
-    }
-  }
-
-  async function handleRefreshDashboard() {
-    const dashboardId = el.dashboardSelect ? el.dashboardSelect.value : '';
-
-    if (!dashboardId && !currentDashboardId) {
-      setDashboardViewMessage('กรุณาเลือก Dashboard ก่อน Refresh');
-      showToast('warning', 'กรุณาเลือก Dashboard', 'เลือก Dashboard ก่อน Refresh');
-      return;
-    }
-
-    if (!dashboardId && currentDashboardId && el.dashboardSelect) {
-      el.dashboardSelect.value = currentDashboardId;
-    }
-
-    setDashboardViewMessage('กำลัง Refresh Dashboard...');
-
-    if (el.refreshDashboardBtn) {
-      setButtonLoading(el.refreshDashboardBtn, true, 'กำลัง Refresh...');
-    }
-
-    try {
-      await handleOpenDashboard();
-
-      writeLog({
-        step: 'dashboard_refresh',
-        dashboardId: dashboardId || currentDashboardId,
-        status: 'success'
-      });
-
-    } catch (error) {
-      setDashboardViewMessage(error.message || 'Refresh Dashboard ไม่สำเร็จ');
-      showToast('error', 'Refresh Dashboard ไม่สำเร็จ', error.message || '');
-
-      writeLog({
-        step: 'dashboard_refresh_error',
-        message: error.message,
-        payload: error.payload || null
-      });
-
-    } finally {
-      if (el.refreshDashboardBtn) {
-        setButtonLoading(el.refreshDashboardBtn, false, 'Refresh Dashboard');
-      }
-    }
-  }
-
-  async function handleOpenDashboard() {
-    const dashboardId = el.dashboardSelect ? el.dashboardSelect.value : '';
-    const limit = el.dashboardLimit ? Number(el.dashboardLimit.value || 1000) : 1000;
-
-    if (!dashboardId) {
-      setDashboardViewMessage('กรุณาเลือก Dashboard');
-      showToast('warning', 'กรุณาเลือก Dashboard', '');
-      return;
-    }
-
-    if (!window.AnalyticsAPI.dashboardView) {
-      setDashboardViewMessage('ยังไม่พบฟังก์ชัน dashboardView ใน api.js');
-      showToast('error', 'ไม่พบ API', 'ยังไม่พบฟังก์ชัน dashboardView ใน api.js');
-      return;
-    }
-
-    currentDashboardId = dashboardId;
-
-    setButtonLoading(el.openDashboardBtn, true, 'กำลังเปิด Dashboard...');
-    setDashboardViewMessage('กำลังโหลด Dashboard...');
-    setPanelLoading(el.dashboardViewResult, 'กำลังโหลด Dashboard...');
-
-    try {
-      const data = await window.AnalyticsAPI.dashboardView({
-        dashboardId: dashboardId,
-        limit: limit,
-        filters: []
-      });
-
-      renderDashboardView(data);
-      renderDashboardFilters(data.filters || []);
-      setDashboardViewMessage('โหลด Dashboard สำเร็จ');
-      showToast('success', 'โหลด Dashboard สำเร็จ', '');
-
-      writeLog({
-        step: 'dashboard_view',
-        response: data
-      });
-
-    } catch (error) {
-      const message = getFriendlyErrorMessage(error);
-
-      showApiError(setDashboardViewMessage, error, 'เปิด Dashboard ไม่สำเร็จ');
-
-      if (el.dashboardViewResult) {
-        el.dashboardViewResult.textContent = message;
-        el.dashboardViewResult.classList.add('empty');
-      }
-
-      logApiError('dashboard_view_error', error, {
-        dashboardId: dashboardId,
-        limit: limit
-      });
-
-    } finally {
-      setButtonLoading(el.openDashboardBtn, false, 'เปิด Dashboard');
-    }
-  }
-
-  async function handleApplyDashboardFilter() {
-    const dashboardId = currentDashboardId || (el.dashboardSelect ? el.dashboardSelect.value : '');
-    const limit = el.dashboardLimit ? Number(el.dashboardLimit.value || 1000) : 1000;
-
-    if (!dashboardId) {
-      setDashboardViewMessage('กรุณาเลือก Dashboard ก่อน');
-      showToast('warning', 'กรุณาเลือก Dashboard', 'เลือก Dashboard ก่อนใช้ Filter');
-      return;
-    }
-
-    const filters = collectDashboardFilters();
-
-    setButtonLoading(el.applyDashboardFilterBtn, true, 'กำลังกรอง...');
-    setDashboardViewMessage('กำลังกรองข้อมูล...');
-    setPanelLoading(el.dashboardViewResult, 'กำลังกรองข้อมูล Dashboard...');
-
-    try {
-      const data = await window.AnalyticsAPI.dashboardView({
-        dashboardId: dashboardId,
-        limit: limit,
-        filters: filters
-      });
-
-      renderDashboardView(data);
-      renderDashboardFilters(data.filters || [], filters);
-
-      setDashboardViewMessage(
-        'กรองข้อมูลสำเร็จ: จาก ' +
-        Number(data.totalRowsRead || 0).toLocaleString() +
-        ' แถว เหลือ ' +
-        Number(data.totalRowsAfterFilter || 0).toLocaleString() +
-        ' แถว'
-      );
-
-      showToast('success', 'กรองข้อมูลสำเร็จ', 'เหลือ ' + Number(data.totalRowsAfterFilter || 0).toLocaleString() + ' แถว');
-
-      writeLog({
-        step: 'dashboard_filter',
-        filters: filters,
-        response: data
-      });
-
-    } catch (error) {
-      showApiError(setDashboardViewMessage, error, 'กรองข้อมูล Dashboard ไม่สำเร็จ');
-      logApiError('dashboard_filter_error', error, {
-        dashboardId: dashboardId,
-        filters: filters
-      });
-
-    } finally {
-      setButtonLoading(el.applyDashboardFilterBtn, false, 'กรองข้อมูล Dashboard');
-    }
-  }
-
-  async function handleResetDashboardFilter() {
-    if (!el.dashboardFilterBox) {
-      return;
-    }
-
-    const inputs = el.dashboardFilterBox.querySelectorAll('input, select');
-
-    inputs.forEach(function (input) {
-      input.value = '';
-    });
-
-    await handleApplyDashboardFilter();
-  }
-
-  function renderSavedDashboard(data) {
-    if (!el.dashboardViewResult) {
-      return;
-    }
-
-    if (!data || !data.ok) {
-      el.dashboardViewResult.textContent = (data && data.message) || 'โหลด Dashboard ไม่สำเร็จ';
-      el.dashboardViewResult.classList.add('empty');
-      return;
-    }
-
-    disposeDashboardCharts();
-    chartRenderQueue = [];
-
-    const dashboard = data.dashboard || {};
-    const dashboardName = dashboard['ชื่อ Dashboard'] || '-';
-    const dashboardDesc = dashboard['คำอธิบาย'] || '';
-    const source = data.source || {};
-
-    currentDashboardTable = data.table || {
-      fields: [],
-      rows: []
-    };
-
-    currentDashboardTablePage = 1;
-
-    el.dashboardViewResult.classList.remove('empty');
-
-    el.dashboardViewResult.innerHTML = `
-      <div class="dashboard-title-box">
-        <h3>${escapeHtml(dashboardName)}</h3>
-        <p>
-          ${escapeHtml(dashboardDesc)}
-          ${dashboardDesc ? ' | ' : ''}
-          แหล่งข้อมูล: ${escapeHtml(source.sourceName || '')}
-          / ชีท: ${escapeHtml(source.sheetName || '')}
-          / อ่านข้อมูล ${Number(data.totalRowsRead || 0).toLocaleString()} แถว
-          / หลังกรอง ${Number(data.totalRowsAfterFilter || data.totalRowsRead || 0).toLocaleString()} แถว
-        </p>
-      </div>
-
-      <div class="dashboard-section-title">ตัวชี้วัด</div>
-      ${renderPreviewKpis(data.kpis || [])}
-
-      <div class="dashboard-section-title">กราฟ</div>
-      ${renderPreviewCharts(data.chartResults || [])}
-
-      <div class="dashboard-section-title">ตารางข้อมูล</div>
-      <div data-dashboard-table-section>
-        ${renderDashboardPagedTable(currentDashboardTable, currentDashboardTablePage)}
-      </div>
-    `;
-
-    mountQueuedCharts();
-  }
-    function renderDashboardFilters(filters, appliedFilters) {
+  function renderDashboardFilters(filters, appliedFilters) {
     if (!el.dashboardFilterBox) {
       return;
     }
@@ -1876,8 +1825,20 @@
           <label class="dashboard-filter-item" data-filter-index="${index}">
             <span>${escapeHtml(name)}</span>
             <div class="dashboard-filter-date-pair">
-              <input type="date" data-dashboard-filter-field="${escapeAttr(column)}" data-dashboard-filter-type="date_range" data-dashboard-filter-part="from" value="${escapeAttr(applied.from || '')}">
-              <input type="date" data-dashboard-filter-field="${escapeAttr(column)}" data-dashboard-filter-type="date_range" data-dashboard-filter-part="to" value="${escapeAttr(applied.to || '')}">
+              <input
+                type="date"
+                data-dashboard-filter-field="${escapeAttr(column)}"
+                data-dashboard-filter-type="date_range"
+                data-dashboard-filter-part="from"
+                value="${escapeAttr(applied.from || '')}"
+              >
+              <input
+                type="date"
+                data-dashboard-filter-field="${escapeAttr(column)}"
+                data-dashboard-filter-type="date_range"
+                data-dashboard-filter-part="to"
+                value="${escapeAttr(applied.to || '')}"
+              >
             </div>
           </label>
         `;
@@ -1888,8 +1849,22 @@
           <label class="dashboard-filter-item" data-filter-index="${index}">
             <span>${escapeHtml(name)}</span>
             <div class="dashboard-filter-number-pair">
-              <input type="number" data-dashboard-filter-field="${escapeAttr(column)}" data-dashboard-filter-type="number_range" data-dashboard-filter-part="min" placeholder="ต่ำสุด" value="${escapeAttr(applied.min || '')}">
-              <input type="number" data-dashboard-filter-field="${escapeAttr(column)}" data-dashboard-filter-type="number_range" data-dashboard-filter-part="max" placeholder="สูงสุด" value="${escapeAttr(applied.max || '')}">
+              <input
+                type="number"
+                data-dashboard-filter-field="${escapeAttr(column)}"
+                data-dashboard-filter-type="number_range"
+                data-dashboard-filter-part="min"
+                placeholder="ต่ำสุด"
+                value="${escapeAttr(applied.min || '')}"
+              >
+              <input
+                type="number"
+                data-dashboard-filter-field="${escapeAttr(column)}"
+                data-dashboard-filter-type="number_range"
+                data-dashboard-filter-part="max"
+                placeholder="สูงสุด"
+                value="${escapeAttr(applied.max || '')}"
+              >
             </div>
           </label>
         `;
@@ -1976,25 +1951,9 @@
       });
   }
 
-  function compactText(value, maxLength) {
-    const text = String(value || '').trim();
-    const limit = Number(maxLength || 24);
-
-    if (!text || text.length <= limit) {
-      return text;
-    }
-
-    if (limit <= 6) {
-      return text.slice(0, limit);
-    }
-
-    const head = Math.ceil((limit - 3) * 0.6);
-    const tail = Math.floor((limit - 3) * 0.4);
-
-    return text.slice(0, head) + '...' + text.slice(text.length - tail);
-  }
-
   function findAppliedFilter(appliedFilters, field) {
+    appliedFilters = appliedFilters || [];
+
     for (let i = 0; i < appliedFilters.length; i++) {
       if (String(appliedFilters[i].field || '') === String(field || '')) {
         return appliedFilters[i];
@@ -2023,7 +1982,7 @@
 
     } catch (error) {
       if (el.dashboardResult) {
-        el.dashboardResult.textContent = error.message;
+        el.dashboardResult.textContent = error.message || 'โหลด Dashboard ไม่สำเร็จ';
       }
 
       showToast('error', 'โหลด Dashboard ไม่สำเร็จ', error.message || '');
@@ -2037,6 +1996,8 @@
   }
 
   function renderPreviewKpis(kpis) {
+    kpis = kpis || [];
+
     if (!kpis.length) {
       return '';
     }
@@ -2055,14 +2016,16 @@
   }
 
   function renderPreviewCharts(charts) {
-    if (!charts || !charts.length) {
+    charts = charts || [];
+
+    if (!charts.length) {
       return '';
     }
 
     const html = charts.map(function (chart) {
       const id = 'echart_' + (++chartUid);
       const type = String(chart.type || 'bar').toLowerCase();
-      const sizeClass = type === 'line' ? 'chart-large' : '';
+      const sizeClass = type === 'line' || type === 'area' ? 'chart-large' : '';
 
       chartRenderQueue.push({
         id: id,
@@ -2082,35 +2045,6 @@
         ${html}
       </div>
     `;
-  }
-
-  function renderSimpleBarChart(items) {
-    if (!items.length) {
-      return '<p class="empty">ไม่มีข้อมูลสำหรับกราฟ</p>';
-    }
-
-    const max = Math.max.apply(null, items.map(function (x) {
-      return Number(x.value || 0);
-    })) || 1;
-
-    const html = items.map(function (item) {
-      const value = Number(item.value || 0);
-      const percent = Math.max(2, Math.round((value / max) * 100));
-
-      return `
-        <div class="simple-bar-item">
-          <div class="simple-bar-label" title="${escapeAttr(item.name || '')}">
-            ${escapeHtml(item.name || '(ว่าง)')}
-          </div>
-          <div class="simple-bar-track">
-            <div class="simple-bar-fill" style="width:${percent}%"></div>
-          </div>
-          <div class="simple-bar-value">${formatNumber(value)}</div>
-        </div>
-      `;
-    }).join('');
-
-    return `<div class="simple-bar-list">${html}</div>`;
   }
 
   function renderDashboardPagedTable(table, page) {
@@ -2202,8 +2136,7 @@
       </div>
     `;
   }
-
-  function changeDashboardTablePage(direction) {
+    function changeDashboardTablePage(direction) {
     if (!currentDashboardTable || !el.dashboardViewResult) {
       return;
     }
@@ -2229,6 +2162,8 @@
   }
 
   function renderPreviewTable(table) {
+    table = table || {};
+
     const fields = table.fields || [];
     const rows = table.rows || [];
 
@@ -2260,7 +2195,8 @@
       </div>
     `;
   }
-    function renderUser(user) {
+
+  function renderUser(user) {
     if (!user) {
       if (el.userDisplayName) el.userDisplayName.textContent = '-';
       if (el.userRole) el.userRole.textContent = '-';
@@ -2383,19 +2319,6 @@
         <div class="skeleton-card"></div>
         <div class="skeleton-card"></div>
       </div>
-    `;
-  }
-
-  function setInlineLoading(target, message) {
-    if (!target) {
-      return;
-    }
-
-    target.innerHTML = `
-      <span class="inline-loading">
-        <span class="loading-spinner mini"></span>
-        ${escapeHtml(message || 'กำลังโหลด...')}
-      </span>
     `;
   }
 
@@ -2522,7 +2445,6 @@
     }
 
     setSystemStatus('เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่');
-
     showToast('warning', 'เซสชันหมดอายุ', 'กรุณาเข้าสู่ระบบใหม่');
 
     resetWorkingState();
@@ -2605,8 +2527,7 @@
       }
     }
   }
-
-  function renderUsers(users) {
+    function renderUsers(users) {
     if (!el.userManageList) {
       return;
     }
@@ -2838,7 +2759,7 @@
       });
 
     } finally {
-      setButtonLoading(el.createUserBtn, false, 'เพิ่มผู้ใช้ใหม่');
+      setButtonLoading(el.createUserBtn, false, 'Create User');
     }
   }
 
@@ -2870,7 +2791,7 @@
       });
 
     } finally {
-      setButtonLoading(el.updateUserBtn, false, 'บันทึกการแก้ไข');
+      setButtonLoading(el.updateUserBtn, false, 'Update User');
     }
   }
 
@@ -3006,556 +2927,12 @@
     setUserManageMessage('');
   }
 
-
-          response: data
-      });
-
-      await loadManageDashboards();
-      await loadDashboardOptions();
-
-      if (el.manageDashboardSelect) {
-        el.manageDashboardSelect.value = dashboardId;
-        handleSelectManageDashboard();
-      }
-
-    } catch (error) {
-      showApiError(setManageDashboardMessage, error, 'บันทึก Dashboard ไม่สำเร็จ');
-      logApiError('manage_dashboard_save_error', error, {
-        dashboardId: dashboardId
-      });
-
-    } finally {
-      setButtonLoading(el.saveManageDashboardBtn, false, 'Save Dashboard');
+  function setUserManageMessage(message) {
+    if (el.userManageMessage) {
+      el.userManageMessage.textContent = message || '';
     }
   }
-
-
-  async function handleRegenerateManageDashboard() {
-    const dashboardId = el.manageDashboardSelect ? el.manageDashboardSelect.value : '';
-
-    if (!dashboardId) {
-      setManageDashboardMessage('กรุณาเลือก Dashboard ก่อน Regenerate');
-      return;
-    }
-
-    const dashboard = findManageDashboardById(dashboardId);
-    const dashboardName = dashboard
-      ? String(dashboard['ชื่อ Dashboard'] || dashboardId)
-      : dashboardId;
-
-    const result = await showConfirmDialog({
-      icon: 'warning',
-      title: 'ยืนยัน Regenerate Dashboard',
-      text:
-        'ยืนยัน Regenerate Dashboard หรือไม่?\n\n' +
-        dashboardName +
-        '\n\nระบบจะสร้าง KPI / กราฟ / ตัวกรอง / Layout ใหม่จาก Mapping ล่าสุด\n' +
-        'ถ้า Dashboard นี้เคยสร้างจาก Dashboard Builder ระบบจะใช้ Widget เดิมที่ Super Admin เลือกไว้\n' +
-        'และจะคงชื่อ Dashboard, Publish, Export และสิทธิ์เดิมไว้',
-      confirmText: 'Regenerate',
-      cancelText: 'ยกเลิก'
-    });
-
-    if (!result || !result.isConfirmed) {
-      return;
-    }
-
-    setButtonLoading(el.regenerateManageDashboardBtn, true, 'กำลัง Regenerate...');
-    setManageDashboardMessage('กำลัง Regenerate Dashboard จาก Mapping ล่าสุด / Builder Config เดิม.');
-    showGlobalLoading('กำลัง Regenerate Dashboard จาก Mapping ล่าสุด / Builder Config เดิม.');
-
-    try {
-      const data = await window.AnalyticsAPI.regenerateDashboard(dashboardId);
-
-      const modeText = data.regenerateMode === 'builder'
-        ? 'โหมด Builder'
-        : 'โหมด Auto Mapping';
-
-      setManageDashboardMessage(
-        (data.message || 'Regenerate สำเร็จ') +
-        ' | ' + modeText +
-        ' | KPI ' + Number(data.totalMetrics || 0).toLocaleString() +
-        ' | กราฟ ' + Number(data.totalCharts || 0).toLocaleString() +
-        ' | ตัวกรอง ' + Number(data.totalFilters || 0).toLocaleString()
-      );
-
-      showToast('success', 'Regenerate สำเร็จ', modeText);
-
-      writeLog({
-        step: 'manage_dashboard_regenerate',
-        response: data
-      });
-
-      await loadManageDashboards();
-      await loadDashboardOptions();
-
-      if (el.manageDashboardSelect) {
-        el.manageDashboardSelect.value = dashboardId;
-        handleSelectManageDashboard();
-      }
-
-    } catch (error) {
-      showApiError(setManageDashboardMessage, error, 'Regenerate Dashboard ไม่สำเร็จ');
-      logApiError('manage_dashboard_regenerate_error', error, {
-        dashboardId: dashboardId
-      });
-
-    } finally {
-      hideGlobalLoading();
-      setButtonLoading(el.regenerateManageDashboardBtn, false, 'Regenerate');
-    }
-  }
-
-
-  async function handleToggleManageDashboardHidden() {
-    const dashboardId = el.manageDashboardSelect ? el.manageDashboardSelect.value : '';
-
-    if (!dashboardId) {
-      setManageDashboardMessage('กรุณาเลือก Dashboard ก่อน');
-      return;
-    }
-
-    const currentPublish = el.manageDashboardPublish ? el.manageDashboardPublish.checked : false;
-    const nextPublish = !currentPublish;
-
-    const result = await showConfirmDialog({
-      icon: nextPublish ? 'question' : 'warning',
-      title: nextPublish ? 'ยืนยันเปิดใช้งาน Dashboard' : 'ยืนยันซ่อน Dashboard',
-      text: nextPublish
-        ? 'ต้องการเปิด Publish Dashboard นี้หรือไม่?'
-        : 'ต้องการซ่อน Dashboard นี้หรือไม่?',
-      confirmText: nextPublish ? 'เปิดใช้งาน' : 'ซ่อน',
-      cancelText: 'ยกเลิก'
-    });
-
-    if (!result || !result.isConfirmed) {
-      return;
-    }
-
-    setButtonLoading(el.hideManageDashboardBtn, true, 'กำลังบันทึก...');
-
-    try {
-      const data = await window.AnalyticsAPI.toggleDashboardPublish(
-        dashboardId,
-        nextPublish
-      );
-
-      setManageDashboardMessage(data.message || 'เปลี่ยนสถานะ Dashboard สำเร็จ');
-      showToast('success', 'เปลี่ยนสถานะ Dashboard สำเร็จ', nextPublish ? 'Published' : 'Hidden');
-
-      writeLog({
-        step: 'manage_dashboard_toggle_publish',
-        response: data
-      });
-
-      await loadManageDashboards();
-      await loadDashboardOptions();
-
-      if (el.manageDashboardSelect) {
-        el.manageDashboardSelect.value = dashboardId;
-        handleSelectManageDashboard();
-      }
-
-    } catch (error) {
-      showApiError(setManageDashboardMessage, error, 'เปลี่ยนสถานะ Dashboard ไม่สำเร็จ');
-      logApiError('manage_dashboard_toggle_publish_error', error, {
-        dashboardId: dashboardId,
-        publish: nextPublish
-      });
-
-    } finally {
-      setButtonLoading(el.hideManageDashboardBtn, false, 'Hide / Show');
-    }
-  }
-
-
-  async function handleDeleteManageDashboard() {
-    const dashboardId = el.manageDashboardSelect ? el.manageDashboardSelect.value : '';
-
-    if (!dashboardId) {
-      setManageDashboardMessage('กรุณาเลือก Dashboard ก่อนลบ');
-      return;
-    }
-
-    const dashboard = findManageDashboardById(dashboardId);
-    const dashboardName = dashboard
-      ? String(dashboard['ชื่อ Dashboard'] || dashboardId)
-      : dashboardId;
-
-    const result = await showConfirmDialog({
-      icon: 'warning',
-      title: 'ยืนยัน Soft Delete Dashboard',
-      text:
-        'ต้องการลบ Dashboard แบบ Soft Delete หรือไม่?\n\n' +
-        dashboardName +
-        '\n\nระบบจะซ่อน Dashboard และปิด Publish แต่ยังเก็บข้อมูลไว้ในระบบ',
-      confirmText: 'Soft Delete',
-      cancelText: 'ยกเลิก'
-    });
-
-    if (!result || !result.isConfirmed) {
-      return;
-    }
-
-    setButtonLoading(el.deleteManageDashboardBtn, true, 'กำลังลบ...');
-    setManageDashboardMessage('');
-
-    try {
-      const data = await window.AnalyticsAPI.deleteDashboard(dashboardId);
-
-      setManageDashboardMessage(data.message || 'Soft Delete Dashboard สำเร็จ');
-      showToast('success', 'Soft Delete Dashboard สำเร็จ', dashboardName);
-
-      writeLog({
-        step: 'manage_dashboard_delete',
-        response: data
-      });
-
-      await loadManageDashboards();
-      await loadDashboardOptions();
-
-      resetManageDashboardForm();
-
-    } catch (error) {
-      showApiError(setManageDashboardMessage, error, 'Soft Delete Dashboard ไม่สำเร็จ');
-      logApiError('manage_dashboard_delete_error', error, {
-        dashboardId: dashboardId
-      });
-
-    } finally {
-      setButtonLoading(el.deleteManageDashboardBtn, false, 'Soft Delete');
-    }
-  }
-
-
-  function renderManageDashboardSummary(dash) {
-    if (!el.manageDashboardSummary) {
-      return;
-    }
-
-    if (!dash) {
-      el.manageDashboardSummary.classList.add('empty');
-      el.manageDashboardSummary.textContent = 'เลือก Dashboard เพื่อดูรายละเอียด';
-      return;
-    }
-
-    const dashboardId = String(dash['รหัส Dashboard'] || '').trim();
-    const name = String(dash['ชื่อ Dashboard'] || dashboardId).trim();
-    const type = String(dash['ประเภท Dashboard'] || '-').trim();
-    const sourceId = String(dash['รหัสแหล่งข้อมูลหลัก'] || '-').trim();
-    const sheetName = String(dash['รหัสชีทย่อยหลัก'] || '-').trim();
-    const visibility = String(dash['สิทธิ์ที่มองเห็น'] || '-').trim();
-    const publish = toBool(dash['สถานะ Publish']);
-    const allowExport = toBool(dash['อนุญาต Export']);
-
-    el.manageDashboardSummary.classList.remove('empty');
-
-    el.manageDashboardSummary.innerHTML = `
-      <div class="dashboard-manage-summary">
-        <div class="dashboard-manage-summary-head">
-          <div>
-            <h4>${escapeHtml(name || '-')}</h4>
-            <p>${escapeHtml(dash['คำอธิบาย'] || 'ไม่มีคำอธิบาย')}</p>
-          </div>
-
-          <span class="dashboard-type-pill">${escapeHtml(type || '-')}</span>
-        </div>
-
-        <div class="dashboard-manage-summary-grid">
-          <div class="dashboard-manage-summary-item">
-            <span>Dashboard ID</span>
-            <strong>${escapeHtml(dashboardId || '-')}</strong>
-          </div>
-
-          <div class="dashboard-manage-summary-item">
-            <span>Source ID</span>
-            <strong>${escapeHtml(sourceId || '-')}</strong>
-          </div>
-
-          <div class="dashboard-manage-summary-item">
-            <span>Sheet</span>
-            <strong>${escapeHtml(sheetName || '-')}</strong>
-          </div>
-
-          <div class="dashboard-manage-summary-item">
-            <span>Visibility</span>
-            <strong>${escapeHtml(visibility || '-')}</strong>
-          </div>
-        </div>
-
-        <div class="dashboard-manage-card-status">
-          <span class="dashboard-status-pill ${publish ? 'is-on' : 'is-off'}">
-            ${publish ? 'Published' : 'Unpublished'}
-          </span>
-
-          <span class="dashboard-status-pill ${allowExport ? 'is-on' : 'is-off'}">
-            ${allowExport ? 'Export On' : 'Export Off'}
-          </span>
-
-          <span class="dashboard-status-pill is-muted">
-            Created: ${escapeHtml(dash['วันที่สร้าง'] || '-')}
-          </span>
-
-          <span class="dashboard-status-pill is-muted">
-            Updated: ${escapeHtml(dash['วันที่แก้ไขล่าสุด'] || '-')}
-          </span>
-        </div>
-      </div>
-    `;
-  }
-
-
-  function setManageDashboardMessage(message) {
-    if (el.manageDashboardMessage) {
-      el.manageDashboardMessage.textContent = message || '';
-    }
-  }
-
-
-  function downloadTextFile(filename, content, mimeType) {
-    const blob = new Blob([content || ''], {
-      type: mimeType || 'text/plain;charset=utf-8'
-    });
-
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-
-    link.href = url;
-    link.download = filename || 'download.txt';
-
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-
-    setTimeout(function () {
-      URL.revokeObjectURL(url);
-    }, 1000);
-  }
-
-
-  function setAppMode(mode) {
-    mode = mode === 'user' ? 'user' : 'admin';
-    currentMode = mode;
-
-    document.body.classList.remove('mode-admin', 'mode-user');
-    document.body.classList.add(mode === 'admin' ? 'mode-admin' : 'mode-user');
-
-    if (el.adminModeBtn) {
-      el.adminModeBtn.classList.toggle('active', mode === 'admin');
-    }
-
-    if (el.userModeBtn) {
-      el.userModeBtn.classList.toggle('active', mode === 'user');
-    }
-
-    if (mode === 'user') {
-      const viewer = document.getElementById('sectionViewer');
-
-      if (viewer) {
-        try {
-          viewer.scrollIntoView({
-            behavior: 'smooth',
-            block: 'start'
-          });
-        } catch (err) {
-          viewer.scrollIntoView();
-        }
-      }
-    }
-  }
-
-
-  function applyRoleUi(user) {
-    user = user || {};
-    const role = String(user.role || '').trim();
-
-    document.body.classList.remove(
-      'role-super-admin',
-      'role-admin',
-      'role-editor',
-      'role-user',
-      'role-viewer',
-      'role-viewer-only'
-    );
-
-    if (role === 'Super Admin') {
-      document.body.classList.add('role-super-admin');
-    } else if (role === 'Admin') {
-      document.body.classList.add('role-admin');
-    } else if (role === 'Editor') {
-      document.body.classList.add('role-editor');
-    } else if (role === 'User') {
-      document.body.classList.add('role-user');
-    } else {
-      document.body.classList.add('role-viewer', 'role-viewer-only');
-    }
-
-    const isAdmin = role === 'Super Admin' || role === 'Admin';
-    const canEditDashboard = isAdmin || !!user.canEditDashboard;
-    const canAddSource = isAdmin || !!user.canAddSource;
-    const canManageUser = isAdmin || !!user.canManageUser;
-    const canAudit = isAdmin || !!user.canViewAuditLog;
-
-    document.querySelectorAll('.admin-only').forEach(function (node) {
-      node.classList.toggle('hidden', !isAdmin && !canEditDashboard && !canAddSource);
-    });
-
-    document.querySelectorAll('.source-admin-only').forEach(function (node) {
-      node.classList.toggle('hidden', !canAddSource);
-    });
-
-    document.querySelectorAll('.dashboard-admin-only').forEach(function (node) {
-      node.classList.toggle('hidden', !canEditDashboard);
-    });
-
-    document.querySelectorAll('.user-admin-only').forEach(function (node) {
-      node.classList.toggle('hidden', !canManageUser);
-    });
-
-    document.querySelectorAll('.audit-admin-only').forEach(function (node) {
-      node.classList.toggle('hidden', !canAudit);
-    });
-
-    if (el.modeSwitcher) {
-      el.modeSwitcher.classList.remove('hidden');
-    }
-
-    if (role === 'Viewer') {
-      setAppMode('user');
-    } else {
-      setAppMode('admin');
-    }
-  }
-
-
-  function mountQueuedCharts() {
-    if (!chartRenderQueue.length) {
-      return;
-    }
-
-    if (!window.echarts) {
-      writeLog({
-        step: 'echarts_missing',
-        message: 'ไม่พบ ECharts'
-      });
-      return;
-    }
-
-    chartRenderQueue.forEach(function (item) {
-      const target = document.getElementById(item.id);
-
-      if (!target) {
-        return;
-      }
-
-      const instance = window.echarts.init(target);
-      const option = buildEChartOption(item.chart || {});
-
-      instance.setOption(option);
-
-      chartInstances.push(instance);
-    });
-
-    chartRenderQueue = [];
-
-    setTimeout(function () {
-      resizeDashboardCharts();
-    }, 80);
-  }
-
-
-  function resizeDashboardCharts() {
-    chartInstances.forEach(function (chart) {
-      try {
-        chart.resize();
-      } catch (err) {}
-    });
-  }
-
-
-  function disposeDashboardCharts() {
-    chartInstances.forEach(function (chart) {
-      try {
-        chart.dispose();
-      } catch (err) {}
-    });
-
-    chartInstances = [];
-  }
-
-
-  window.addEventListener('resize', function () {
-    resizeDashboardCharts();
-  });
-
-
-  function buildEChartOption(chart) {
-    const type = String(chart.type || 'bar').toLowerCase();
-    const labels = chart.labels || chart.names || [];
-    const values = chart.values || chart.data || [];
-    const title = chart.title || '';
-
-    if (type === 'pie' || type === 'donut') {
-      const pieData = labels.map(function (label, index) {
-        return {
-          name: label,
-          value: Number(values[index] || 0)
-        };
-      });
-
-      return {
-        tooltip: {
-          trigger: 'item'
-        },
-        legend: {
-          bottom: 0,
-          type: 'scroll'
-        },
-        series: [
-          {
-            name: title,
-            type: 'pie',
-            radius: type === 'donut' ? ['45%', '70%'] : '70%',
-            center: ['50%', '45%'],
-            data: pieData,
-            label: {
-              formatter: '{b}: {d}%'
-            }
-          }
-        ]
-      };
-    }
-
-    if (type === 'line' || type === 'area') {
-      return {
-        tooltip: {
-          trigger: 'axis'
-        },
-        grid: {
-          left: 42,
-          right: 20,
-          top: 30,
-          bottom: 45
-        },
-        xAxis: {
-          type: 'category',
-          data: labels
-        },
-        yAxis: {
-          type: 'value'
-        },
-        series: [
-          {
-            name: title,
-            type: 'line',
-            smooth: true,
-            areaStyle: type === 'area' ? {} : undefined,
-            data: values
-          }
-        ]
-      };
-    }
-      async function loadManageDashboards() {
+    async function loadManageDashboards() {
     if (!el.manageDashboardCardList) {
       return;
     }
@@ -3997,8 +3374,7 @@
       setButtonLoading(el.regenerateManageDashboardBtn, false, 'Regenerate');
     }
   }
-
-  async function handleToggleManageDashboardHidden() {
+    async function handleToggleManageDashboardHidden() {
     const dashboardId = el.manageDashboardSelect ? el.manageDashboardSelect.value : '';
 
     if (!dashboardId) {
@@ -4059,7 +3435,8 @@
       setButtonLoading(el.hideManageDashboardBtn, false, 'Hide / Show');
     }
   }
-      async function handleDeleteManageDashboard() {
+
+  async function handleDeleteManageDashboard() {
     const dashboardId = el.manageDashboardSelect ? el.manageDashboardSelect.value : '';
 
     if (!dashboardId) {
@@ -4550,8 +3927,7 @@
       setButtonLoading(el.exportDashboardBtn, false, 'Export CSV');
     }
   }
-
-  async function handleExportDashboardExcel() {
+    async function handleExportDashboardExcel() {
     const dashboardId = currentDashboardId || (el.dashboardSelect ? el.dashboardSelect.value : '');
 
     if (!dashboardId) {
@@ -4571,7 +3947,7 @@
         filters: filters
       });
 
-      if (data.base64 && window.XLSX) {
+      if (data.base64) {
         const binary = atob(data.base64);
         const bytes = new Uint8Array(binary.length);
 
@@ -4588,6 +3964,7 @@
 
         link.href = url;
         link.download = data.filename || ('dashboard_' + dashboardId + '.xlsx');
+
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -4616,6 +3993,7 @@
 
     } catch (error) {
       showApiError(setDashboardViewMessage, error, 'Export Excel ไม่สำเร็จ');
+
       logApiError('dashboard_export_excel_error', error, {
         dashboardId: dashboardId
       });
@@ -4624,7 +4002,8 @@
       setButtonLoading(el.exportDashboardExcelBtn, false, 'Export Excel');
     }
   }
-      async function loadAuditLog() {
+
+  async function loadAuditLog() {
     if (!el.auditLogResult) {
       return;
     }
@@ -5080,7 +4459,6 @@
         <div class="mini-line">
           <svg viewBox="0 0 120 54" preserveAspectRatio="none" aria-hidden="true">
             <path d="M4 42 C20 28, 32 36, 45 25 S72 18, 86 30 S105 12, 116 18"></path>
-            ${item.chartType === 'area' ? '<path class="area" d="M4 42 C20 28, 32 36, 45 25 S72 18, 86 30 S105 12, 116 18 L116 52 L4 52 Z"></path>' : ''}
           </svg>
         </div>
       `;
@@ -5374,6 +4752,24 @@
     }
 
     return '';
+  }
+
+  function compactText(value, maxLength) {
+    const text = String(value || '').trim();
+    const limit = Number(maxLength || 24);
+
+    if (!text || text.length <= limit) {
+      return text;
+    }
+
+    if (limit <= 6) {
+      return text.slice(0, limit);
+    }
+
+    const head = Math.ceil((limit - 3) * 0.6);
+    const tail = Math.floor((limit - 3) * 0.4);
+
+    return text.slice(0, head) + '...' + text.slice(text.length - tail);
   }
 
   function showToast(type, title, text) {
