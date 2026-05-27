@@ -16,7 +16,7 @@
     rel="stylesheet"
   >
 
-  <link rel="stylesheet" href="./style.css">
+  <link rel="stylesheet" href="./style.css?v=20260527-02">
 </head>
 
 <body>
@@ -798,7 +798,854 @@
           <pre id="debugLog" class="debug-log">ยังไม่มีข้อมูล</pre>
         </section>
 
-      </main>
+      </main><main class="main">
+
+  <!-- ================= HERO / OVERVIEW ================= -->
+  <section class="hero-card">
+    <div>
+      <h1>Data Analytics Control Center</h1>
+      <p>
+        ศูนย์กลางจัดการแหล่งข้อมูล Mapping สร้าง Dashboard วิเคราะห์ข้อมูล
+        จัดการสิทธิ์ผู้ใช้ Export และตรวจสอบระบบในที่เดียว
+      </p>
+    </div>
+
+    <button id="refreshMeBtn" class="btn btn-secondary" type="button">
+      Refresh ผู้ใช้
+    </button>
+  </section>
+
+  <!-- ================= MODE SWITCHER ================= -->
+  <section id="modeSwitcher" class="mode-switcher hidden">
+    <button id="adminModeBtn" class="mode-btn active" type="button">
+      Admin Console
+    </button>
+
+    <button id="userModeBtn" class="mode-btn" type="button">
+      User Dashboard
+    </button>
+  </section>
+
+  <!-- ================= QUICK NAV ================= -->
+  <section class="dashboard-command-bar admin-only">
+    <a class="command-pill active" href="#sectionOverview">
+      Overview
+    </a>
+
+    <a class="command-pill" href="#sectionDataSource">
+      Data Source
+    </a>
+
+    <a class="command-pill" href="#sectionMapping">
+      Mapping
+    </a>
+
+    <a class="command-pill" href="#sectionBuilder">
+      Builder
+    </a>
+
+    <a class="command-pill" href="#sectionViewer">
+      Viewer
+    </a>
+
+    <a class="command-pill" href="#sectionManagement">
+      Management
+    </a>
+
+    <a class="command-pill" href="#sectionUsers">
+      Users
+    </a>
+
+    <a class="command-pill" href="#sectionSystem">
+      System
+    </a>
+  </section>
+
+  <!-- ================= OVERVIEW ================= -->
+  <section id="sectionOverview" class="dashboard-section admin-only">
+    <div class="section-title">
+      <div>
+        <span class="section-kicker">Step 0</span>
+        <h2>ภาพรวมระบบ</h2>
+        <p>
+          ตรวจสอบสถานะระบบ โหลดข้อมูลหลัก และดูภาพรวมก่อนเริ่มสร้าง Dashboard
+        </p>
+      </div>
+    </div>
+
+    <div class="grid">
+      <article class="card action-card">
+        <div class="action-icon blue">API</div>
+        <h3>API Health</h3>
+        <p id="healthResult">กำลังตรวจสอบสถานะระบบ...</p>
+        <button id="runSystemCheckBtn" class="btn btn-secondary" type="button">
+          Run System Check
+        </button>
+      </article>
+
+      <article class="card action-card">
+        <div class="action-icon teal">ME</div>
+        <h3>ข้อมูลผู้ใช้</h3>
+        <p id="meResult">กด Refresh ผู้ใช้เพื่อตรวจสอบ session และสิทธิ์</p>
+        <button class="btn btn-ghost" type="button" onclick="document.getElementById('refreshMeBtn')?.click()">
+          ตรวจสอบผู้ใช้
+        </button>
+      </article>
+
+      <article class="card action-card">
+        <div class="action-icon violet">SRC</div>
+        <h3>Data Sources</h3>
+        <p id="sourceResult">โหลดรายการ Google Sheets ที่นำมาใช้วิเคราะห์</p>
+        <button id="loadSourcesBtn" class="btn btn-secondary" type="button">
+          โหลด Source
+        </button>
+      </article>
+
+      <article class="card action-card">
+        <div class="action-icon amber">DASH</div>
+        <h3>Dashboards</h3>
+        <p id="dashboardResult">โหลดรายการ Dashboard ที่สร้างไว้แล้ว</p>
+        <button id="loadDashboardsBtn" class="btn btn-secondary" type="button">
+          โหลด Dashboard
+        </button>
+      </article>
+    </div>
+  </section>
+
+  <!-- ================= DATA SOURCE ================= -->
+  <section id="sectionDataSource" class="dashboard-section admin-only">
+    <div class="section-title">
+      <div>
+        <span class="section-kicker">Step 1</span>
+        <h2>Data Source Manager</h2>
+        <p>
+          เพิ่ม Google Sheet ID เลือกชีท และอ่านหัวคอลัมน์เพื่อเตรียมทำ Mapping
+        </p>
+      </div>
+    </div>
+
+    <section class="admin-layout">
+      <article class="panel">
+        <div class="panel-header">
+          <div>
+            <h3>เพิ่มแหล่งข้อมูล Google Sheet</h3>
+            <p>เพิ่ม Sheet ID ที่ต้องการนำมาวิเคราะห์ในระบบ</p>
+          </div>
+        </div>
+
+        <form id="sourceForm" class="source-form">
+          <div class="form-grid">
+            <label class="field">
+              <span>ชื่อแหล่งข้อมูล</span>
+              <input
+                id="sourceName"
+                type="text"
+                placeholder="เช่น ข้อมูลพาเลทขาออก"
+                required
+              >
+            </label>
+
+            <label class="field">
+              <span>ประเภทข้อมูล</span>
+              <select id="sourceDataType">
+                <option value="Operation">Operation</option>
+                <option value="Audit">Audit</option>
+                <option value="HR">HR</option>
+                <option value="Vehicle">Vehicle</option>
+                <option value="Inventory">Inventory</option>
+                <option value="Incident">Incident / Error</option>
+                <option value="Performance">Performance</option>
+                <option value="Custom">Custom</option>
+                <option value="Other">Other</option>
+              </select>
+            </label>
+
+            <label class="field field-wide">
+              <span>Google Sheet ID</span>
+              <input
+                id="sourceSpreadsheetId"
+                type="text"
+                placeholder="วาง Google Sheet ID"
+                required
+              >
+            </label>
+
+            <label class="field">
+              <span>เจ้าของข้อมูล</span>
+              <input
+                id="sourceOwner"
+                type="text"
+                placeholder="เช่น LPS / Operation / DC906"
+              >
+            </label>
+
+            <label class="field">
+              <span>คำอธิบาย</span>
+              <input
+                id="sourceDescription"
+                type="text"
+                placeholder="รายละเอียดเพิ่มเติม"
+              >
+            </label>
+          </div>
+
+          <div class="actions-row">
+            <button id="createSourceBtn" class="btn btn-primary" type="submit">
+              เพิ่มแหล่งข้อมูล
+            </button>
+
+            <button id="reloadSourcesBtn" class="btn btn-secondary" type="button">
+              โหลดรายการใหม่
+            </button>
+          </div>
+
+          <p id="sourceFormMessage" class="form-message"></p>
+        </form>
+      </article>
+
+      <article class="panel">
+        <div class="panel-header">
+          <div>
+            <h3>รายการ Source / Sheet / Headers</h3>
+            <p>เลือก Source แล้วระบบจะแสดงรายชื่อชีทและหัวคอลัมน์</p>
+          </div>
+        </div>
+
+        <div class="source-workspace">
+          <div>
+            <div class="mini-title">1. Data Sources</div>
+            <div id="sourcesList" class="list-box empty">
+              กดโหลด Source เพื่อแสดงรายการ
+            </div>
+          </div>
+
+          <div>
+            <div class="mini-title">2. Sheets</div>
+            <div id="sourceSheetsList" class="list-box empty">
+              เลือก Source เพื่อแสดงรายชื่อชีท
+            </div>
+          </div>
+
+          <div>
+            <div class="mini-title">3. Headers</div>
+            <div id="headersResult" class="list-box empty">
+              เลือกชีทเพื่ออ่าน Header
+            </div>
+          </div>
+        </div>
+      </article>
+    </section>
+  </section>
+
+  <!-- ================= MAPPING ================= -->
+  <section id="sectionMapping" class="dashboard-section admin-only">
+    <div class="section-title">
+      <div>
+        <span class="section-kicker">Step 2</span>
+        <h2>Data Mapping</h2>
+        <p>
+          กำหนดความหมายของแต่ละคอลัมน์ เช่น วันที่ ตัวเลข หมวดหมู่ สถานะ Filter และ Export
+        </p>
+      </div>
+    </div>
+
+    <section class="panel">
+      <div class="panel-header">
+        <div>
+          <h3>Mapping Builder</h3>
+          <p>
+            หลังจากอ่าน Header แล้ว ให้กำหนดประเภทข้อมูลก่อนสร้าง Dashboard Preview
+          </p>
+        </div>
+
+        <div class="actions-row">
+          <button id="saveMappingBtn" class="btn btn-primary" type="button">
+            Save Mapping
+          </button>
+        </div>
+      </div>
+
+      <div class="builder-guideline">
+        <article>
+          <strong>วันที่หลัก</strong>
+          <span>ใช้สร้างแนวโน้มรายวัน รายเดือน และ Filter ช่วงเวลา</span>
+        </article>
+
+        <article>
+          <strong>ตัวเลขหลัก</strong>
+          <span>ใช้คำนวณ Sum, Avg, KPI และกราฟเปรียบเทียบ</span>
+        </article>
+
+        <article>
+          <strong>หมวดหมู่</strong>
+          <span>ใช้ทำ Bar, Pie, Donut, Ranking และ Grouping</span>
+        </article>
+
+        <article>
+          <strong>สถานะ</strong>
+          <span>ใช้แยกผลลัพธ์ เช่น สำเร็จ รอดำเนินการ ผิดปกติ</span>
+        </article>
+      </div>
+
+      <div class="actions-row mapping-action-row">
+        <span id="mappingMessage" class="mapping-message"></span>
+      </div>
+    </section>
+  </section>
+
+  <!-- ================= DASHBOARD BUILDER ================= -->
+  <section id="sectionBuilder" class="dashboard-section admin-only">
+    <div class="section-title">
+      <div>
+        <span class="section-kicker">Step 3</span>
+        <h2>Dashboard Builder</h2>
+        <p>
+          สร้าง Preview จาก Mapping แล้วบันทึกเป็น Dashboard จริง
+          รอบถัดไปจะเพิ่มตัวเลือก Chart/Card หลายรูปแบบให้ Super Admin เลือกได้
+        </p>
+      </div>
+    </div>
+
+    <section class="panel dashboard-builder-panel">
+      <div class="panel-header">
+        <div>
+          <h3>สร้าง Dashboard จาก Mapping</h3>
+          <p>
+            ระบบจะสร้าง KPI, Chart, Filter และ Table จาก Mapping ที่บันทึกไว้
+          </p>
+        </div>
+
+        <div class="actions-row">
+          <button id="previewDashboardBtn" class="btn btn-primary" type="button">
+            สร้าง Dashboard Preview
+          </button>
+        </div>
+      </div>
+
+      <div class="dashboard-builder-grid">
+        <article class="builder-card">
+          <div class="builder-card-head">
+            <span class="builder-step">A</span>
+            <div>
+              <h4>Dashboard Info</h4>
+              <p>ตั้งชื่อและประเภท Dashboard ก่อนบันทึกจริง</p>
+            </div>
+          </div>
+
+          <div class="form-grid">
+            <label class="field">
+              <span>ชื่อ Dashboard</span>
+              <input
+                id="dashboardName"
+                type="text"
+                placeholder="เช่น Pallet Outbound Overview"
+              >
+            </label>
+
+            <label class="field">
+              <span>ประเภท Dashboard</span>
+              <select id="dashboardType">
+                <option value="Operation">Operation</option>
+                <option value="Performance">Performance</option>
+                <option value="Audit">Audit</option>
+                <option value="Vehicle">Vehicle</option>
+                <option value="Inventory">Inventory</option>
+                <option value="Incident">Incident</option>
+                <option value="Custom">Custom</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="actions-row">
+            <button id="createDashboardBtn" class="btn btn-secondary" type="button">
+              บันทึกเป็น Dashboard จริง
+            </button>
+
+            <span id="createDashboardMessage" class="mapping-message"></span>
+          </div>
+        </article>
+
+        <article class="builder-card builder-card-preview">
+          <div class="builder-card-head">
+            <span class="builder-step">B</span>
+            <div>
+              <h4>Widget Preview Concept</h4>
+              <p>ส่วนนี้เป็นพื้นที่เตรียมสำหรับรอบถัดไป</p>
+            </div>
+          </div>
+
+          <div class="widget-choice-grid">
+            <div class="widget-choice">
+              <strong>KPI Card</strong>
+              <span>ยอดรวม / ค่าเฉลี่ย / เป้าหมาย</span>
+            </div>
+
+            <div class="widget-choice">
+              <strong>Bar Chart</strong>
+              <span>เปรียบเทียบตามหมวดหมู่</span>
+            </div>
+
+            <div class="widget-choice">
+              <strong>Line Chart</strong>
+              <span>แนวโน้มตามช่วงเวลา</span>
+            </div>
+
+            <div class="widget-choice">
+              <strong>Donut Chart</strong>
+              <span>ดูสัดส่วนแบบเข้าใจง่าย</span>
+            </div>
+          </div>
+        </article>
+      </div>
+
+      <div id="previewResult" class="preview-box empty">
+        กรุณาบันทึก Mapping ก่อน แล้วกดสร้าง Dashboard Preview
+      </div>
+    </section>
+  </section>
+
+  <!-- ================= USER DASHBOARD VIEWER ================= -->
+  <section id="sectionViewer" class="dashboard-section user-dashboard-section">
+    <div class="section-title">
+      <div>
+        <span class="section-kicker">Step 4</span>
+        <h2>Dashboard Viewer</h2>
+        <p>
+          เปิด Dashboard ใช้ Filter Refresh และ Export ข้อมูลตามสิทธิ์ผู้ใช้งาน
+        </p>
+      </div>
+    </div>
+
+    <section class="panel">
+      <div class="panel-header">
+        <div>
+          <h3>เปิด Dashboard</h3>
+          <p>เลือก Dashboard ที่ต้องการดู ระบบจะแสดง KPI, Chart และ Table</p>
+        </div>
+
+        <div class="actions-row">
+          <button id="reloadDashboardListBtn" class="btn btn-secondary" type="button">
+            โหลดรายการ Dashboard
+          </button>
+        </div>
+      </div>
+
+      <div class="dashboard-view-toolbar">
+        <label class="field">
+          <span>เลือก Dashboard</span>
+          <select id="dashboardSelect">
+            <option value="">ยังไม่มีรายการ Dashboard</option>
+          </select>
+        </label>
+
+        <label class="field">
+          <span>จำนวนแถวที่โหลด</span>
+          <select id="dashboardLimit">
+            <option value="500">500 แถว</option>
+            <option value="1000">1,000 แถว</option>
+            <option value="3000">3,000 แถว</option>
+            <option value="5000">5,000 แถว</option>
+            <option value="10000">10,000 แถว</option>
+            <option value="20000">20,000 แถว</option>
+          </select>
+        </label>
+      </div>
+
+      <div id="dashboardFilterBox" class="dashboard-filter-box empty">
+        เมื่อเปิด Dashboard แล้ว ระบบจะแสดงตัวกรองที่ตั้งไว้ตรงนี้
+      </div>
+
+      <div class="dashboard-viewer-actions">
+        <button id="openDashboardBtn" class="btn btn-primary" type="button">
+          เปิด Dashboard
+        </button>
+
+        <button id="applyDashboardFilterBtn" class="btn btn-secondary" type="button">
+          Apply Filter
+        </button>
+
+        <button id="resetDashboardFilterBtn" class="btn btn-ghost" type="button">
+          Reset Filter
+        </button>
+
+        <button id="refreshDashboardBtn" class="btn btn-ghost" type="button">
+          Refresh
+        </button>
+
+        <button id="exportDashboardBtn" class="btn btn-secondary" type="button">
+          Export CSV
+        </button>
+
+        <button id="exportDashboardExcelBtn" class="btn btn-secondary" type="button">
+          Export Excel
+        </button>
+
+        <span id="dashboardViewMessage" class="mapping-message dashboard-viewer-message"></span>
+      </div>
+
+      <div id="dashboardViewResult" class="preview-box empty">
+        กรุณาเลือก Dashboard แล้วกดเปิด Dashboard
+      </div>
+    </section>
+  </section>
+
+  <!-- ================= DASHBOARD MANAGEMENT ================= -->
+  <section id="sectionManagement" class="dashboard-section admin-only dashboard-management-section">
+    <div class="section-title">
+      <div>
+        <span class="section-kicker">Step 5</span>
+        <h2>Dashboard Management</h2>
+        <p>
+          จัดการ Dashboard ที่สร้างแล้ว เช่น Publish, Export, Regenerate และ Soft Delete
+        </p>
+      </div>
+    </div>
+
+    <section class="panel">
+      <div class="panel-header">
+        <div>
+          <h3>จัดการ Dashboard ที่สร้างแล้ว</h3>
+          <p>
+            แก้ชื่อ Dashboard, ประเภท, Publish, Export, สิทธิ์การมองเห็น และลบแบบ Soft Delete
+          </p>
+        </div>
+
+        <div class="actions-row">
+          <button id="reloadManageDashboardsBtn" class="btn btn-secondary" type="button">
+            โหลดรายการ Dashboard
+          </button>
+        </div>
+      </div>
+
+      <div class="dashboard-manage-box">
+        <div class="form-grid">
+          <div class="dashboard-manage-toolbar field-wide">
+            <label class="field">
+              <span>ค้นหา Dashboard</span>
+              <input
+                id="manageDashboardSearch"
+                type="text"
+                placeholder="ค้นหาจากชื่อ / ID / ประเภท"
+              >
+            </label>
+
+            <label class="field">
+              <span>กรองประเภท</span>
+              <select id="manageDashboardTypeFilter">
+                <option value="">ทุกประเภท</option>
+                <option value="Operation">Operation</option>
+                <option value="Performance">Performance</option>
+                <option value="Audit">Audit</option>
+                <option value="Vehicle">Vehicle</option>
+                <option value="Inventory">Inventory</option>
+                <option value="Incident">Incident</option>
+                <option value="Custom">Custom</option>
+              </select>
+            </label>
+
+            <label class="field">
+              <span>กรองสถานะ</span>
+              <select id="manageDashboardStatusFilter">
+                <option value="">ทุกสถานะ</option>
+                <option value="published">Published</option>
+                <option value="unpublished">Unpublished</option>
+                <option value="export_on">Export On</option>
+                <option value="export_off">Export Off</option>
+                <option value="hidden">Hidden / Deleted</option>
+              </select>
+            </label>
+          </div>
+
+          <label class="field field-wide">
+            <span>เลือก Dashboard เพื่อแก้ไข</span>
+            <select id="manageDashboardSelect">
+              <option value="">เลือก Dashboard</option>
+            </select>
+          </label>
+
+          <label class="field">
+            <span>ชื่อ Dashboard</span>
+            <input id="manageDashboardName" type="text" placeholder="ชื่อ Dashboard">
+          </label>
+
+          <label class="field">
+            <span>ประเภท Dashboard</span>
+            <select id="manageDashboardType">
+              <option value="Operation">Operation</option>
+              <option value="Performance">Performance</option>
+              <option value="Audit">Audit</option>
+              <option value="Vehicle">Vehicle</option>
+              <option value="Inventory">Inventory</option>
+              <option value="Incident">Incident</option>
+              <option value="Custom">Custom</option>
+            </select>
+          </label>
+
+          <label class="field field-wide">
+            <span>คำอธิบาย</span>
+            <input id="manageDashboardDescription" type="text" placeholder="รายละเอียด Dashboard">
+          </label>
+
+          <label class="check-card">
+            <input id="manageDashboardPublish" type="checkbox">
+            <span>Publish Dashboard</span>
+          </label>
+
+          <label class="check-card">
+            <input id="manageDashboardExport" type="checkbox">
+            <span>อนุญาต Export</span>
+          </label>
+
+          <label class="check-card">
+            <input id="manageDashboardHidden" type="checkbox">
+            <span>ซ่อน / Soft Delete</span>
+          </label>
+        </div>
+
+        <div class="actions-row">
+          <button id="saveManageDashboardBtn" class="btn btn-primary" type="button">
+            Save Dashboard
+          </button>
+
+          <button id="regenerateManageDashboardBtn" class="btn btn-secondary" type="button">
+            Regenerate
+          </button>
+
+          <button id="hideManageDashboardBtn" class="btn btn-ghost" type="button">
+            Hide / Show
+          </button>
+
+          <button id="deleteManageDashboardBtn" class="btn btn-danger" type="button">
+            Soft Delete
+          </button>
+
+          <span id="manageDashboardMessage" class="mapping-message"></span>
+        </div>
+
+        <div id="manageDashboardSummary" class="preview-box empty">
+          เลือก Dashboard เพื่อแสดงรายละเอียด
+        </div>
+
+        <div class="result-header">
+          <strong>รายการ Dashboard</strong>
+          <span id="manageDashboardCount">0 รายการ</span>
+        </div>
+
+        <div id="manageDashboardCardList" class="list-box empty">
+          กดโหลดรายการ Dashboard เพื่อแสดงข้อมูล
+        </div>
+
+        <div id="manageDashboardCardCount" class="muted-counter">
+          0 รายการ
+        </div>
+      </div>
+    </section>
+  </section>
+
+  <!-- ================= USER MANAGEMENT ================= -->
+  <section id="sectionUsers" class="dashboard-section admin-only">
+    <div class="section-title">
+      <div>
+        <span class="section-kicker">Step 6</span>
+        <h2>User Management</h2>
+        <p>
+          จัดการผู้ใช้ Role Permission และ Dashboard ที่แต่ละคนสามารถดูได้
+        </p>
+      </div>
+    </div>
+
+    <section class="panel">
+      <div class="panel-header">
+        <div>
+          <h3>จัดการผู้ใช้งาน</h3>
+          <p>
+            Admin / Super Admin สามารถเพิ่มผู้ใช้ แก้สิทธิ์ Reset Password และปิดใช้งานได้
+          </p>
+        </div>
+
+        <div class="actions-row">
+          <button id="reloadUsersBtn" class="btn btn-secondary" type="button">
+            โหลดรายชื่อผู้ใช้
+          </button>
+        </div>
+      </div>
+
+      <div class="user-manage-box">
+        <div class="form-grid">
+          <label class="field">
+            <span>Username</span>
+            <input id="userManageUsername" type="text" placeholder="username">
+          </label>
+
+          <label class="field">
+            <span>ชื่อแสดงผล</span>
+            <input id="userManageDisplayName" type="text" placeholder="ชื่อผู้ใช้งาน">
+          </label>
+
+          <label class="field">
+            <span>อีเมล</span>
+            <input id="userManageEmail" type="email" placeholder="email@example.com">
+          </label>
+
+          <label class="field">
+            <span>Role</span>
+            <select id="userManageRole">
+              <option value="Viewer">Viewer</option>
+              <option value="User">User</option>
+              <option value="Editor">Editor</option>
+              <option value="Admin">Admin</option>
+              <option value="Super Admin">Super Admin</option>
+            </select>
+          </label>
+
+          <label class="field">
+            <span>Status</span>
+            <select id="userManageStatus">
+              <option value="active">active</option>
+              <option value="inactive">inactive</option>
+            </select>
+          </label>
+
+          <label class="field">
+            <span>Password</span>
+            <input id="userManagePassword" type="text" placeholder="ใช้ตอนสร้างหรือ Reset">
+          </label>
+
+          <label class="field field-wide">
+            <span>Dashboard ที่ดูได้</span>
+            <input
+              id="userManageDashboards"
+              type="text"
+              placeholder="เช่น DASH_xxx,DASH_yyy หรือเว้นว่างเพื่อใช้ตาม Role"
+            >
+          </label>
+
+          <label class="check-card">
+            <input id="userCanExport" type="checkbox">
+            <span>Export ได้</span>
+          </label>
+
+          <label class="check-card">
+            <input id="userCanAddSource" type="checkbox">
+            <span>เพิ่ม Source ได้</span>
+          </label>
+
+          <label class="check-card">
+            <input id="userCanEditDashboard" type="checkbox">
+            <span>แก้ไข Dashboard ได้</span>
+          </label>
+
+          <label class="check-card">
+            <input id="userCanViewAuditLog" type="checkbox">
+            <span>ดู Audit Log ได้</span>
+          </label>
+
+          <label class="check-card">
+            <input id="userCanManageUser" type="checkbox">
+            <span>จัดการ User ได้</span>
+          </label>
+        </div>
+
+        <div class="actions-row">
+          <button id="createUserBtn" class="btn btn-primary" type="button">
+            Create User
+          </button>
+
+          <button id="updateUserBtn" class="btn btn-secondary" type="button">
+            Update User
+          </button>
+
+          <button id="resetUserPasswordBtn" class="btn btn-ghost" type="button">
+            Reset Password
+          </button>
+
+          <button id="clearUserFormBtn" class="btn btn-ghost" type="button">
+            Clear Form
+          </button>
+
+          <span id="userManageMessage" class="mapping-message"></span>
+        </div>
+
+        <div class="result-header">
+          <strong>รายชื่อผู้ใช้งาน</strong>
+          <span id="userManageCount">0 รายการ</span>
+        </div>
+
+        <div id="userManageList" class="list-box empty">
+          กดโหลดรายชื่อผู้ใช้เพื่อแสดงรายการ
+        </div>
+      </div>
+    </section>
+  </section>
+
+  <!-- ================= SYSTEM / AUDIT ================= -->
+  <section id="sectionSystem" class="dashboard-section admin-only">
+    <div class="section-title">
+      <div>
+        <span class="section-kicker">Step 7</span>
+        <h2>System Check & Audit Log</h2>
+        <p>
+          ตรวจสอบสถานะระบบ ประวัติการใช้งาน และ Debug Log
+        </p>
+      </div>
+    </div>
+
+    <section class="admin-layout">
+      <article class="panel">
+        <div class="panel-header">
+          <div>
+            <h3>Audit Log</h3>
+            <p>ดูประวัติ Login, Save Mapping, Create Dashboard, Export และ Error</p>
+          </div>
+
+          <div class="actions-row">
+            <button id="reloadAuditLogBtn" class="btn btn-secondary" type="button">
+              โหลด Audit Log
+            </button>
+          </div>
+        </div>
+
+        <div class="form-grid audit-toolbar">
+          <label class="field">
+            <span>จำนวนรายการ</span>
+            <select id="auditLimitSelect">
+              <option value="50">50 รายการ</option>
+              <option value="100">100 รายการ</option>
+              <option value="200">200 รายการ</option>
+              <option value="500">500 รายการ</option>
+            </select>
+          </label>
+        </div>
+
+        <div id="auditLogResult" class="list-box empty">
+          กดโหลด Audit Log เพื่อแสดงข้อมูล
+        </div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-header">
+          <div>
+            <h3>System Result / Debug</h3>
+            <p>ใช้ตรวจสอบ API, Setup, Source, Dashboard และ Error ระหว่างทำงาน</p>
+          </div>
+
+          <div class="actions-row">
+            <button id="clearLogBtn" class="btn btn-ghost" type="button">
+              Clear Log
+            </button>
+          </div>
+        </div>
+
+        <div id="systemCheckResult" class="list-box empty">
+          กด Run System Check เพื่อแสดงผลตรวจสอบ
+        </div>
+
+        <pre id="debugLog" class="debug-log"></pre>
+      </article>
+    </section>
+  </section>
+
+</main>
     </section>
 
   </div>
