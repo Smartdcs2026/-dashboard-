@@ -4348,9 +4348,11 @@ if (el.manageDashboardCardCount) {
   const dashboardName = dash ? String(dash['ชื่อ Dashboard'] || dashboardId) : dashboardId;
 
   const confirmed = window.confirm(
-    'ยืนยัน Regenerate Dashboard จาก Mapping ล่าสุดหรือไม่?\n\n' +
-    dashboardName +
-    '\n\nระบบจะสร้าง KPI / กราฟ / ตัวกรอง / Layout ใหม่จาก Mapping ล่าสุด แต่จะคงชื่อ Dashboard, Publish, Export และสิทธิ์เดิมไว้'
+    'ยืนยัน Regenerate Dashboard หรือไม่?\n\n' +
+dashboardName +
+'\n\nระบบจะสร้าง KPI / กราฟ / ตัวกรอง / Layout ใหม่จาก Mapping ล่าสุด\n' +
+'ถ้า Dashboard นี้เคยสร้างจาก Dashboard Builder ระบบจะใช้ Widget เดิมที่ Super Admin เลือกไว้\n' +
+'และจะคงชื่อ Dashboard, Publish, Export และสิทธิ์เดิมไว้'
   );
 
   if (!confirmed) {
@@ -4363,18 +4365,23 @@ if (el.manageDashboardCardCount) {
   }
 
   setButtonLoading(el.regenerateManageDashboardBtn, true, 'กำลัง Regenerate...');
-  setManageDashboardMessage('กำลัง Regenerate Dashboard จาก Mapping ล่าสุด...');
-     showGlobalLoading('กำลัง Regenerate Dashboard จาก Mapping ล่าสุด...');
+  setManageDashboardMessage('กำลัง Regenerate Dashboard จาก Mapping ล่าสุด / Builder Config เดิม.');
+showGlobalLoading('กำลัง Regenerate Dashboard จาก Mapping ล่าสุด / Builder Config เดิม.');
 
   try {
     const data = await window.AnalyticsAPI.regenerateDashboard(dashboardId);
 
-    setManageDashboardMessage(
-      (data.message || 'Regenerate สำเร็จ') +
-      ' | KPI ' + Number(data.totalMetrics || 0).toLocaleString() +
-      ' | กราฟ ' + Number(data.totalCharts || 0).toLocaleString() +
-      ' | ตัวกรอง ' + Number(data.totalFilters || 0).toLocaleString()
-    );
+    const modeText = data.regenerateMode === 'builder'
+  ? 'โหมด Builder'
+  : 'โหมด Auto Mapping';
+
+setManageDashboardMessage(
+  (data.message || 'Regenerate สำเร็จ') +
+  ' | ' + modeText +
+  ' | KPI ' + Number(data.totalMetrics || 0).toLocaleString() +
+  ' | กราฟ ' + Number(data.totalCharts || 0).toLocaleString() +
+  ' | ตัวกรอง ' + Number(data.totalFilters || 0).toLocaleString()
+);
 
     writeLog({
       step: 'manage_dashboard_regenerate',
