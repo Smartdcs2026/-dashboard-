@@ -140,13 +140,145 @@ let selectedManageUserId = '';
   let currentDashboardTable = null;
 let currentDashboardTablePage = 1;
 const DASHBOARD_TABLE_PAGE_SIZE = 50;
+  const DASHBOARD_BUILDER_STORAGE_KEY = 'analytics_dashboard_builder_widgets';
+
+const DASHBOARD_WIDGET_CATALOG = [
+  {
+    id: 'kpi_total',
+    type: 'metric',
+    subType: 'summary',
+    title: 'KPI Summary Card',
+    shortTitle: 'KPI Card',
+    description: 'แสดงยอดรวม จำนวนรายการ ค่าเฉลี่ย หรือค่าหลักของระบบ',
+    bestFor: 'ข้อมูลตัวเลข / จำนวนรายการ / KPI หลัก',
+    icon: 'KPI',
+    recommended: true
+  },
+  {
+    id: 'kpi_trend',
+    type: 'metric',
+    subType: 'trend',
+    title: 'KPI Trend Card',
+    shortTitle: 'Trend Card',
+    description: 'แสดงตัวเลขพร้อมแนวโน้มเพิ่มขึ้นหรือลดลง',
+    bestFor: 'ข้อมูลที่มีวันที่ เช่น รายวัน รายเดือน',
+    icon: 'TRD',
+    recommended: true
+  },
+  {
+    id: 'kpi_target',
+    type: 'metric',
+    subType: 'target',
+    title: 'KPI Target Card',
+    shortTitle: 'Target Card',
+    description: 'แสดงผลเทียบเป้าหมายพร้อม Progress Bar',
+    bestFor: 'งานที่มีเป้าหมาย เช่น SLA / Performance / Target',
+    icon: 'TGT',
+    recommended: false
+  },
+  {
+    id: 'bar_chart',
+    type: 'chart',
+    chartType: 'bar',
+    title: 'Bar Chart',
+    shortTitle: 'Bar Chart',
+    description: 'เปรียบเทียบจำนวนหรือผลรวมแยกตามหมวดหมู่',
+    bestFor: 'DC / สาขา / ประเภท / สถานะ',
+    icon: 'BAR',
+    recommended: true
+  },
+  {
+    id: 'horizontal_bar',
+    type: 'chart',
+    chartType: 'horizontal_bar',
+    title: 'Horizontal Bar',
+    shortTitle: 'Horizontal Bar',
+    description: 'เหมาะกับชื่อหมวดหมู่ยาว หรือ Top Ranking',
+    bestFor: 'Top 10 สาขา / พนักงาน / Location',
+    icon: 'H-B',
+    recommended: false
+  },
+  {
+    id: 'line_chart',
+    type: 'chart',
+    chartType: 'line',
+    title: 'Line Chart',
+    shortTitle: 'Line Chart',
+    description: 'ดูแนวโน้มข้อมูลตามช่วงเวลา',
+    bestFor: 'Timestamp / วันที่ตรวจ / วันที่บันทึก',
+    icon: 'LIN',
+    recommended: true
+  },
+  {
+    id: 'area_chart',
+    type: 'chart',
+    chartType: 'area',
+    title: 'Area Chart',
+    shortTitle: 'Area Chart',
+    description: 'ดูแนวโน้มพร้อมน้ำหนักของปริมาณข้อมูล',
+    bestFor: 'ยอดสะสม / ปริมาณงานตามเวลา',
+    icon: 'ARE',
+    recommended: false
+  },
+  {
+    id: 'donut_chart',
+    type: 'chart',
+    chartType: 'donut',
+    title: 'Donut Chart',
+    shortTitle: 'Donut Chart',
+    description: 'แสดงสัดส่วนแบบอ่านง่ายและดูเป็นมืออาชีพ',
+    bestFor: 'สถานะ / ประเภท / แบรนด์ / กลุ่มข้อมูล',
+    icon: 'DON',
+    recommended: true
+  },
+  {
+    id: 'pie_chart',
+    type: 'chart',
+    chartType: 'pie',
+    title: 'Pie Chart',
+    shortTitle: 'Pie Chart',
+    description: 'แสดงสัดส่วนข้อมูลแบบพื้นฐาน',
+    bestFor: 'ข้อมูลไม่เกิน 5-7 กลุ่ม',
+    icon: 'PIE',
+    recommended: false
+  },
+  {
+    id: 'table_detail',
+    type: 'table',
+    subType: 'detail',
+    title: 'Data Table',
+    shortTitle: 'Table',
+    description: 'แสดงรายการข้อมูลจริง พร้อม Pagination',
+    bestFor: 'ตรวจสอบรายการละเอียด / Export',
+    icon: 'TBL',
+    recommended: true
+  },
+  {
+    id: 'table_ranking',
+    type: 'table',
+    subType: 'ranking',
+    title: 'Ranking Table',
+    shortTitle: 'Ranking',
+    description: 'แสดงอันดับ Top 5 / Top 10 จากข้อมูล',
+    bestFor: 'อันดับ DC / สาขา / ผู้รับผิดชอบ',
+    icon: 'TOP',
+    recommended: false
+  }
+];
+
+let dashboardBuilderState = {
+  selectedWidgetIds: [],
+  lastSelectedAt: '',
+  mode: 'auto'
+};
 
   document.addEventListener('DOMContentLoaded', init);
 
   async function init() {
-    bindEvents();
-    showLogin();
-    resetWorkingState();
+  bindEvents();
+  showLogin();
+  resetWorkingState();
+  initDashboardBuilderDesigner();
 
     if (FORCE_LOGIN_EVERY_OPEN && window.AnalyticsAPI && window.AnalyticsAPI.clearToken) {
       window.AnalyticsAPI.clearToken();
@@ -1347,13 +1479,16 @@ applyRoleUi(currentUser);
     setCreateDashboardMessage('');
 
     try {
-      const data = await window.AnalyticsAPI.createDashboardFromPreview({
-        sourceId: selectedSourceId,
-        sheetName: selectedSheetName,
-        dashboardName: dashboardName,
-        dashboardType: dashboardType,
-        description: 'สร้างจาก Mapping ผ่าน Admin Console'
-      });
+      const builderPayload = getDashboardBuilderPayload();
+
+const data = await window.AnalyticsAPI.createDashboardFromPreview({
+  sourceId: selectedSourceId,
+  sheetName: selectedSheetName,
+  dashboardName: dashboardName,
+  dashboardType: dashboardType,
+  description: 'สร้างจาก Mapping ผ่าน Admin Console',
+  builderConfig: builderPayload
+});
 
       setCreateDashboardMessage(
         'สร้าง Dashboard สำเร็จ: ' + data.dashboardId +
@@ -1363,9 +1498,10 @@ applyRoleUi(currentUser);
       );
 
       writeLog({
-        step: 'create_dashboard_from_preview',
-        response: data
-      });
+  step: 'create_dashboard_from_preview',
+  response: data,
+  builderConfig: getDashboardBuilderPayload()
+});
 
            await loadDashboards();
       await loadDashboardOptions();
@@ -5133,5 +5269,571 @@ function buildHeatmapOption(title, data, chart) {
       }
     ]
   };
+}
+  /* =====================================================
+ *  DASHBOARD BUILDER DESIGNER
+ *  Frontend selector only
+ *  ===================================================== */
+
+function initDashboardBuilderDesigner() {
+  restoreDashboardBuilderState();
+  renderDashboardWidgetDesigner();
+  bindDashboardBuilderDesignerEvents();
+
+  window.AnalyticsDashboardBuilder = {
+    getSelectedWidgets: getSelectedDashboardWidgets,
+    getPayload: getDashboardBuilderPayload,
+    reset: resetDashboardBuilderSelection
+  };
+}
+
+function restoreDashboardBuilderState() {
+  try {
+    const raw = localStorage.getItem(DASHBOARD_BUILDER_STORAGE_KEY);
+    const saved = raw ? JSON.parse(raw) : null;
+
+    if (saved && Array.isArray(saved.selectedWidgetIds)) {
+      dashboardBuilderState = {
+        selectedWidgetIds: saved.selectedWidgetIds,
+        lastSelectedAt: saved.lastSelectedAt || '',
+        mode: saved.mode || 'manual'
+      };
+      return;
+    }
+  } catch (error) {
+    console.warn('restoreDashboardBuilderState error:', error);
+  }
+
+  dashboardBuilderState = {
+    selectedWidgetIds: DASHBOARD_WIDGET_CATALOG
+      .filter(function (item) {
+        return item.recommended;
+      })
+      .map(function (item) {
+        return item.id;
+      }),
+    lastSelectedAt: new Date().toISOString(),
+    mode: 'auto'
+  };
+
+  saveDashboardBuilderState();
+}
+
+function saveDashboardBuilderState() {
+  try {
+    localStorage.setItem(
+      DASHBOARD_BUILDER_STORAGE_KEY,
+      JSON.stringify(dashboardBuilderState)
+    );
+  } catch (error) {
+    console.warn('saveDashboardBuilderState error:', error);
+  }
+}
+
+function bindDashboardBuilderDesignerEvents() {
+  const box = document.getElementById('dashboardWidgetDesigner');
+
+  if (!box) {
+    return;
+  }
+
+  box.addEventListener('click', function (event) {
+    const toggleBtn = event.target.closest('[data-widget-toggle]');
+    const sampleBtn = event.target.closest('[data-widget-sample]');
+    const selectRecommendedBtn = event.target.closest('[data-widget-action="recommended"]');
+    const selectAllBtn = event.target.closest('[data-widget-action="all"]');
+    const clearBtn = event.target.closest('[data-widget-action="clear"]');
+
+    if (toggleBtn) {
+      toggleDashboardWidget(toggleBtn.getAttribute('data-widget-toggle'));
+      return;
+    }
+
+    if (sampleBtn) {
+      showDashboardWidgetSample(sampleBtn.getAttribute('data-widget-sample'));
+      return;
+    }
+
+    if (selectRecommendedBtn) {
+      selectRecommendedDashboardWidgets();
+      return;
+    }
+
+    if (selectAllBtn) {
+      selectAllDashboardWidgets();
+      return;
+    }
+
+    if (clearBtn) {
+      resetDashboardBuilderSelection();
+    }
+  });
+}
+
+function renderDashboardWidgetDesigner() {
+  const target = document.querySelector('.builder-card-preview');
+
+  if (!target) {
+    return;
+  }
+
+  target.innerHTML = `
+    <div id="dashboardWidgetDesigner" class="dashboard-widget-designer">
+      <div class="builder-card-head">
+        <span class="builder-step">B</span>
+        <div>
+          <h4>เลือก Chart / Card ที่ต้องการแสดง</h4>
+          <p>
+            Super Admin สามารถเลือก Widget ได้มากกว่า 1 แบบจากข้อมูลชุดเดียวกัน
+            รอบนี้เป็นตัวเลือกและตัวอย่างฝั่งหน้าเว็บ รอบถัดไปจะเชื่อม Backend เพื่อบันทึกจริง
+          </p>
+        </div>
+      </div>
+
+      <div class="widget-designer-toolbar">
+        <button class="btn btn-secondary" type="button" data-widget-action="recommended">
+          เลือกแบบแนะนำ
+        </button>
+
+        <button class="btn btn-ghost" type="button" data-widget-action="all">
+          เลือกทั้งหมด
+        </button>
+
+        <button class="btn btn-ghost" type="button" data-widget-action="clear">
+          ล้างการเลือก
+        </button>
+      </div>
+
+      <div class="widget-type-group">
+        <div class="widget-group-title">
+          <strong>Card / KPI</strong>
+          <span>ใช้แสดงตัวเลขสำคัญแบบอ่านเร็ว</span>
+        </div>
+
+        <div class="widget-choice-grid advanced-widget-grid">
+          ${renderWidgetChoiceCards('metric')}
+        </div>
+      </div>
+
+      <div class="widget-type-group">
+        <div class="widget-group-title">
+          <strong>Charts</strong>
+          <span>ใช้วิเคราะห์แนวโน้ม เปรียบเทียบ และสัดส่วน</span>
+        </div>
+
+        <div class="widget-choice-grid advanced-widget-grid">
+          ${renderWidgetChoiceCards('chart')}
+        </div>
+      </div>
+
+      <div class="widget-type-group">
+        <div class="widget-group-title">
+          <strong>Tables</strong>
+          <span>ใช้ตรวจสอบข้อมูลจริงและจัดอันดับ</span>
+        </div>
+
+        <div class="widget-choice-grid advanced-widget-grid">
+          ${renderWidgetChoiceCards('table')}
+        </div>
+      </div>
+
+      <div id="dashboardWidgetSummary" class="widget-summary-box"></div>
+    </div>
+  `;
+
+  renderDashboardWidgetSummary();
+}
+
+function renderWidgetChoiceCards(type) {
+  return DASHBOARD_WIDGET_CATALOG
+    .filter(function (item) {
+      return item.type === type;
+    })
+    .map(function (item) {
+      const selected = dashboardBuilderState.selectedWidgetIds.indexOf(item.id) >= 0;
+      const recommended = item.recommended ? '<span class="widget-badge">แนะนำ</span>' : '';
+
+      return `
+        <article class="widget-choice advanced-widget-choice ${selected ? 'is-selected' : ''}">
+          <div class="widget-choice-top">
+            <div class="widget-icon">${escapeHtml(item.icon)}</div>
+            <div>
+              <strong>${escapeHtml(item.shortTitle)}</strong>
+              ${recommended}
+            </div>
+          </div>
+
+          <p>${escapeHtml(item.description)}</p>
+
+          <div class="widget-mini-preview ${escapeAttr(item.id)}">
+            ${renderWidgetMiniPreview(item)}
+          </div>
+
+          <div class="widget-best-for">
+            <span>เหมาะกับ:</span>
+            ${escapeHtml(item.bestFor)}
+          </div>
+
+          <div class="widget-choice-actions">
+            <button
+              class="btn ${selected ? 'btn-primary' : 'btn-secondary'}"
+              type="button"
+              data-widget-toggle="${escapeAttr(item.id)}"
+            >
+              ${selected ? 'เลือกแล้ว' : 'เลือกใช้งาน'}
+            </button>
+
+            <button
+              class="btn btn-ghost"
+              type="button"
+              data-widget-sample="${escapeAttr(item.id)}"
+            >
+              ดูตัวอย่าง
+            </button>
+          </div>
+        </article>
+      `;
+    })
+    .join('');
+}
+
+function renderWidgetMiniPreview(item) {
+  if (item.type === 'metric' && item.subType === 'summary') {
+    return `
+      <div class="mini-kpi">
+        <span>งานทั้งหมด</span>
+        <strong>12,450</strong>
+      </div>
+    `;
+  }
+
+  if (item.type === 'metric' && item.subType === 'trend') {
+    return `
+      <div class="mini-kpi">
+        <span>วันนี้</span>
+        <strong>850</strong>
+        <em>+12.4%</em>
+      </div>
+    `;
+  }
+
+  if (item.type === 'metric' && item.subType === 'target') {
+    return `
+      <div class="mini-kpi">
+        <span>เป้าหมาย</span>
+        <strong>86%</strong>
+        <div class="mini-progress"><i style="width:86%"></i></div>
+      </div>
+    `;
+  }
+
+  if (item.chartType === 'bar' || item.chartType === 'horizontal_bar') {
+    return `
+      <div class="mini-bars ${item.chartType === 'horizontal_bar' ? 'is-horizontal' : ''}">
+        <i style="height:35%"></i>
+        <i style="height:68%"></i>
+        <i style="height:48%"></i>
+        <i style="height:82%"></i>
+        <i style="height:56%"></i>
+      </div>
+    `;
+  }
+
+  if (item.chartType === 'line' || item.chartType === 'area') {
+    return `
+      <div class="mini-line">
+        <svg viewBox="0 0 120 54" preserveAspectRatio="none" aria-hidden="true">
+          <path d="M4 42 C20 28, 32 36, 45 25 S72 18, 86 30 S105 12, 116 18"></path>
+          ${item.chartType === 'area' ? '<path class="area" d="M4 42 C20 28, 32 36, 45 25 S72 18, 86 30 S105 12, 116 18 L116 52 L4 52 Z"></path>' : ''}
+        </svg>
+      </div>
+    `;
+  }
+
+  if (item.chartType === 'donut' || item.chartType === 'pie') {
+    return `
+      <div class="mini-donut">
+        <span></span>
+      </div>
+    `;
+  }
+
+  if (item.type === 'table') {
+    return `
+      <div class="mini-table">
+        <b></b><b></b><b></b>
+        <i></i><i></i><i></i>
+        <i></i><i></i><i></i>
+        <i></i><i></i><i></i>
+      </div>
+    `;
+  }
+
+  return '<div class="mini-placeholder"></div>';
+}
+
+function renderDashboardWidgetSummary() {
+  const summary = document.getElementById('dashboardWidgetSummary');
+
+  if (!summary) {
+    return;
+  }
+
+  const selected = getSelectedDashboardWidgets();
+
+  if (!selected.length) {
+    summary.innerHTML = `
+      <div class="widget-summary-empty">
+        ยังไม่ได้เลือก Widget ระบบจะใช้รูปแบบอัตโนมัติเดิมจาก Mapping
+      </div>
+    `;
+    return;
+  }
+
+  const metricCount = selected.filter(function (item) { return item.type === 'metric'; }).length;
+  const chartCount = selected.filter(function (item) { return item.type === 'chart'; }).length;
+  const tableCount = selected.filter(function (item) { return item.type === 'table'; }).length;
+
+  summary.innerHTML = `
+    <div class="widget-summary-head">
+      <strong>Widget ที่เลือกแล้ว</strong>
+      <span>
+        Card ${metricCount} / Chart ${chartCount} / Table ${tableCount}
+      </span>
+    </div>
+
+    <div class="selected-widget-list">
+      ${selected.map(function (item, index) {
+        return `
+          <div class="selected-widget-item">
+            <span>${index + 1}</span>
+            <strong>${escapeHtml(item.shortTitle)}</strong>
+            <em>${escapeHtml(item.bestFor)}</em>
+          </div>
+        `;
+      }).join('')}
+    </div>
+  `;
+}
+
+function toggleDashboardWidget(widgetId) {
+  widgetId = String(widgetId || '').trim();
+
+  if (!widgetId) {
+    return;
+  }
+
+  const index = dashboardBuilderState.selectedWidgetIds.indexOf(widgetId);
+
+  if (index >= 0) {
+    dashboardBuilderState.selectedWidgetIds.splice(index, 1);
+  } else {
+    dashboardBuilderState.selectedWidgetIds.push(widgetId);
+  }
+
+  dashboardBuilderState.mode = 'manual';
+  dashboardBuilderState.lastSelectedAt = new Date().toISOString();
+
+  saveDashboardBuilderState();
+  renderDashboardWidgetDesigner();
+}
+
+function selectRecommendedDashboardWidgets() {
+  dashboardBuilderState.selectedWidgetIds = DASHBOARD_WIDGET_CATALOG
+    .filter(function (item) {
+      return item.recommended;
+    })
+    .map(function (item) {
+      return item.id;
+    });
+
+  dashboardBuilderState.mode = 'recommended';
+  dashboardBuilderState.lastSelectedAt = new Date().toISOString();
+
+  saveDashboardBuilderState();
+  renderDashboardWidgetDesigner();
+}
+
+function selectAllDashboardWidgets() {
+  dashboardBuilderState.selectedWidgetIds = DASHBOARD_WIDGET_CATALOG.map(function (item) {
+    return item.id;
+  });
+
+  dashboardBuilderState.mode = 'all';
+  dashboardBuilderState.lastSelectedAt = new Date().toISOString();
+
+  saveDashboardBuilderState();
+  renderDashboardWidgetDesigner();
+}
+
+function resetDashboardBuilderSelection() {
+  dashboardBuilderState.selectedWidgetIds = [];
+  dashboardBuilderState.mode = 'empty';
+  dashboardBuilderState.lastSelectedAt = new Date().toISOString();
+
+  saveDashboardBuilderState();
+  renderDashboardWidgetDesigner();
+}
+
+function getSelectedDashboardWidgets() {
+  return DASHBOARD_WIDGET_CATALOG.filter(function (item) {
+    return dashboardBuilderState.selectedWidgetIds.indexOf(item.id) >= 0;
+  });
+}
+
+function getDashboardBuilderPayload() {
+  return {
+    mode: dashboardBuilderState.mode,
+    selectedWidgetIds: dashboardBuilderState.selectedWidgetIds.slice(),
+    widgets: getSelectedDashboardWidgets().map(function (item, index) {
+      return {
+        order: index + 1,
+        id: item.id,
+        type: item.type,
+        subType: item.subType || '',
+        chartType: item.chartType || '',
+        title: item.title,
+        shortTitle: item.shortTitle,
+        description: item.description,
+        bestFor: item.bestFor,
+        recommended: !!item.recommended
+      };
+    }),
+    selectedAt: dashboardBuilderState.lastSelectedAt
+  };
+}
+
+function showDashboardWidgetSample(widgetId) {
+  const item = DASHBOARD_WIDGET_CATALOG.find(function (x) {
+    return x.id === widgetId;
+  });
+
+  if (!item) {
+    return;
+  }
+
+  const sampleHtml = buildWidgetSampleHtml(item);
+
+  if (window.Swal && window.Swal.fire) {
+    window.Swal.fire({
+      title: item.title,
+      html: sampleHtml,
+      width: 720,
+      confirmButtonText: 'เข้าใจแล้ว',
+      customClass: {
+        popup: 'dashboard-widget-swal'
+      }
+    });
+    return;
+  }
+
+  alert(item.title + '\n\n' + item.description + '\nเหมาะกับ: ' + item.bestFor);
+}
+
+function buildWidgetSampleHtml(item) {
+  return `
+    <div class="widget-sample-modal">
+      <div class="widget-sample-desc">
+        <strong>คำอธิบาย</strong>
+        <p>${escapeHtml(item.description)}</p>
+        <strong>เหมาะกับ</strong>
+        <p>${escapeHtml(item.bestFor)}</p>
+      </div>
+
+      <div class="widget-sample-preview">
+        ${renderLargeWidgetSample(item)}
+      </div>
+    </div>
+  `;
+}
+
+function renderLargeWidgetSample(item) {
+  if (item.type === 'metric') {
+    if (item.subType === 'trend') {
+      return `
+        <div class="sample-kpi-card">
+          <span>งานวันนี้</span>
+          <strong>850</strong>
+          <em class="up">+12.4% จากเมื่อวาน</em>
+        </div>
+      `;
+    }
+
+    if (item.subType === 'target') {
+      return `
+        <div class="sample-kpi-card">
+          <span>เป้าหมายประจำเดือน</span>
+          <strong>86%</strong>
+          <div class="sample-progress"><i style="width:86%"></i></div>
+          <small>86 จาก 100 เป้าหมาย</small>
+        </div>
+      `;
+    }
+
+    return `
+      <div class="sample-kpi-card">
+        <span>จำนวนรายการทั้งหมด</span>
+        <strong>12,450</strong>
+        <small>จากข้อมูลที่ผ่าน Mapping</small>
+      </div>
+    `;
+  }
+
+  if (item.chartType === 'bar' || item.chartType === 'horizontal_bar') {
+    return `
+      <div class="sample-chart-card">
+        <strong>ตัวอย่าง ${escapeHtml(item.shortTitle)}</strong>
+        <div class="sample-bars ${item.chartType === 'horizontal_bar' ? 'is-horizontal' : ''}">
+          <i style="height:44%"><span>DC901</span></i>
+          <i style="height:78%"><span>DC902</span></i>
+          <i style="height:56%"><span>DC906</span></i>
+          <i style="height:88%"><span>DC907</span></i>
+          <i style="height:64%"><span>DC908</span></i>
+        </div>
+      </div>
+    `;
+  }
+
+  if (item.chartType === 'line' || item.chartType === 'area') {
+    return `
+      <div class="sample-chart-card">
+        <strong>ตัวอย่างแนวโน้มตามเวลา</strong>
+        <svg class="sample-line-chart" viewBox="0 0 520 220" preserveAspectRatio="none" aria-hidden="true">
+          ${item.chartType === 'area' ? '<path class="area" d="M20 170 C70 110, 105 145, 150 95 S245 65, 310 118 S420 42, 500 70 L500 205 L20 205 Z"></path>' : ''}
+          <path d="M20 170 C70 110, 105 145, 150 95 S245 65, 310 118 S420 42, 500 70"></path>
+        </svg>
+      </div>
+    `;
+  }
+
+  if (item.chartType === 'donut' || item.chartType === 'pie') {
+    return `
+      <div class="sample-chart-card sample-donut-card">
+        <strong>ตัวอย่างสัดส่วน</strong>
+        <div class="sample-donut"></div>
+        <div class="sample-legend">
+          <span>สำเร็จ 62%</span>
+          <span>รอดำเนินการ 25%</span>
+          <span>ผิดปกติ 13%</span>
+        </div>
+      </div>
+    `;
+  }
+
+  if (item.type === 'table') {
+    return `
+      <div class="sample-chart-card">
+        <strong>ตัวอย่างตาราง</strong>
+        <div class="sample-table">
+          <div>วันที่</div><div>DC</div><div>จำนวน</div><div>สถานะ</div>
+          <span>27/05/2026</span><span>906</span><span>120</span><span>สำเร็จ</span>
+          <span>27/05/2026</span><span>901</span><span>88</span><span>รอดำเนินการ</span>
+          <span>27/05/2026</span><span>902</span><span>45</span><span>ตรวจสอบ</span>
+        </div>
+      </div>
+    `;
+  }
+
+  return '<div class="sample-chart-card">ไม่มีตัวอย่าง</div>';
 }
 })();
