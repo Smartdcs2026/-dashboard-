@@ -4004,84 +4004,246 @@
   }
 
   async function loadAuditLog() {
-    if (!el.auditLogResult) {
+  if (!el.auditLogResult) {
+    return;
+  }
+
+  const limit = el.auditLimitSelect ? Number(el.auditLimitSelect.value || 100) : 100;
+
+  el.auditLogResult.classList.remove('empty');
+  setPanelLoading(el.auditLogResult, 'กำลังโหลดประวัติการใช้งาน...');
+
+  if (el.reloadAuditLogBtn) {
+    setButtonLoading(el.reloadAuditLogBtn, true, 'กำลังโหลด...');
+  }
+
+  try {
+    const data = await window.AnalyticsAPI.auditLog({
+      limit: limit
+    });
+
+    renderAuditLogCompact(data.logs || data.rows || []);
+
+    writeLog({
+      step: 'audit_log',
+      response: {
+        ok: data.ok,
+        total: data.total || (data.logs || data.rows || []).length
+      }
+    });
+
+  } catch (error) {
+    const message = getFriendlyErrorMessage(error);
+
+    if (handleAuthErrorIfNeeded(error)) {
       return;
     }
 
-    const limit = el.auditLimitSelect ? Number(el.auditLimitSelect.value || 100) : 100;
+    el.auditLogResult.classList.add('empty');
+    el.auditLogResult.textContent = message;
 
-    setPanelLoading(el.auditLogResult, 'กำลังโหลด Audit Log...');
+    showToast('error', 'โหลด Audit Log ไม่สำเร็จ', message);
 
+    logApiError('audit_log_error', error, {
+      limit: limit
+    });
+
+  } finally {
     if (el.reloadAuditLogBtn) {
-      setButtonLoading(el.reloadAuditLogBtn, true, 'กำลังโหลด...');
-    }
-
-    try {
-      const data = await window.AnalyticsAPI.auditLog({
-        limit: limit
-      });
-
-      const logs = data.logs || data.rows || [];
-
-      if (!logs.length) {
-        el.auditLogResult.classList.add('empty');
-        el.auditLogResult.textContent = 'ยังไม่มี Audit Log';
-        return;
-      }
-
-      el.auditLogResult.classList.remove('empty');
-
-      el.auditLogResult.innerHTML = `
-        <div class="audit-list">
-          ${logs.map(function (log) {
-            return `
-              <article class="audit-item">
-                <div class="audit-item-head">
-                  <strong>${escapeHtml(log.action || log['Action'] || '-')}</strong>
-                  <span>${escapeHtml(log.status || log['Status'] || '-')}</span>
-                </div>
-
-                <div class="audit-item-meta">
-                  <span>${escapeHtml(log.timestamp || log['Timestamp'] || log['วันที่เวลา'] || '-')}</span>
-                  <span>${escapeHtml(log.username || log['Username'] || '-')}</span>
-                  <span>${escapeHtml(log.role || log['Role'] || '-')}</span>
-                </div>
-
-                <p>${escapeHtml(log.detail || log['Detail'] || log.message || '-')}</p>
-              </article>
-            `;
-          }).join('')}
-        </div>
-      `;
-
-      writeLog({
-        step: 'audit_log',
-        response: {
-          ok: data.ok,
-          total: logs.length
-        }
-      });
-
-    } catch (error) {
-      const message = getFriendlyErrorMessage(error);
-
-      if (handleAuthErrorIfNeeded(error)) {
-        return;
-      }
-
-      el.auditLogResult.classList.add('empty');
-      el.auditLogResult.textContent = message;
-
-      showToast('error', 'โหลด Audit Log ไม่สำเร็จ', message);
-
-      logApiError('audit_log_error', error);
-
-    } finally {
-      if (el.reloadAuditLogBtn) {
-        setButtonLoading(el.reloadAuditLogBtn, false, 'โหลด Audit Log');
-      }
+      setButtonLoading(el.reloadAuditLogBtn, false, 'โหลดประวัติ');
     }
   }
+}
+
+
+function renderAuditLogCompact(logs) {
+  if (!el.auditLogResult) {
+    return;
+  }
+
+  if (!logs || !logs.length) {
+    el.auditLogResult.classList.add('empty');
+    el.auditLogResult.textContent = 'ยังไม่มีประวัติการใช้งาน';
+    return;
+  }
+
+  el.auditLogResult.classList.remove('empty');
+
+  const rowsHtml = logs.map(function (log) {
+    const time =
+      log['วันที่เวลา'] ||
+      log['Timestamp'] ||
+      log.timestamp ||
+      log.createdAt ||
+      '-';
+
+    const username =
+      log['ชื่อผู้ใช้'] ||
+      log['Username'] ||
+      log.username ||
+      '-';
+
+    const role =
+      log['สิทธิ์'] ||
+      log['Role'] ||
+      log.role ||
+      '-';
+
+    const action =
+      log['Action'] ||
+      log['การทำงาน'] ||
+      log.action ||
+      '-';
+
+    const status =
+      log['Status'] ||
+      log['สถานะ'] ||
+      log.status ||
+      '-';
+
+    const detail =
+      log['รายละเอียด'] ||
+      log['Detail'] ||
+      log.detail ||
+      log.message ||
+      '-';
+
+    const sourceId =
+      log['รหัสแหล่งข้อมูล'] ||
+      log.sourceId ||
+      '';
+
+    const dashboardId =
+      log['รหัส Dashboard'] ||
+      log.dashboardId ||
+      '';
+
+    const metaText = [
+      sourceId ? 'Source: ' + sourceId : '',
+      dashboardId ? 'Dashboard: ' + dashboardId : ''
+    ].filter(Boolean).join(' · ');
+
+    return `
+      <tr>
+        <td class="audit-time-cell">
+          <strong>${escapeHtml(compactAuditTime(time))}</strong>
+          <span>${escapeHtml(compactAuditDate(time))}</span>
+        </td>
+
+        <td class="audit-user-cell">
+          <strong>${escapeHtml(username)}</strong>
+          <span>${escapeHtml(role)}</span>
+        </td>
+
+        <td class="audit-action-cell">
+          ${renderAuditActionBadgeCompact(action)}
+        </td>
+
+        <td class="audit-status-cell">
+          ${renderAuditStatusBadgeCompact(status)}
+        </td>
+
+        <td class="audit-detail-cell">
+          <div class="audit-detail-line" title="${escapeAttr(detail)}">
+            ${escapeHtml(detail)}
+          </div>
+          ${metaText ? `<div class="audit-meta-line">${escapeHtml(metaText)}</div>` : ''}
+        </td>
+      </tr>
+    `;
+  }).join('');
+
+  el.auditLogResult.innerHTML = `
+    <div class="audit-compact-head">
+      <div>
+        <strong>ประวัติการใช้งานล่าสุด</strong>
+        <span>${Number(logs.length || 0).toLocaleString()} รายการ</span>
+      </div>
+      <div class="audit-compact-hint">
+        แสดงแบบตารางกระชับ เพื่อลดพื้นที่ใช้งาน
+      </div>
+    </div>
+
+    <div class="audit-compact-table-wrap">
+      <table class="audit-compact-table">
+        <thead>
+          <tr>
+            <th>เวลา</th>
+            <th>ผู้ใช้</th>
+            <th>Action</th>
+            <th>Status</th>
+            <th>รายละเอียด</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rowsHtml}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+
+function compactAuditDate(value) {
+  const text = String(value || '').trim();
+
+  if (!text || text === '-') {
+    return '-';
+  }
+
+  const parts = text.split(' ');
+
+  return parts[0] || text;
+}
+
+
+function compactAuditTime(value) {
+  const text = String(value || '').trim();
+
+  if (!text || text === '-') {
+    return '-';
+  }
+
+  const parts = text.split(' ');
+
+  if (parts.length >= 2) {
+    return parts[1].slice(0, 8);
+  }
+
+  return text;
+}
+
+
+function renderAuditActionBadgeCompact(action) {
+  const text = String(action || '-');
+  const lower = text.toLowerCase();
+
+  let cls = 'audit-mini-badge muted';
+
+  if (lower.includes('login')) cls = 'audit-mini-badge info';
+  if (lower.includes('logout')) cls = 'audit-mini-badge muted';
+  if (lower.includes('error')) cls = 'audit-mini-badge danger';
+  if (lower.includes('export')) cls = 'audit-mini-badge warning';
+  if (lower.includes('create') || lower.includes('save') || lower.includes('update')) cls = 'audit-mini-badge success';
+  if (lower.includes('delete')) cls = 'audit-mini-badge danger';
+  if (lower.includes('dashboard')) cls = 'audit-mini-badge primary';
+
+  return `<span class="${cls}" title="${escapeAttr(text)}">${escapeHtml(compactText(text, 22))}</span>`;
+}
+
+
+function renderAuditStatusBadgeCompact(status) {
+  const text = String(status || '-');
+  const lower = text.toLowerCase();
+
+  let cls = 'audit-mini-badge muted';
+
+  if (lower === 'success' || lower === 'สำเร็จ' || lower === 'ok') cls = 'audit-mini-badge success';
+  if (lower === 'fail' || lower === 'failed' || lower === 'warning') cls = 'audit-mini-badge warning';
+  if (lower === 'error' || lower === 'failed_error') cls = 'audit-mini-badge danger';
+
+  return `<span class="${cls}" title="${escapeAttr(text)}">${escapeHtml(compactText(text, 16))}</span>`;
+}
 
   async function runSystemCheck() {
     if (!el.systemCheckResult) {
