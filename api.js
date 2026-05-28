@@ -700,6 +700,18 @@ function clearCache(payload = {}) {
       timeoutMs: API_TIMEOUT.DASHBOARD
     });
   }
+  function dashboardBuilderView(payload = {}) {
+  return requestWithRetry('/api/dashboard-builder-view', {
+    method: 'POST',
+    body: {
+      dashboardId: payload.dashboardId || '',
+      limit: payload.limit || 5000
+    },
+    timeoutMs: API_TIMEOUT.DASHBOARD,
+    retry: 1,
+    retryDelay: 1000
+  });
+}
   window.AnalyticsAPI = {
     API_BASE,
     TOKEN_KEY,
@@ -760,15 +772,16 @@ auditLog,
      * Dashboard Builder / Designer
      */
     themes,
-    widgetTemplates,
-    fieldAnalysis,
-    analyzeSheet,
-    suggestWidgets,
-    widgetPreview,
-    comparisonPreview,
-    saveWidget,
-    updateWidget,
-    deleteWidget,
-    dashboardDesignerLoad
+widgetTemplates,
+fieldAnalysis,
+analyzeSheet,
+suggestWidgets,
+widgetPreview,
+comparisonPreview,
+saveWidget,
+updateWidget,
+deleteWidget,
+dashboardDesignerLoad,
+dashboardBuilderView
   };
 })();
