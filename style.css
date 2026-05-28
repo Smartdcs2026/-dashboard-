@@ -4612,3 +4612,329 @@ body.is-loading input {
     white-space: nowrap;
   }
 }
+/*******************************************************
+ * Dashboard Builder Viewer
+ *******************************************************/
+
+.builder-dashboard-shell {
+  --builder-bg: #f8fafc;
+  --builder-card: #ffffff;
+  --builder-primary: #2563eb;
+  --builder-secondary: #38bdf8;
+  --builder-success: #16a34a;
+  --builder-warning: #f59e0b;
+  --builder-danger: #dc2626;
+  --builder-text: #0f172a;
+  --builder-muted: #64748b;
+  --builder-border: #e2e8f0;
+
+  padding: 16px;
+  border-radius: 22px;
+  background: var(--builder-bg);
+  color: var(--builder-text);
+}
+
+.builder-dashboard-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+  padding: 18px;
+  border: 1px solid var(--builder-border);
+  border-radius: 22px;
+  background: var(--builder-card);
+}
+
+.builder-dashboard-header h3 {
+  margin: 0;
+  font-size: 22px;
+}
+
+.builder-dashboard-header p {
+  margin: 6px 0 0;
+  color: var(--builder-muted);
+  font-size: 13px;
+}
+
+.builder-dashboard-badge {
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--builder-primary) 12%, white);
+  color: var(--builder-primary);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.builder-dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.builder-widget {
+  grid-column: span var(--builder-widget-span, 4);
+  min-height: calc(var(--builder-widget-height, 3) * 82px);
+  overflow: hidden;
+  border: 1px solid var(--builder-border);
+  border-radius: 22px;
+  background: var(--builder-card);
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.06);
+}
+
+.builder-widget-header {
+  min-height: 68px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid var(--builder-border);
+}
+
+.builder-widget-header h4 {
+  margin: 0;
+  color: var(--builder-text);
+  font-size: 16px;
+}
+
+.builder-widget-header p {
+  margin: 4px 0 0;
+  color: var(--builder-muted);
+  font-size: 12px;
+}
+
+.builder-widget-body {
+  padding: 14px;
+}
+
+.builder-widget-loading,
+.builder-widget-empty {
+  min-height: 160px;
+  display: grid;
+  place-items: center;
+  color: var(--builder-muted);
+  text-align: center;
+}
+
+.builder-kpi {
+  display: grid;
+  align-content: center;
+  gap: 8px;
+  min-height: 160px;
+  padding: 10px;
+}
+
+.builder-kpi-value {
+  font-size: clamp(28px, 4vw, 44px);
+  line-height: 1.1;
+  font-weight: 900;
+  color: var(--builder-primary);
+}
+
+.builder-kpi-meta {
+  color: var(--builder-muted);
+  font-size: 13px;
+}
+
+.builder-compare {
+  margin-top: 8px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: #f8fafc;
+  color: #334155;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.builder-compare.success {
+  background: #f0fdf4;
+  color: #166534;
+}
+
+.builder-compare.warning {
+  background: #fffbeb;
+  color: #92400e;
+}
+
+.builder-chart {
+  width: 100%;
+  min-height: 300px;
+}
+
+.builder-ranking {
+  display: grid;
+  gap: 8px;
+}
+
+.builder-ranking-row {
+  min-height: 42px;
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--builder-border);
+  border-radius: 14px;
+  background: #f8fafc;
+}
+
+.builder-ranking-no {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--builder-primary);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.builder-ranking-name {
+  min-width: 0;
+  color: var(--builder-text);
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.builder-table-wrap {
+  overflow: auto;
+}
+
+.builder-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.builder-table th,
+.builder-table td {
+  padding: 9px 10px;
+  border-bottom: 1px solid var(--builder-border);
+  text-align: left;
+  vertical-align: top;
+  white-space: nowrap;
+}
+
+.builder-table th {
+  background: #f8fafc;
+  color: #334155;
+  font-weight: 800;
+}
+
+.builder-table-count {
+  margin-top: 10px;
+  color: var(--builder-muted);
+  font-size: 12px;
+}
+
+.builder-error-panel {
+  grid-column: 1 / -1;
+  margin-top: 16px;
+  padding: 14px;
+  border: 1px solid #fecaca;
+  border-radius: 18px;
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.builder-error-panel h4 {
+  margin: 0 0 10px;
+}
+
+.builder-error-item {
+  display: grid;
+  gap: 3px;
+  padding: 8px 0;
+  border-top: 1px solid #fecaca;
+}
+
+@media (max-width: 1100px) {
+  .builder-dashboard-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .builder-widget {
+    grid-column: span 1;
+  }
+}
+
+@media (max-width: 720px) {
+  .builder-dashboard-shell {
+    padding: 10px;
+    border-radius: 18px;
+  }
+
+  .builder-dashboard-header {
+    display: grid;
+    padding: 14px;
+    border-radius: 18px;
+  }
+
+  .builder-dashboard-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .builder-widget {
+    grid-column: 1 / -1;
+    min-height: auto;
+    border-radius: 18px;
+  }
+
+  .builder-widget-mobile-hidden {
+    display: none;
+  }
+
+  .builder-widget-header {
+    padding: 12px;
+  }
+
+  .builder-widget-body {
+    padding: 12px;
+  }
+
+  .builder-chart {
+    min-height: 260px;
+  }
+
+  .builder-kpi {
+    min-height: 130px;
+  }
+
+  .builder-table,
+  .builder-table thead,
+  .builder-table tbody,
+  .builder-table th,
+  .builder-table td,
+  .builder-table tr {
+    display: block;
+  }
+
+  .builder-table thead {
+    display: none;
+  }
+
+  .builder-table tr {
+    margin-bottom: 10px;
+    padding: 10px;
+    border: 1px solid var(--builder-border);
+    border-radius: 14px;
+    background: #ffffff;
+  }
+
+  .builder-table td {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    white-space: normal;
+    border-bottom: 1px dashed var(--builder-border);
+  }
+
+  .builder-table td:last-child {
+    border-bottom: 0;
+  }
+}
