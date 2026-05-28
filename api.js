@@ -565,6 +565,126 @@ function clearCache(payload = {}) {
     });
   }
 
+    /**
+   * =========================
+   * Dashboard Builder API
+   * =========================
+   */
+
+  function themes() {
+    return request('/api/themes', {
+      method: 'GET',
+      timeoutMs: API_TIMEOUT.READ
+    });
+  }
+
+  function widgetTemplates() {
+    return request('/api/widget-templates', {
+      method: 'GET',
+      timeoutMs: API_TIMEOUT.READ
+    });
+  }
+
+  function fieldAnalysis(payload = {}) {
+    const mode = payload.mode || 'list';
+
+    if (String(mode).toLowerCase() === 'list') {
+      return request('/api/field-analysis', {
+        method: 'GET',
+        query: {
+          mode: 'list',
+          sourceId: payload.sourceId || '',
+          sheetName: payload.sheetName || ''
+        },
+        timeoutMs: API_TIMEOUT.READ
+      });
+    }
+
+    return request('/api/field-analysis', {
+      method: 'POST',
+      body: {
+        ...payload,
+        mode: 'save'
+      },
+      timeoutMs: API_TIMEOUT.DASHBOARD
+    });
+  }
+
+  function analyzeSheet(payload = {}) {
+    return request('/api/analyze-sheet', {
+      method: 'POST',
+      body: {
+        sourceId: payload.sourceId || '',
+        sheetName: payload.sheetName || '',
+        sampleLimit: payload.sampleLimit || 200
+      },
+      timeoutMs: API_TIMEOUT.DASHBOARD
+    });
+  }
+
+  function suggestWidgets(payload = {}) {
+    return request('/api/suggest-widgets', {
+      method: 'POST',
+      body: {
+        sourceId: payload.sourceId || '',
+        sheetName: payload.sheetName || '',
+        dashboardType: payload.dashboardType || 'operation'
+      },
+      timeoutMs: API_TIMEOUT.DASHBOARD
+    });
+  }
+
+  function widgetPreview(payload = {}) {
+    return request('/api/widget-preview', {
+      method: 'POST',
+      body: payload,
+      timeoutMs: API_TIMEOUT.DASHBOARD
+    });
+  }
+
+  function comparisonPreview(payload = {}) {
+    return request('/api/comparison-preview', {
+      method: 'POST',
+      body: payload,
+      timeoutMs: API_TIMEOUT.DASHBOARD
+    });
+  }
+
+  function saveWidget(payload = {}) {
+    return request('/api/save-widget', {
+      method: 'POST',
+      body: payload,
+      timeoutMs: API_TIMEOUT.DASHBOARD
+    });
+  }
+
+  function updateWidget(payload = {}) {
+    return request('/api/update-widget', {
+      method: 'POST',
+      body: payload,
+      timeoutMs: API_TIMEOUT.DASHBOARD
+    });
+  }
+
+  function deleteWidget(widgetId) {
+    return request('/api/delete-widget', {
+      method: 'POST',
+      body: {
+        widgetId
+      },
+      timeoutMs: API_TIMEOUT.DEFAULT
+    });
+  }
+
+  function dashboardDesignerLoad(dashboardId) {
+    return request('/api/dashboard-designer-load', {
+      method: 'GET',
+      query: {
+        dashboardId
+      },
+      timeoutMs: API_TIMEOUT.DASHBOARD
+    });
+  }
   window.AnalyticsAPI = {
     API_BASE,
     TOKEN_KEY,
@@ -620,6 +740,20 @@ disableUser,
 enableUser,
 
 clearCache,
-auditLog
+auditLog,
+    /**
+     * Dashboard Builder / Designer
+     */
+    themes,
+    widgetTemplates,
+    fieldAnalysis,
+    analyzeSheet,
+    suggestWidgets,
+    widgetPreview,
+    comparisonPreview,
+    saveWidget,
+    updateWidget,
+    deleteWidget,
+    dashboardDesignerLoad
   };
 })();
