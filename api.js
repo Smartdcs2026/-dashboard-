@@ -585,7 +585,7 @@ function clearCache(payload = {}) {
     });
   }
 
-  function fieldAnalysis(payload = {}) {
+    function fieldAnalysis(payload = {}) {
     const mode = payload.mode || 'list';
 
     if (String(mode).toLowerCase() === 'list') {
@@ -600,45 +600,52 @@ function clearCache(payload = {}) {
       });
     }
 
-    return request('/api/field-analysis', {
+    return requestWithRetry('/api/field-analysis', {
       method: 'POST',
       body: {
         ...payload,
         mode: 'save'
       },
-      timeoutMs: API_TIMEOUT.DASHBOARD
+      timeoutMs: API_TIMEOUT.DASHBOARD,
+      retry: 1,
+      retryDelay: 1000
     });
   }
 
-  function analyzeSheet(payload = {}) {
-    return request('/api/analyze-sheet', {
+    function analyzeSheet(payload = {}) {
+    return requestWithRetry('/api/analyze-sheet', {
       method: 'POST',
       body: {
         sourceId: payload.sourceId || '',
         sheetName: payload.sheetName || '',
         sampleLimit: payload.sampleLimit || 200
       },
-      timeoutMs: API_TIMEOUT.DASHBOARD
+      timeoutMs: API_TIMEOUT.DASHBOARD,
+      retry: 1,
+      retryDelay: 1000
     });
   }
-
-  function suggestWidgets(payload = {}) {
-    return request('/api/suggest-widgets', {
+    function suggestWidgets(payload = {}) {
+    return requestWithRetry('/api/suggest-widgets', {
       method: 'POST',
       body: {
         sourceId: payload.sourceId || '',
         sheetName: payload.sheetName || '',
         dashboardType: payload.dashboardType || 'operation'
       },
-      timeoutMs: API_TIMEOUT.DASHBOARD
+      timeoutMs: API_TIMEOUT.DASHBOARD,
+      retry: 1,
+      retryDelay: 1000
     });
   }
 
   function widgetPreview(payload = {}) {
-    return request('/api/widget-preview', {
+    return requestWithRetry('/api/widget-preview', {
       method: 'POST',
       body: payload,
-      timeoutMs: API_TIMEOUT.DASHBOARD
+      timeoutMs: API_TIMEOUT.DASHBOARD,
+      retry: 1,
+      retryDelay: 1000
     });
   }
 
@@ -666,7 +673,11 @@ function clearCache(payload = {}) {
     });
   }
 
-  function deleteWidget(widgetId) {
+    function deleteWidget(widgetId) {
+    if (!widgetId) {
+      return Promise.reject(new Error('ไม่พบ widgetId สำหรับลบ Widget'));
+    }
+
     return request('/api/delete-widget', {
       method: 'POST',
       body: {
@@ -676,7 +687,11 @@ function clearCache(payload = {}) {
     });
   }
 
-  function dashboardDesignerLoad(dashboardId) {
+    function dashboardDesignerLoad(dashboardId) {
+    if (!dashboardId) {
+      return Promise.reject(new Error('ไม่พบ dashboardId สำหรับโหลด Dashboard Designer'));
+    }
+
     return request('/api/dashboard-designer-load', {
       method: 'GET',
       query: {
