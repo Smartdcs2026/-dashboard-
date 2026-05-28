@@ -213,6 +213,10 @@ let currentDashboardTablePage = 1;
    */
   let designerThemesCache = [];
   let designerWidgetTemplatesCache = [];
+    let designerCurrentPreviewData = null;
+  let designerSavedWidgetsCache = [];
+  let designerSavedComparisonsCache = [];
+  let designerSavedLayoutsCache = [];
   let designerFieldsCache = [];
   let designerSuggestedWidgetsCache = [];
   let designerSelectedSourceId = '';
@@ -5274,6 +5278,25 @@ function buildHeatmapOption(title, data, chart) {
         renderDesignerMiniPreviewByType(el.designerWidgetType ? el.designerWidgetType.value : '');
       });
     }
+        if (el.designerRealPreviewBtn) {
+    el.designerRealPreviewBtn.addEventListener('click', handleDesignerRealPreview);
+  }
+
+  if (el.designerComparisonPreviewBtn) {
+    el.designerComparisonPreviewBtn.addEventListener('click', handleDesignerComparisonPreview);
+  }
+
+  if (el.designerSaveWidgetBtn) {
+    el.designerSaveWidgetBtn.addEventListener('click', handleDesignerSaveWidget);
+  }
+
+  if (el.designerUpdateWidgetBtn) {
+    el.designerUpdateWidgetBtn.addEventListener('click', handleDesignerSaveWidget);
+  }
+
+  if (el.designerLoadSavedWidgetsBtn) {
+    el.designerLoadSavedWidgetsBtn.addEventListener('click', handleDesignerLoadSavedWidgets);
+  }
   }
     /**
    * =====================================================
@@ -6090,5 +6113,902 @@ function buildHeatmapOption(title, data, chart) {
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#039;');
+  }
+    /**
+   * =====================================================
+   * Dashboard Designer / Builder - Round 2
+   * Preview / Compare / Save / Load Saved Widgets
+   * =====================================================
+   */
+
+  function collectDesignerWidgetConfig() {
+    const widgetType = el.designerWidgetType ? el.designerWidgetType.value : '';
+    const title = el.designerWidgetTitle ? el.designerWidgetTitle.value.trim() : '';
+
+    return {
+      widgetId: designerEditingWidgetId || '',
+      dashboardId: getDesignerDashboardId(),
+      widgetType: widgetType,
+      title: title || getDefaultWidgetTitle(widgetType),
+      description: '',
+      sourceId: getDesignerSourceId(),
+      sourceName: getDesignerSourceName(),
+      sheetName: getDesignerSheetName(),
+
+      dateField: el.designerDateField ? el.designerDateField.value : '',
+      xField: el.designerXField ? el.designerXField.value : '',
+      yField: '',
+      valueField: el.designerValueField ? el.designerValueField.value : '',
+      categoryField: el.designerXField ? el.designerXField.value : '',
+      groupField: '',
+      stackField: el.designerStackField ? el.designerStackField.value : '',
+
+      aggregate: el.designerAggregate ? el.designerAggregate.value : 'count',
+      unit: el.designerUnit ? el.designerUnit.value.trim() : '',
+      sortMethod: el.designerSortMethod ? el.designerSortMethod.value : 'desc',
+      limit: el.designerLimit ? Number(el.designerLimit.value || 0) : 0,
+
+      theme: el.designerTheme ? el.designerTheme.value : 'executive_blue',
+      colorMode: 'auto',
+      customColors: '',
+
+      showLegend: el.designerShowLegend ? el.designerShowLegend.checked : true,
+      showLabel: el.designerShowLabel ? el.designerShowLabel.checked : false,
+      showPercent: el.designerShowPercent ? el.designerShowPercent.checked : false,
+      showTotal: true,
+      enableExport: el.designerEnableExport ? el.designerEnableExport.checked : true,
+      refreshMode: 'manual',
+
+      groupBy: 'day',
+      targetValue: el.designerTargetValue ? el.designerTargetValue.value : '',
+
+      compare: collectDesignerCompareConfig(),
+      layout: collectDesignerLayoutConfig()
+    };
+  }
+
+
+  function collectDesignerCompareConfig() {
+    return {
+      enabled: el.designerCompareEnabled ? el.designerCompareEnabled.checked : false,
+      type: el.designerCompareType ? el.designerCompareType.value : 'none',
+      categoryField: el.designerCompareCategoryField ? el.designerCompareCategoryField.value : '',
+      categoryA: el.designerCompareCategoryA ? el.designerCompareCategoryA.value.trim() : '',
+      categoryB: el.designerCompareCategoryB ? el.designerCompareCategoryB.value.trim() : '',
+      targetValue: el.designerCompareTargetValue ? el.designerCompareTargetValue.value : '',
+      averageWindow: el.designerCompareAverageWindow ? el.designerCompareAverageWindow.value : '',
+      dateField: el.designerDateField ? el.designerDateField.value : '',
+      displayMode: 'summary'
+    };
+  }
+
+
+  function collectDesignerLayoutConfig() {
+    return {
+      desktop: {
+        x: 0,
+        y: 0,
+        w: el.designerDesktopW ? Number(el.designerDesktopW.value || 4) : 4,
+        h: el.designerDesktopH ? Number(el.designerDesktopH.value || 3) : 3
+      },
+      tablet: {
+        order: el.designerTabletOrder ? Number(el.designerTabletOrder.value || 1) : 1,
+        w: 2,
+        h: el.designerDesktopH ? Number(el.designerDesktopH.value || 3) : 3
+      },
+      mobile: {
+        order: el.designerMobileOrder ? Number(el.designerMobileOrder.value || 1) : 1,
+        display: 'full',
+        hidden: el.designerMobileHidden ? el.designerMobileHidden.checked : false
+      }
+    };
+  }
+
+
+  function getDesignerDashboardId() {
+    return el.designerDashboardSelect ? String(el.designerDashboardSelect.value || '').trim() : '';
+  }
+
+
+  function getDesignerSourceName() {
+    if (!el.designerSourceSelect) {
+      return '';
+    }
+
+    const opt = el.designerSourceSelect.options[el.designerSourceSelect.selectedIndex];
+
+    return opt ? String(opt.textContent || '').trim() : '';
+  }
+
+
+  function getDefaultWidgetTitle(widgetType) {
+    const map = {
+      kpi: 'KPI Summary',
+      line: 'Trend Chart',
+      bar: 'Bar Chart',
+      donut: 'Donut Chart',
+      stacked_bar: 'Stacked Bar Chart',
+      gauge: 'Gauge Chart',
+      ranking: 'Ranking',
+      table: 'Table',
+      heatmap: 'Heatmap'
+    };
+
+    return map[widgetType] || 'Untitled Widget';
+  }
+
+
+  function validateDesignerWidgetConfig(config, mode) {
+    if (!config.dashboardId) {
+      return 'กรุณาเลือก Dashboard ที่ต้องการออกแบบ';
+    }
+
+    if (!config.sourceId || !config.sheetName) {
+      return 'กรุณาเลือก Source และ Sheet';
+    }
+
+    if (!config.widgetType) {
+      return 'กรุณาเลือก Widget Type';
+    }
+
+    if (config.widgetType === 'line' && !(config.dateField || config.xField)) {
+      return 'กราฟเส้นต้องเลือก Date Field';
+    }
+
+    if (config.widgetType === 'bar' && !(config.xField || config.categoryField)) {
+      return 'กราฟแท่งต้องเลือก X / Category Field';
+    }
+
+    if (config.widgetType === 'donut' && !(config.categoryField || config.xField)) {
+      return 'Donut Chart ต้องเลือก Category Field';
+    }
+
+    if (config.widgetType === 'stacked_bar' && (!(config.xField || config.categoryField) || !config.stackField)) {
+      return 'Stacked Bar ต้องเลือก X Field และ Stack Field';
+    }
+
+    if (config.widgetType === 'ranking' && !(config.categoryField || config.xField)) {
+      return 'Ranking ต้องเลือก Field สำหรับจัดอันดับ';
+    }
+
+    if (config.widgetType === 'gauge' && !config.targetValue && !(config.compare && config.compare.targetValue)) {
+      return 'Gauge ต้องกำหนด Target Value';
+    }
+
+    if (mode === 'save' && !config.dashboardId) {
+      return 'ต้องเลือก Dashboard ก่อนบันทึก Widget';
+    }
+
+    return '';
+  }
+
+
+  async function handleDesignerRealPreview() {
+    const config = collectDesignerWidgetConfig();
+    const error = validateDesignerWidgetConfig(config, 'preview');
+
+    if (error) {
+      setDesignerMessage(error, 'error');
+      return;
+    }
+
+    try {
+      setDesignerMessage('กำลังสร้าง Preview จากข้อมูลจริง...', 'muted');
+      setDesignerBusy(true);
+
+      const result = await window.AnalyticsAPI.widgetPreview(config);
+
+      designerCurrentPreviewData = result;
+
+      renderDesignerRealPreview(result);
+
+      setDesignerMessage('สร้าง Preview สำเร็จ', 'success');
+
+      writeLog({
+        step: 'designer_widget_preview',
+        result: result
+      });
+
+    } catch (error) {
+      setDesignerMessage(error.message || 'สร้าง Preview ไม่สำเร็จ', 'error');
+
+      writeLog({
+        step: 'designer_widget_preview_error',
+        message: error.message,
+        payload: error.payload || null
+      });
+
+    } finally {
+      setDesignerBusy(false);
+    }
+  }
+
+
+  function renderDesignerRealPreview(result) {
+    if (!el.designerLivePreview) {
+      return;
+    }
+
+    const preview = result.preview || {};
+    const type = result.widgetType || preview.type || '';
+
+    el.designerLivePreview.classList.remove('empty');
+
+    if (type === 'kpi') {
+      renderDesignerKpiPreview(preview);
+      return;
+    }
+
+    if (type === 'bar') {
+      renderDesignerChartPreview(preview, 'bar');
+      return;
+    }
+
+    if (type === 'line') {
+      renderDesignerChartPreview(preview, 'line');
+      return;
+    }
+
+    if (type === 'donut') {
+      renderDesignerChartPreview(preview, 'pie');
+      return;
+    }
+
+    if (type === 'stacked_bar') {
+      renderDesignerStackedBarPreview(preview);
+      return;
+    }
+
+    if (type === 'ranking') {
+      renderDesignerRankingPreview(preview);
+      return;
+    }
+
+    if (type === 'table') {
+      renderDesignerTablePreview(preview);
+      return;
+    }
+
+    if (type === 'gauge') {
+      renderDesignerGaugePreview(preview);
+      return;
+    }
+
+    el.designerLivePreview.innerHTML = [
+      '<div class="preview-widget-card">',
+        '<strong>' + escapeHtml(result.title || 'Preview') + '</strong>',
+        '<pre style="white-space:pre-wrap;word-break:break-word;">',
+          escapeHtml(JSON.stringify(preview, null, 2)),
+        '</pre>',
+      '</div>'
+    ].join('');
+  }
+
+
+  function renderDesignerKpiPreview(preview) {
+    el.designerLivePreview.innerHTML = [
+      '<div class="preview-kpi-card">',
+        '<h5>' + escapeHtml(preview.title || 'KPI') + '</h5>',
+        '<div class="preview-kpi-value">' + escapeHtml(preview.displayValue || preview.value || '0') + '</div>',
+        '<div class="preview-kpi-unit">',
+          escapeHtml(preview.aggregate ? 'Aggregate: ' + preview.aggregate : ''),
+        '</div>',
+      '</div>'
+    ].join('');
+  }
+
+
+  function renderDesignerChartPreview(preview, chartType) {
+    const chartId = 'designerPreviewChart_' + Date.now();
+
+    el.designerLivePreview.innerHTML = [
+      '<div class="preview-widget-card">',
+        '<h5 style="margin:0 0 12px;">' + escapeHtml(preview.title || 'Chart Preview') + '</h5>',
+        '<div id="' + chartId + '" class="preview-chart"></div>',
+      '</div>'
+    ].join('');
+
+    const chartEl = document.getElementById(chartId);
+
+    if (!chartEl || !window.echarts) {
+      return;
+    }
+
+    const chart = echarts.init(chartEl);
+
+    let option;
+
+    if (chartType === 'line') {
+      option = {
+        tooltip: { trigger: 'axis' },
+        legend: { show: true },
+        grid: { left: 36, right: 16, top: 36, bottom: 36 },
+        xAxis: {
+          type: 'category',
+          data: preview.labels || []
+        },
+        yAxis: {
+          type: 'value'
+        },
+        series: preview.series || [
+          {
+            name: preview.title || 'Value',
+            type: 'line',
+            smooth: true,
+            data: preview.data || []
+          }
+        ]
+      };
+    } else if (chartType === 'pie') {
+      option = {
+        tooltip: { trigger: 'item' },
+        legend: { bottom: 0 },
+        series: [
+          {
+            name: preview.title || 'Share',
+            type: 'pie',
+            radius: ['42%', '68%'],
+            center: ['50%', '44%'],
+            data: preview.data || []
+          }
+        ]
+      };
+    } else {
+      const data = preview.data || [];
+
+      option = {
+        tooltip: { trigger: 'axis' },
+        grid: { left: 42, right: 16, top: 28, bottom: 48 },
+        xAxis: {
+          type: 'category',
+          data: data.map(function (item) {
+            return item.name;
+          }),
+          axisLabel: {
+            rotate: data.length > 5 ? 35 : 0
+          }
+        },
+        yAxis: {
+          type: 'value'
+        },
+        series: [
+          {
+            name: preview.title || 'Value',
+            type: 'bar',
+            data: data.map(function (item) {
+              return item.value;
+            })
+          }
+        ]
+      };
+    }
+
+    chart.setOption(option);
+
+    setTimeout(function () {
+      chart.resize();
+    }, 120);
+  }
+
+
+  function renderDesignerStackedBarPreview(preview) {
+    const chartId = 'designerPreviewChart_' + Date.now();
+
+    el.designerLivePreview.innerHTML = [
+      '<div class="preview-widget-card">',
+        '<h5 style="margin:0 0 12px;">' + escapeHtml(preview.title || 'Stacked Bar Preview') + '</h5>',
+        '<div id="' + chartId + '" class="preview-chart"></div>',
+      '</div>'
+    ].join('');
+
+    const chartEl = document.getElementById(chartId);
+
+    if (!chartEl || !window.echarts) {
+      return;
+    }
+
+    const chart = echarts.init(chartEl);
+
+    chart.setOption({
+      tooltip: { trigger: 'axis' },
+      legend: { top: 0 },
+      grid: { left: 42, right: 16, top: 48, bottom: 48 },
+      xAxis: {
+        type: 'category',
+        data: preview.categories || []
+      },
+      yAxis: {
+        type: 'value'
+      },
+      series: preview.series || []
+    });
+
+    setTimeout(function () {
+      chart.resize();
+    }, 120);
+  }
+
+
+  function renderDesignerRankingPreview(preview) {
+    const data = preview.data || [];
+
+    el.designerLivePreview.innerHTML = [
+      '<div class="preview-widget-card">',
+        '<h5 style="margin:0 0 12px;">' + escapeHtml(preview.title || 'Ranking') + '</h5>',
+        '<div class="saved-widget-list" style="padding:0;background:transparent;">',
+          data.map(function (item, index) {
+            return [
+              '<div class="saved-widget-card">',
+                '<div class="saved-widget-top">',
+                  '<strong>' + (index + 1) + '. ' + escapeHtml(item.name) + '</strong>',
+                  '<span class="widget-type-pill">' + escapeHtml(formatDesignerNumber(item.value)) + '</span>',
+                '</div>',
+              '</div>'
+            ].join('');
+          }).join(''),
+        '</div>',
+      '</div>'
+    ].join('');
+  }
+
+
+  function renderDesignerTablePreview(preview) {
+    const columns = preview.columns || [];
+    const rows = preview.rows || [];
+
+    if (!columns.length) {
+      el.designerLivePreview.innerHTML = '<div class="preview-widget-card">ไม่พบคอลัมน์สำหรับแสดงตาราง</div>';
+      return;
+    }
+
+    el.designerLivePreview.innerHTML = [
+      '<div class="preview-widget-card">',
+        '<h5 style="margin:0 0 12px;">' + escapeHtml(preview.title || 'Table') + '</h5>',
+        '<div style="overflow:auto;">',
+          '<table class="preview-table">',
+            '<thead>',
+              '<tr>',
+                columns.map(function (col) {
+                  return '<th>' + escapeHtml(col) + '</th>';
+                }).join(''),
+              '</tr>',
+            '</thead>',
+            '<tbody>',
+              rows.map(function (row) {
+                return [
+                  '<tr>',
+                    columns.map(function (col) {
+                      return '<td>' + escapeHtml(formatDesignerCell(row[col])) + '</td>';
+                    }).join(''),
+                  '</tr>'
+                ].join('');
+              }).join(''),
+            '</tbody>',
+          '</table>',
+        '</div>',
+      '</div>'
+    ].join('');
+  }
+
+
+  function renderDesignerGaugePreview(preview) {
+    const chartId = 'designerPreviewChart_' + Date.now();
+
+    el.designerLivePreview.innerHTML = [
+      '<div class="preview-widget-card">',
+        '<h5 style="margin:0 0 12px;">' + escapeHtml(preview.title || 'Gauge') + '</h5>',
+        '<div id="' + chartId + '" class="preview-chart"></div>',
+      '</div>'
+    ].join('');
+
+    const chartEl = document.getElementById(chartId);
+
+    if (!chartEl || !window.echarts) {
+      return;
+    }
+
+    const chart = echarts.init(chartEl);
+
+    chart.setOption({
+      tooltip: {
+        formatter: '{a}<br/>{b}: {c}%'
+      },
+      series: [
+        {
+          name: preview.title || 'Gauge',
+          type: 'gauge',
+          progress: { show: true },
+          detail: {
+            valueAnimation: true,
+            formatter: '{value}%'
+          },
+          data: [
+            {
+              value: Number(preview.percent || 0),
+              name: 'Progress'
+            }
+          ]
+        }
+      ]
+    });
+
+    setTimeout(function () {
+      chart.resize();
+    }, 120);
+  }
+
+
+  async function handleDesignerComparisonPreview() {
+    const config = collectDesignerWidgetConfig();
+    const compare = collectDesignerCompareConfig();
+
+    if (!compare.enabled || compare.type === 'none') {
+      renderDesignerComparisonResult({
+        enabled: false,
+        message: 'ยังไม่ได้เปิดการเปรียบเทียบ'
+      });
+      return;
+    }
+
+    try {
+      setDesignerMessage('กำลังคำนวณ Comparison...', 'muted');
+
+      const result = await window.AnalyticsAPI.comparisonPreview({
+        widget: config,
+        compare: compare
+      });
+
+      renderDesignerComparisonResult(result);
+
+      setDesignerMessage('คำนวณ Comparison สำเร็จ', 'success');
+
+    } catch (error) {
+      setDesignerMessage(error.message || 'คำนวณ Comparison ไม่สำเร็จ', 'error');
+
+      if (el.designerComparisonResult) {
+        el.designerComparisonResult.className = 'comparison-result danger';
+        el.designerComparisonResult.textContent = error.message || 'Comparison Error';
+      }
+    }
+  }
+
+
+  function renderDesignerComparisonResult(result) {
+    if (!el.designerComparisonResult) {
+      return;
+    }
+
+    if (!result || result.enabled === false) {
+      el.designerComparisonResult.className = 'comparison-result empty';
+      el.designerComparisonResult.textContent = result && result.message ? result.message : 'ยังไม่ได้เปิดการเปรียบเทียบ';
+      return;
+    }
+
+    const data = result.result || result;
+
+    el.designerComparisonResult.className = 'comparison-result success';
+
+    if (data.type === 'target') {
+      el.designerComparisonResult.innerHTML = [
+        '<div><strong>ประเภท:</strong> Target</div>',
+        '<div><strong>ค่าปัจจุบัน:</strong> ' + escapeHtml(formatDesignerNumber(data.current)) + '</div>',
+        '<div><strong>Target:</strong> ' + escapeHtml(formatDesignerNumber(data.target)) + '</div>',
+        '<div><strong>ส่วนต่าง:</strong> ' + escapeHtml(formatDesignerNumber(data.diff)) + '</div>',
+        '<div><strong>% สำเร็จ:</strong> ' + escapeHtml(data.percent) + '%</div>'
+      ].join('');
+      return;
+    }
+
+    if (data.type === 'category_vs_category') {
+      el.designerComparisonResult.innerHTML = [
+        '<div><strong>ประเภท:</strong> Category A vs B</div>',
+        '<div><strong>' + escapeHtml(data.categoryA) + ':</strong> ' + escapeHtml(formatDesignerNumber(data.valueA)) + '</div>',
+        '<div><strong>' + escapeHtml(data.categoryB) + ':</strong> ' + escapeHtml(formatDesignerNumber(data.valueB)) + '</div>',
+        '<div><strong>ส่วนต่าง:</strong> ' + escapeHtml(formatDesignerNumber(data.diff)) + '</div>',
+        '<div><strong>% เปลี่ยนแปลง:</strong> ' + escapeHtml(data.percent) + '%</div>'
+      ].join('');
+      return;
+    }
+
+    el.designerComparisonResult.innerHTML = '<pre style="white-space:pre-wrap;">' +
+      escapeHtml(JSON.stringify(data, null, 2)) +
+      '</pre>';
+  }
+
+
+  async function handleDesignerSaveWidget() {
+    const config = collectDesignerWidgetConfig();
+    const error = validateDesignerWidgetConfig(config, 'save');
+
+    if (error) {
+      setDesignerMessage(error, 'error');
+      return;
+    }
+
+    try {
+      setDesignerMessage('กำลังบันทึก Widget...', 'muted');
+      setDesignerBusy(true);
+
+      const payload = {
+        ...config,
+        compare: config.compare,
+        layout: config.layout
+      };
+
+      const result = designerEditingWidgetId
+        ? await window.AnalyticsAPI.updateWidget(payload)
+        : await window.AnalyticsAPI.saveWidget(payload);
+
+      designerEditingWidgetId = result.widgetId || designerEditingWidgetId || '';
+
+      setDesignerMessage(result.message || 'บันทึก Widget สำเร็จ', 'success');
+
+      await handleDesignerLoadSavedWidgets();
+
+      writeLog({
+        step: 'designer_save_widget',
+        result: result
+      });
+
+    } catch (error) {
+      setDesignerMessage(error.message || 'บันทึก Widget ไม่สำเร็จ', 'error');
+
+      writeLog({
+        step: 'designer_save_widget_error',
+        message: error.message,
+        payload: error.payload || null
+      });
+
+    } finally {
+      setDesignerBusy(false);
+    }
+  }
+
+
+  async function handleDesignerLoadSavedWidgets() {
+    const dashboardId = getDesignerDashboardId();
+
+    if (!dashboardId) {
+      setDesignerMessage('กรุณาเลือก Dashboard ก่อนโหลด Widget เดิม', 'error');
+      return;
+    }
+
+    try {
+      setDesignerMessage('กำลังโหลด Widget เดิม...', 'muted');
+
+      const result = await window.AnalyticsAPI.dashboardDesignerLoad(dashboardId);
+
+      designerSavedWidgetsCache = result.widgets || [];
+      designerSavedComparisonsCache = result.comparisons || [];
+      designerSavedLayoutsCache = result.layouts || [];
+
+      renderDesignerSavedWidgets(designerSavedWidgetsCache);
+
+      setDesignerMessage('โหลด Widget เดิมสำเร็จ', 'success');
+
+      writeLog({
+        step: 'designer_load_saved_widgets',
+        result: result
+      });
+
+    } catch (error) {
+      setDesignerMessage(error.message || 'โหลด Widget เดิมไม่สำเร็จ', 'error');
+
+      writeLog({
+        step: 'designer_load_saved_widgets_error',
+        message: error.message,
+        payload: error.payload || null
+      });
+    }
+  }
+
+
+  function renderDesignerSavedWidgets(widgets) {
+    if (!el.designerSavedWidgetList) {
+      return;
+    }
+
+    const list = Array.isArray(widgets) ? widgets : [];
+
+    if (!list.length) {
+      el.designerSavedWidgetList.classList.add('empty');
+      el.designerSavedWidgetList.textContent = 'ยังไม่มี Widget ที่บันทึกไว้';
+      return;
+    }
+
+    el.designerSavedWidgetList.classList.remove('empty');
+
+    el.designerSavedWidgetList.innerHTML = list.map(function (item, index) {
+      return [
+        '<div class="saved-widget-card" data-saved-widget-index="' + index + '">',
+          '<div class="saved-widget-top">',
+            '<div>',
+              '<strong>' + escapeHtml(item.title || item.widgetType || '') + '</strong>',
+              '<small>' + escapeHtml(item.widgetId || '') + '</small>',
+            '</div>',
+            '<span class="widget-type-pill">' + escapeHtml(item.widgetType || '') + '</span>',
+          '</div>',
+          '<div class="saved-widget-meta">',
+            '<span class="field-badge">Source: ' + escapeHtml(item.sourceName || item.sourceId || '-') + '</span>',
+            '<span class="field-badge">Sheet: ' + escapeHtml(item.sheetName || '-') + '</span>',
+            '<span class="field-badge">Aggregate: ' + escapeHtml(item.aggregate || '-') + '</span>',
+          '</div>',
+          '<div class="saved-widget-actions">',
+            '<button class="btn btn-primary" type="button" data-edit-saved-widget="' + index + '">แก้ไข</button>',
+            '<button class="btn btn-secondary" type="button" data-preview-saved-widget="' + index + '">Preview</button>',
+            '<button class="btn btn-danger" type="button" data-delete-saved-widget="' + index + '">ลบ</button>',
+          '</div>',
+        '</div>'
+      ].join('');
+    }).join('');
+
+    el.designerSavedWidgetList.querySelectorAll('[data-edit-saved-widget]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        const index = Number(btn.getAttribute('data-edit-saved-widget'));
+        applySavedWidgetToDesignerForm(index);
+      });
+    });
+
+    el.designerSavedWidgetList.querySelectorAll('[data-preview-saved-widget]').forEach(function (btn) {
+      btn.addEventListener('click', async function () {
+        const index = Number(btn.getAttribute('data-preview-saved-widget'));
+        await previewSavedWidget(index);
+      });
+    });
+
+    el.designerSavedWidgetList.querySelectorAll('[data-delete-saved-widget]').forEach(function (btn) {
+      btn.addEventListener('click', async function () {
+        const index = Number(btn.getAttribute('data-delete-saved-widget'));
+        await deleteSavedWidget(index);
+      });
+    });
+  }
+
+
+  function applySavedWidgetToDesignerForm(index) {
+    const item = designerSavedWidgetsCache[index];
+
+    if (!item) {
+      return;
+    }
+
+    designerEditingWidgetId = item.widgetId || '';
+
+    if (el.designerWidgetType) el.designerWidgetType.value = item.widgetType || '';
+    if (el.designerWidgetTitle) el.designerWidgetTitle.value = item.title || '';
+    if (el.designerDateField) el.designerDateField.value = item.dateField || '';
+    if (el.designerXField) el.designerXField.value = item.xField || item.categoryField || '';
+    if (el.designerValueField) el.designerValueField.value = item.valueField || '';
+    if (el.designerStackField) el.designerStackField.value = item.stackField || item.groupField || '';
+    if (el.designerAggregate) el.designerAggregate.value = item.aggregate || 'count';
+    if (el.designerUnit) el.designerUnit.value = item.unit || '';
+    if (el.designerSortMethod) el.designerSortMethod.value = item.sortMethod || 'desc';
+    if (el.designerLimit) el.designerLimit.value = item.limit || '';
+    if (el.designerTheme) el.designerTheme.value = item.theme || 'executive_blue';
+
+    if (el.designerShowLegend) el.designerShowLegend.checked = !!item.showLegend;
+    if (el.designerShowLabel) el.designerShowLabel.checked = !!item.showLabel;
+    if (el.designerShowPercent) el.designerShowPercent.checked = !!item.showPercent;
+    if (el.designerEnableExport) el.designerEnableExport.checked = item.enableExport !== false;
+
+    applySavedComparisonToForm(item.widgetId);
+    applySavedLayoutToForm(item.widgetId);
+
+    if (el.designerUpdateWidgetBtn) {
+      el.designerUpdateWidgetBtn.disabled = false;
+    }
+
+    renderDesignerMiniPreviewByType(item.widgetType || '');
+    setDesignerMessage('โหลด Widget มาแก้ไขแล้ว', 'success');
+    scrollToDesignerSection();
+  }
+
+
+  function applySavedComparisonToForm(widgetId) {
+    const compare = designerSavedComparisonsCache.find(function (item) {
+      return item.widgetId === widgetId;
+    });
+
+    if (!compare) {
+      if (el.designerCompareEnabled) el.designerCompareEnabled.checked = false;
+      if (el.designerCompareType) el.designerCompareType.value = 'none';
+      return;
+    }
+
+    if (el.designerCompareEnabled) el.designerCompareEnabled.checked = !!compare.enabled;
+    if (el.designerCompareType) el.designerCompareType.value = compare.type || 'none';
+    if (el.designerCompareCategoryField) el.designerCompareCategoryField.value = compare.categoryField || '';
+    if (el.designerCompareCategoryA) el.designerCompareCategoryA.value = compare.categoryA || '';
+    if (el.designerCompareCategoryB) el.designerCompareCategoryB.value = compare.categoryB || '';
+    if (el.designerCompareTargetValue) el.designerCompareTargetValue.value = compare.targetValue || '';
+    if (el.designerCompareAverageWindow) el.designerCompareAverageWindow.value = compare.averageWindow || '';
+  }
+
+
+  function applySavedLayoutToForm(widgetId) {
+    const layout = designerSavedLayoutsCache.find(function (item) {
+      return item.widgetId === widgetId;
+    });
+
+    if (!layout) {
+      return;
+    }
+
+    if (el.designerDesktopW) el.designerDesktopW.value = layout.desktop ? layout.desktop.w || 4 : 4;
+    if (el.designerDesktopH) el.designerDesktopH.value = layout.desktop ? layout.desktop.h || 3 : 3;
+    if (el.designerTabletOrder) el.designerTabletOrder.value = layout.tablet ? layout.tablet.order || 1 : 1;
+    if (el.designerMobileOrder) el.designerMobileOrder.value = layout.mobile ? layout.mobile.order || 1 : 1;
+    if (el.designerMobileHidden) el.designerMobileHidden.checked = layout.mobile ? !!layout.mobile.hidden : false;
+  }
+
+
+  async function previewSavedWidget(index) {
+    const item = designerSavedWidgetsCache[index];
+
+    if (!item) {
+      return;
+    }
+
+    try {
+      setDesignerMessage('กำลัง Preview Widget เดิม...', 'muted');
+
+      const result = await window.AnalyticsAPI.widgetPreview(item);
+      renderDesignerRealPreview(result);
+
+      setDesignerMessage('Preview Widget เดิมสำเร็จ', 'success');
+
+    } catch (error) {
+      setDesignerMessage(error.message || 'Preview Widget เดิมไม่สำเร็จ', 'error');
+    }
+  }
+
+
+  async function deleteSavedWidget(index) {
+    const item = designerSavedWidgetsCache[index];
+
+    if (!item || !item.widgetId) {
+      return;
+    }
+
+    const ok = window.confirm('ต้องการลบ Widget นี้หรือไม่?\n' + (item.title || item.widgetId));
+
+    if (!ok) {
+      return;
+    }
+
+    try {
+      setDesignerMessage('กำลังลบ Widget...', 'muted');
+
+      await window.AnalyticsAPI.deleteWidget(item.widgetId);
+
+      setDesignerMessage('ลบ Widget สำเร็จ', 'success');
+
+      await handleDesignerLoadSavedWidgets();
+
+    } catch (error) {
+      setDesignerMessage(error.message || 'ลบ Widget ไม่สำเร็จ', 'error');
+    }
+  }
+
+
+  function formatDesignerNumber(value) {
+    const num = Number(value || 0);
+
+    return num.toLocaleString('en-US', {
+      maximumFractionDigits: 2
+    });
+  }
+
+
+  function formatDesignerCell(value) {
+    if (value instanceof Date) {
+      return value.toLocaleString('th-TH');
+    }
+
+    if (value === null || value === undefined) {
+      return '';
+    }
+
+    return String(value);
   }
 })();
