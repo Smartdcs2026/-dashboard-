@@ -208,6 +208,8 @@ let selectedManageUserId = '';
 
   let currentDashboardTable = null;
 let currentDashboardTablePage = 1;
+  let currentBuilderDashboard = null;
+let builderChartInstances = [];
   /**
    * Dashboard Designer State
    */
@@ -298,8 +300,8 @@ const DASHBOARD_TABLE_PAGE_SIZE = 50;
     }
 
     if (el.openDashboardBtn) {
-      el.openDashboardBtn.addEventListener('click', handleOpenDashboard);
-    }
+  el.openDashboardBtn.addEventListener('click', handleOpenDashboardSmart);
+}
 
     if (el.applyDashboardFilterBtn) {
       el.applyDashboardFilterBtn.addEventListener('click', handleApplyDashboardFilter);
@@ -7011,4 +7013,597 @@ function buildHeatmapOption(title, data, chart) {
 
     return String(value);
   }
+  /**
+ * =====================================================
+ * Dashboard Builder Viewer
+ * ใช้แสดง Widget ที่สร้างจาก Dashboard Designer
+ * =====================================================
+ */
+
+async function handleOpenDashboardSmart() {
+  const dashboardId = el.dashboardSelect ? String(el.dashboardSelect.value || '').trim() : '';
+
+  if (!dashboardId) {
+    setDashboardViewMessage('กรุณาเลือก Dashboard ก่อน', 'error');
+    return;
+  }
+
+  if (window.AnalyticsAPI && window.AnalyticsAPI.dashboardBuilderView) {
+    try {
+      await handleOpenDashboardBuilderView();
+      return;
+    } catch (error) {
+      const msg = String(error && error.message ? error.message : '');
+
+      /**
+       * ถ้า Dashboard ยังไม่มี Widget จาก Designer
+       * ให้ fallback ไปใช้ระบบ dashboardView เดิม
+       */
+      if (
+        msg.includes('ยังไม่มี Widget') ||
+        msg.includes('ยังไม่มี') ||
+        msg.includes('ไม่พบ') ||
+        msg.includes('endpoint')
+      ) {
+        writeLog({
+          step: 'builder_view_fallback_to_legacy',
+          message: msg,
+          payload: error.payload || null
+        });
+
+        await handleOpenDashboard();
+        return;
+      }
+
+      setDashboardViewMessage(msg || 'เปิด Dashboard Builder ไม่สำเร็จ', 'error');
+
+      writeLog({
+        step: 'builder_view_error',
+        message: msg,
+        payload: error.payload || null
+      });
+
+      return;
+    }
+  }
+
+  await handleOpenDashboard();
+}
+
+
+async function handleOpenDashboardBuilderView() {
+  const dashboardId = el.dashboardSelect ? String(el.dashboardSelect.value || '').trim() : '';
+  const limit = el.dashboardLimit ? Number(el.dashboardLimit.value || 5000) : 5000;
+
+  if (!dashboardId) {
+    throw new Error('กรุณาเลือก Dashboard ก่อน');
+  }
+
+  setDashboardViewMessage('กำลังโหลด Dashboard Builder...', 'muted');
+  showGlobalLoading('กำลังโหลด Dashboard Builder...');
+
+  try {
+    clearBuilderChartInstances();
+
+    const result = await window.AnalyticsAPI.dashboardBuilderView({
+      dashboardId: dashboardId,
+      limit: limit
+    });
+
+    if (!result.ok) {
+      throw new Error(result.message || 'โหลด Dashboard Builder ไม่สำเร็จ');
+    }
+
+    currentBuilderDashboard = result;
+
+    renderDashboardBuilderView(result);
+
+    setDashboardViewMessage('เปิด Dashboard Builder สำเร็จ', 'success');
+
+    writeLog({
+      step: 'dashboard_builder_view',
+      result: result
+    });
+
+  } finally {
+    hideGlobalLoading();
+  }
+}
+
+
+function renderDashboardBuilderView(result) {
+  if (!el.dashboardViewResult) {
+    return;
+  }
+
+  const widgets = Array.isArray(result.widgets) ? result.widgets : [];
+  const theme = result.theme || {};
+
+  if (!widgets.length) {
+    el.dashboardViewResult.classList.add('empty');
+    el.dashboardViewResult.textContent = 'Dashboard นี้ยังไม่มี Widget จาก Dashboard Designer';
+    return;
+  }
+
+  applyDashboardBuilderTheme(theme);
+
+  const visibleWidgets = widgets
+    .filter(function (widget) {
+      return widget && widget.ok !== false;
+    })
+    .sort(sortBuilderWidgetsByLayout);
+
+  const errorWidgets = widgets.filter(function (widget) {
+    return widget && widget.ok === false;
+  });
+
+  el.dashboardViewResult.classList.remove('empty');
+
+  el.dashboardViewResult.innerHTML = [
+    '<div class="builder-dashboard-shell">',
+      renderBuilderDashboardHeader(result),
+      '<div class="builder-dashboard-grid">',
+        visibleWidgets.map(function (widget, index) {
+          return renderBuilderWidgetShell(widget, index);
+        }).join(''),
+      '</div>',
+      errorWidgets.length ? renderBuilderWidgetErrors(errorWidgets) : '',
+    '</div>'
+  ].join('');
+
+  visibleWidgets.forEach(function (widget, index) {
+    renderBuilderWidgetContent(widget, index);
+  });
+
+  setTimeout(function () {
+    resizeBuilderCharts();
+  }, 150);
+}
+
+
+function renderBuilderDashboardHeader(result) {
+  const theme = result.theme || {};
+  const widgets = Array.isArray(result.widgets) ? result.widgets : [];
+
+  return [
+    '<div class="builder-dashboard-header">',
+      '<div>',
+        '<h3>Dashboard Builder View</h3>',
+        '<p>',
+          'Dashboard ID: ', escapeHtml(result.dashboardId || '-'),
+          ' · Widgets: ', escapeHtml(widgets.length),
+          ' · Theme: ', escapeHtml(theme.themeName || theme.themeId || '-'),
+        '</p>',
+      '</div>',
+      '<div class="builder-dashboard-badge">',
+        escapeHtml(result.message || 'พร้อมใช้งาน'),
+      '</div>',
+    '</div>'
+  ].join('');
+}
+
+
+function renderBuilderWidgetShell(widget, index) {
+  const layout = widget.layout || {};
+  const desktop = layout.desktop || {};
+  const mobile = layout.mobile || {};
+
+  const w = clampNumber(desktop.w || 4, 1, 12);
+  const h = clampNumber(desktop.h || 3, 1, 12);
+  const mobileHidden = mobile.hidden ? ' builder-widget-mobile-hidden' : '';
+
+  return [
+    '<article class="builder-widget builder-widget-', escapeHtml(widget.widgetType || 'unknown'), mobileHidden, '" ',
+      'style="--builder-widget-span:', w, ';--builder-widget-height:', h, ';" ',
+      'data-builder-widget-id="', escapeHtml(widget.widgetId || ''), '">',
+      '<div class="builder-widget-header">',
+        '<div>',
+          '<h4>', escapeHtml(widget.title || 'Untitled Widget'), '</h4>',
+          '<p>',
+            escapeHtml(widget.widgetType || ''),
+            widget.sourceName ? ' · ' + escapeHtml(widget.sourceName) : '',
+            widget.sheetName ? ' · ' + escapeHtml(widget.sheetName) : '',
+          '</p>',
+        '</div>',
+        '<span class="widget-type-pill">', escapeHtml(widget.widgetType || ''), '</span>',
+      '</div>',
+      '<div id="builderWidgetBody_', index, '" class="builder-widget-body">',
+        '<div class="builder-widget-loading">กำลังแสดงผล...</div>',
+      '</div>',
+    '</article>'
+  ].join('');
+}
+
+
+function renderBuilderWidgetContent(widget, index) {
+  const body = document.getElementById('builderWidgetBody_' + index);
+
+  if (!body) {
+    return;
+  }
+
+  const type = widget.widgetType || '';
+  const data = widget.data || {};
+  const comparisonResult = widget.comparisonResult || null;
+
+  if (type === 'kpi') {
+    body.innerHTML = renderBuilderKpi(widget, data, comparisonResult);
+    return;
+  }
+
+  if (type === 'ranking') {
+    body.innerHTML = renderBuilderRanking(widget, data);
+    return;
+  }
+
+  if (type === 'table') {
+    body.innerHTML = renderBuilderTable(widget, data);
+    return;
+  }
+
+  if (type === 'gauge') {
+    body.innerHTML = '<div id="builderChart_' + index + '" class="builder-chart"></div>';
+    renderBuilderGaugeChart('builderChart_' + index, widget, data);
+    return;
+  }
+
+  if (type === 'bar' || type === 'line' || type === 'donut' || type === 'stacked_bar') {
+    body.innerHTML = '<div id="builderChart_' + index + '" class="builder-chart"></div>';
+    renderBuilderEChart('builderChart_' + index, widget, data);
+    return;
+  }
+
+  body.innerHTML = [
+    '<div class="builder-widget-empty">',
+      'ยังไม่รองรับ Widget Type: ',
+      escapeHtml(type || '-'),
+    '</div>'
+  ].join('');
+}
+
+
+function renderBuilderKpi(widget, data, comparisonResult) {
+  return [
+    '<div class="builder-kpi">',
+      '<div class="builder-kpi-value">',
+        escapeHtml(data.displayValue || formatBuilderNumber(data.value || 0)),
+      '</div>',
+      '<div class="builder-kpi-meta">',
+        escapeHtml(data.aggregate ? 'Aggregate: ' + data.aggregate : ''),
+      '</div>',
+      comparisonResult ? renderBuilderComparisonSummary(comparisonResult) : '',
+    '</div>'
+  ].join('');
+}
+
+
+function renderBuilderComparisonSummary(comparisonResult) {
+  const type = comparisonResult.type || '';
+
+  if (type === 'target') {
+    const statusClass = Number(comparisonResult.diff || 0) >= 0 ? 'success' : 'warning';
+
+    return [
+      '<div class="builder-compare ', statusClass, '">',
+        '<strong>Target:</strong> ', escapeHtml(formatBuilderNumber(comparisonResult.target || 0)),
+        ' · <strong>ทำได้:</strong> ', escapeHtml(comparisonResult.percent || 0), '%',
+      '</div>'
+    ].join('');
+  }
+
+  if (type === 'category_vs_category') {
+    return [
+      '<div class="builder-compare">',
+        '<strong>', escapeHtml(comparisonResult.categoryA || 'A'), ':</strong> ',
+        escapeHtml(formatBuilderNumber(comparisonResult.valueA || 0)),
+        ' · <strong>', escapeHtml(comparisonResult.categoryB || 'B'), ':</strong> ',
+        escapeHtml(formatBuilderNumber(comparisonResult.valueB || 0)),
+        ' · <strong>ต่าง:</strong> ',
+        escapeHtml(formatBuilderNumber(comparisonResult.diff || 0)),
+      '</div>'
+    ].join('');
+  }
+
+  return '';
+}
+
+
+function renderBuilderRanking(widget, data) {
+  const rows = Array.isArray(data.data) ? data.data : [];
+
+  if (!rows.length) {
+    return '<div class="builder-widget-empty">ไม่มีข้อมูล Ranking</div>';
+  }
+
+  return [
+    '<div class="builder-ranking">',
+      rows.map(function (item, index) {
+        return [
+          '<div class="builder-ranking-row">',
+            '<span class="builder-ranking-no">', index + 1, '</span>',
+            '<span class="builder-ranking-name">', escapeHtml(item.name || '-'), '</span>',
+            '<strong>', escapeHtml(formatBuilderNumber(item.value || 0)), '</strong>',
+          '</div>'
+        ].join('');
+      }).join(''),
+    '</div>'
+  ].join('');
+}
+
+
+function renderBuilderTable(widget, data) {
+  const columns = Array.isArray(data.columns) ? data.columns : [];
+  const rows = Array.isArray(data.rows) ? data.rows : [];
+
+  if (!columns.length) {
+    return '<div class="builder-widget-empty">ไม่มีคอลัมน์สำหรับแสดงตาราง</div>';
+  }
+
+  return [
+    '<div class="builder-table-wrap">',
+      '<table class="builder-table">',
+        '<thead>',
+          '<tr>',
+            columns.map(function (col) {
+              return '<th>' + escapeHtml(col) + '</th>';
+            }).join(''),
+          '</tr>',
+        '</thead>',
+        '<tbody>',
+          rows.map(function (row) {
+            return [
+              '<tr>',
+                columns.map(function (col) {
+                  return '<td>' + escapeHtml(formatBuilderCell(row[col])) + '</td>';
+                }).join(''),
+              '</tr>'
+            ].join('');
+          }).join(''),
+        '</tbody>',
+      '</table>',
+    '</div>',
+    '<div class="builder-table-count">แสดง ', escapeHtml(rows.length), ' จาก ', escapeHtml(data.totalRows || rows.length), ' รายการ</div>'
+  ].join('');
+}
+
+
+function renderBuilderEChart(elementId, widget, data) {
+  const chartEl = document.getElementById(elementId);
+
+  if (!chartEl || !window.echarts) {
+    return;
+  }
+
+  const chart = echarts.init(chartEl);
+  const type = widget.widgetType || '';
+  let option = {};
+
+  if (type === 'line') {
+    option = {
+      tooltip: { trigger: 'axis' },
+      legend: { show: widget.config ? widget.config.showLegend !== false : true },
+      grid: { left: 42, right: 18, top: 42, bottom: 42 },
+      xAxis: {
+        type: 'category',
+        data: data.labels || []
+      },
+      yAxis: { type: 'value' },
+      series: data.series || [
+        {
+          name: widget.title || 'Value',
+          type: 'line',
+          smooth: true,
+          data: data.data || []
+        }
+      ]
+    };
+  }
+
+  if (type === 'bar') {
+    const rows = Array.isArray(data.data) ? data.data : [];
+
+    option = {
+      tooltip: { trigger: 'axis' },
+      grid: { left: 42, right: 18, top: 32, bottom: 54 },
+      xAxis: {
+        type: 'category',
+        data: rows.map(function (item) {
+          return item.name;
+        }),
+        axisLabel: {
+          rotate: rows.length > 5 ? 35 : 0
+        }
+      },
+      yAxis: { type: 'value' },
+      series: [
+        {
+          name: widget.title || 'Value',
+          type: 'bar',
+          data: rows.map(function (item) {
+            return item.value;
+          })
+        }
+      ]
+    };
+  }
+
+  if (type === 'donut') {
+    option = {
+      tooltip: { trigger: 'item' },
+      legend: { bottom: 0 },
+      series: [
+        {
+          name: widget.title || 'Share',
+          type: 'pie',
+          radius: ['44%', '70%'],
+          center: ['50%', '43%'],
+          data: data.data || []
+        }
+      ]
+    };
+  }
+
+  if (type === 'stacked_bar') {
+    option = {
+      tooltip: { trigger: 'axis' },
+      legend: { top: 0 },
+      grid: { left: 42, right: 18, top: 48, bottom: 54 },
+      xAxis: {
+        type: 'category',
+        data: data.categories || []
+      },
+      yAxis: { type: 'value' },
+      series: data.series || []
+    };
+  }
+
+  chart.setOption(option);
+  builderChartInstances.push(chart);
+}
+
+
+function renderBuilderGaugeChart(elementId, widget, data) {
+  const chartEl = document.getElementById(elementId);
+
+  if (!chartEl || !window.echarts) {
+    return;
+  }
+
+  const chart = echarts.init(chartEl);
+
+  chart.setOption({
+    tooltip: {
+      formatter: '{a}<br/>{b}: {c}%'
+    },
+    series: [
+      {
+        name: widget.title || 'Gauge',
+        type: 'gauge',
+        progress: { show: true },
+        detail: {
+          valueAnimation: true,
+          formatter: '{value}%'
+        },
+        data: [
+          {
+            value: Number(data.percent || 0),
+            name: 'Progress'
+          }
+        ]
+      }
+    ]
+  });
+
+  builderChartInstances.push(chart);
+}
+
+
+function renderBuilderWidgetErrors(errors) {
+  return [
+    '<div class="builder-error-panel">',
+      '<h4>Widget ที่แสดงผลไม่สำเร็จ</h4>',
+      errors.map(function (widget) {
+        return [
+          '<div class="builder-error-item">',
+            '<strong>', escapeHtml(widget.title || widget.widgetId || '-'), '</strong>',
+            '<span>', escapeHtml(widget.message || 'ไม่ทราบสาเหตุ'), '</span>',
+          '</div>'
+        ].join('');
+      }).join(''),
+    '</div>'
+  ].join('');
+}
+
+
+function sortBuilderWidgetsByLayout(a, b) {
+  const la = a.layout || {};
+  const lb = b.layout || {};
+
+  const ma = la.mobile || {};
+  const mb = lb.mobile || {};
+
+  const da = la.desktop || {};
+  const db = lb.desktop || {};
+
+  const orderA = Number(ma.order || da.y || 0);
+  const orderB = Number(mb.order || db.y || 0);
+
+  if (orderA !== orderB) {
+    return orderA - orderB;
+  }
+
+  return Number(da.x || 0) - Number(db.x || 0);
+}
+
+
+function applyDashboardBuilderTheme(theme) {
+  if (!el.dashboardViewResult || !theme) {
+    return;
+  }
+
+  const target = el.dashboardViewResult;
+
+  target.style.setProperty('--builder-bg', theme.backgroundColor || '#f8fafc');
+  target.style.setProperty('--builder-card', theme.cardColor || '#ffffff');
+  target.style.setProperty('--builder-primary', theme.primaryColor || '#2563eb');
+  target.style.setProperty('--builder-secondary', theme.secondaryColor || '#38bdf8');
+  target.style.setProperty('--builder-success', theme.successColor || '#16a34a');
+  target.style.setProperty('--builder-warning', theme.warningColor || '#f59e0b');
+  target.style.setProperty('--builder-danger', theme.dangerColor || '#dc2626');
+  target.style.setProperty('--builder-text', theme.textColor || '#0f172a');
+  target.style.setProperty('--builder-muted', theme.mutedTextColor || '#64748b');
+  target.style.setProperty('--builder-border', theme.borderColor || '#e2e8f0');
+}
+
+
+function clearBuilderChartInstances() {
+  builderChartInstances.forEach(function (chart) {
+    try {
+      chart.dispose();
+    } catch (err) {}
+  });
+
+  builderChartInstances = [];
+}
+
+
+function resizeBuilderCharts() {
+  builderChartInstances.forEach(function (chart) {
+    try {
+      chart.resize();
+    } catch (err) {}
+  });
+}
+
+
+function clampNumber(value, min, max) {
+  const n = Number(value || 0);
+
+  if (n < min) return min;
+  if (n > max) return max;
+
+  return n;
+}
+
+
+function formatBuilderNumber(value) {
+  const num = Number(value || 0);
+
+  return num.toLocaleString('en-US', {
+    maximumFractionDigits: 2
+  });
+}
+
+
+function formatBuilderCell(value) {
+  if (value instanceof Date) {
+    return value.toLocaleString('th-TH');
+  }
+
+  if (value === null || value === undefined) {
+    return '';
+  }
+
+  return String(value);
+}
 })();
