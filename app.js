@@ -118,7 +118,76 @@ auditLogResult: document.getElementById('auditLogResult'),
     runSystemCheckBtn: document.getElementById('runSystemCheckBtn'),
 systemCheckResult: document.getElementById('systemCheckResult'),
     
-    debugLog: document.getElementById('debugLog')
+    debugLog: document.getElementById('debugLog'),
+        /**
+     * Dashboard Designer / Builder
+     */
+    openDesignerBtn: document.getElementById('openDesignerBtn'),
+    dashboardDesignerSection: document.getElementById('dashboardDesignerSection'),
+
+    designerReloadBtn: document.getElementById('designerReloadBtn'),
+    designerResetBtn: document.getElementById('designerResetBtn'),
+
+    designerDashboardSelect: document.getElementById('designerDashboardSelect'),
+    designerDashboardType: document.getElementById('designerDashboardType'),
+    designerSourceSelect: document.getElementById('designerSourceSelect'),
+    designerSheetSelect: document.getElementById('designerSheetSelect'),
+    designerSampleLimit: document.getElementById('designerSampleLimit'),
+
+    designerAnalyzeBtn: document.getElementById('designerAnalyzeBtn'),
+    designerSuggestBtn: document.getElementById('designerSuggestBtn'),
+    designerMessage: document.getElementById('designerMessage'),
+    designerDetectedSummary: document.getElementById('designerDetectedSummary'),
+
+    designerSaveFieldAnalysisBtn: document.getElementById('designerSaveFieldAnalysisBtn'),
+    designerFieldList: document.getElementById('designerFieldList'),
+
+    designerWidgetGallery: document.getElementById('designerWidgetGallery'),
+    designerSuggestedWidgets: document.getElementById('designerSuggestedWidgets'),
+
+    designerWidgetType: document.getElementById('designerWidgetType'),
+    designerWidgetTitle: document.getElementById('designerWidgetTitle'),
+    designerDateField: document.getElementById('designerDateField'),
+    designerXField: document.getElementById('designerXField'),
+    designerValueField: document.getElementById('designerValueField'),
+    designerStackField: document.getElementById('designerStackField'),
+    designerAggregate: document.getElementById('designerAggregate'),
+    designerUnit: document.getElementById('designerUnit'),
+    designerSortMethod: document.getElementById('designerSortMethod'),
+    designerLimit: document.getElementById('designerLimit'),
+    designerTheme: document.getElementById('designerTheme'),
+    designerTargetValue: document.getElementById('designerTargetValue'),
+
+    designerShowLegend: document.getElementById('designerShowLegend'),
+    designerShowLabel: document.getElementById('designerShowLabel'),
+    designerShowPercent: document.getElementById('designerShowPercent'),
+    designerEnableExport: document.getElementById('designerEnableExport'),
+
+    designerCompareEnabled: document.getElementById('designerCompareEnabled'),
+    designerCompareType: document.getElementById('designerCompareType'),
+    designerCompareCategoryField: document.getElementById('designerCompareCategoryField'),
+    designerCompareCategoryA: document.getElementById('designerCompareCategoryA'),
+    designerCompareCategoryB: document.getElementById('designerCompareCategoryB'),
+    designerCompareTargetValue: document.getElementById('designerCompareTargetValue'),
+    designerCompareAverageWindow: document.getElementById('designerCompareAverageWindow'),
+    designerComparisonPreviewBtn: document.getElementById('designerComparisonPreviewBtn'),
+    designerComparisonResult: document.getElementById('designerComparisonResult'),
+
+    designerMiniPreviewBtn: document.getElementById('designerMiniPreviewBtn'),
+    designerRealPreviewBtn: document.getElementById('designerRealPreviewBtn'),
+    designerLivePreview: document.getElementById('designerLivePreview'),
+
+    designerSaveWidgetBtn: document.getElementById('designerSaveWidgetBtn'),
+    designerUpdateWidgetBtn: document.getElementById('designerUpdateWidgetBtn'),
+
+    designerDesktopW: document.getElementById('designerDesktopW'),
+    designerDesktopH: document.getElementById('designerDesktopH'),
+    designerTabletOrder: document.getElementById('designerTabletOrder'),
+    designerMobileOrder: document.getElementById('designerMobileOrder'),
+    designerMobileHidden: document.getElementById('designerMobileHidden'),
+
+    designerLoadSavedWidgetsBtn: document.getElementById('designerLoadSavedWidgetsBtn'),
+    designerSavedWidgetList: document.getElementById('designerSavedWidgetList')
   };
 
   let currentUser = null;
@@ -139,6 +208,19 @@ let selectedManageUserId = '';
 
   let currentDashboardTable = null;
 let currentDashboardTablePage = 1;
+  /**
+   * Dashboard Designer State
+   */
+  let designerThemesCache = [];
+  let designerWidgetTemplatesCache = [];
+  let designerFieldsCache = [];
+  let designerSuggestedWidgetsCache = [];
+  let designerSelectedSourceId = '';
+  let designerSelectedSheetName = '';
+  let designerSelectedDashboardId = '';
+  let designerSelectedWidgetType = '';
+  let designerEditingWidgetId = '';
+  
 const DASHBOARD_TABLE_PAGE_SIZE = 50;
 
   document.addEventListener('DOMContentLoaded', init);
@@ -316,7 +398,8 @@ if (el.manageDashboardStatusFilter) {
         }
       });
     }
-  }
+  bindDashboardDesignerEvents();
+}
 
   function resetWorkingState() {
     currentUser = null;
@@ -427,6 +510,7 @@ if (el.userManageCount) {
       showDashboard();
             await loadSources();
       await loadDashboardOptions();
+        await initDashboardDesigner();
       await loadManageDashboards();
       if (currentUser && ['Super Admin', 'Admin'].includes(String(currentUser.role || ''))) {
   await loadUsers();
@@ -480,6 +564,7 @@ applyRoleUi(currentUser);
       await loadMe();
             await loadSources();
       await loadDashboardOptions();
+      await initDashboardDesigner();
       await loadManageDashboards();
       if (currentUser && ['Super Admin', 'Admin'].includes(String(currentUser.role || ''))) {
   await loadUsers();
@@ -5134,4 +5219,876 @@ function buildHeatmapOption(title, data, chart) {
     ]
   };
 }
+    function bindDashboardDesignerEvents() {
+    if (el.openDesignerBtn) {
+      el.openDesignerBtn.addEventListener('click', function () {
+        scrollToDesignerSection();
+      });
+    }
+
+    if (el.designerReloadBtn) {
+      el.designerReloadBtn.addEventListener('click', initDashboardDesigner);
+    }
+
+    if (el.designerResetBtn) {
+      el.designerResetBtn.addEventListener('click', resetDashboardDesigner);
+    }
+
+    if (el.designerSourceSelect) {
+      el.designerSourceSelect.addEventListener('change', handleDesignerSourceChange);
+    }
+
+    if (el.designerSheetSelect) {
+      el.designerSheetSelect.addEventListener('change', function () {
+        designerSelectedSheetName = el.designerSheetSelect.value || '';
+      });
+    }
+
+    if (el.designerDashboardSelect) {
+      el.designerDashboardSelect.addEventListener('change', function () {
+        designerSelectedDashboardId = el.designerDashboardSelect.value || '';
+      });
+    }
+
+    if (el.designerAnalyzeBtn) {
+      el.designerAnalyzeBtn.addEventListener('click', handleDesignerAnalyzeSheet);
+    }
+
+    if (el.designerSuggestBtn) {
+      el.designerSuggestBtn.addEventListener('click', handleDesignerSuggestWidgets);
+    }
+
+    if (el.designerWidgetType) {
+      el.designerWidgetType.addEventListener('change', function () {
+        designerSelectedWidgetType = el.designerWidgetType.value || '';
+        renderDesignerMiniPreviewByType(designerSelectedWidgetType);
+      });
+    }
+
+    if (el.designerSaveFieldAnalysisBtn) {
+      el.designerSaveFieldAnalysisBtn.addEventListener('click', handleDesignerSaveFieldAnalysis);
+    }
+
+    if (el.designerMiniPreviewBtn) {
+      el.designerMiniPreviewBtn.addEventListener('click', function () {
+        renderDesignerMiniPreviewByType(el.designerWidgetType ? el.designerWidgetType.value : '');
+      });
+    }
+  }
+    /**
+   * =====================================================
+   * Dashboard Designer / Builder
+   * =====================================================
+   */
+
+  async function initDashboardDesigner() {
+    try {
+      setDesignerMessage('กำลังโหลดข้อมูล Dashboard Designer...', 'muted');
+
+      await Promise.all([
+        loadDesignerThemes(),
+        loadDesignerWidgetTemplates(),
+        loadDesignerSources(),
+        loadDesignerDashboards()
+      ]);
+
+      setDesignerMessage('โหลด Dashboard Designer สำเร็จ', 'success');
+    } catch (error) {
+      setDesignerMessage(error.message || 'โหลด Dashboard Designer ไม่สำเร็จ', 'error');
+
+      writeLog({
+        step: 'designer_init_error',
+        message: error.message,
+        payload: error.payload || null
+      });
+    }
+  }
+
+
+  function resetDashboardDesigner() {
+    designerFieldsCache = [];
+    designerSuggestedWidgetsCache = [];
+    designerSelectedSourceId = '';
+    designerSelectedSheetName = '';
+    designerSelectedDashboardId = '';
+    designerSelectedWidgetType = '';
+    designerEditingWidgetId = '';
+
+    if (el.designerDashboardSelect) el.designerDashboardSelect.value = '';
+    if (el.designerDashboardType) el.designerDashboardType.value = 'operation';
+    if (el.designerSourceSelect) el.designerSourceSelect.value = '';
+    if (el.designerSheetSelect) {
+      el.designerSheetSelect.innerHTML = '<option value="">เลือก Sheet</option>';
+    }
+
+    if (el.designerDetectedSummary) {
+      el.designerDetectedSummary.classList.add('empty');
+      el.designerDetectedSummary.textContent = 'ยังไม่ได้วิเคราะห์ข้อมูล';
+    }
+
+    if (el.designerFieldList) {
+      el.designerFieldList.classList.add('empty');
+      el.designerFieldList.textContent = 'กด “วิเคราะห์ข้อมูล” เพื่อแสดง Field ที่ตรวจพบ';
+    }
+
+    if (el.designerSuggestedWidgets) {
+      el.designerSuggestedWidgets.classList.add('empty');
+      el.designerSuggestedWidgets.textContent = 'กด “แนะนำ Widget” เพื่อให้ระบบสร้างรายการแนะนำ';
+    }
+
+    if (el.designerLivePreview) {
+      el.designerLivePreview.classList.add('empty');
+      el.designerLivePreview.textContent = 'เลือก Widget และกด Preview เพื่อแสดงตัวอย่าง';
+    }
+
+    if (el.designerComparisonResult) {
+      el.designerComparisonResult.className = 'comparison-result empty';
+      el.designerComparisonResult.textContent = 'ยังไม่ได้คำนวณ Comparison';
+    }
+
+    resetDesignerWidgetForm();
+    setDesignerMessage('');
+  }
+
+
+  function resetDesignerWidgetForm() {
+    if (el.designerWidgetType) el.designerWidgetType.value = '';
+    if (el.designerWidgetTitle) el.designerWidgetTitle.value = '';
+    if (el.designerDateField) el.designerDateField.innerHTML = '<option value="">ไม่ใช้</option>';
+    if (el.designerXField) el.designerXField.innerHTML = '<option value="">ไม่ใช้</option>';
+    if (el.designerValueField) el.designerValueField.innerHTML = '<option value="">นับจำนวนรายการ</option>';
+    if (el.designerStackField) el.designerStackField.innerHTML = '<option value="">ไม่ใช้</option>';
+    if (el.designerAggregate) el.designerAggregate.value = 'count';
+    if (el.designerUnit) el.designerUnit.value = '';
+    if (el.designerSortMethod) el.designerSortMethod.value = 'desc';
+    if (el.designerLimit) el.designerLimit.value = '';
+    if (el.designerTargetValue) el.designerTargetValue.value = '';
+    if (el.designerShowLegend) el.designerShowLegend.checked = true;
+    if (el.designerShowLabel) el.designerShowLabel.checked = false;
+    if (el.designerShowPercent) el.designerShowPercent.checked = false;
+    if (el.designerEnableExport) el.designerEnableExport.checked = true;
+    if (el.designerUpdateWidgetBtn) el.designerUpdateWidgetBtn.disabled = true;
+  }
+
+
+  function scrollToDesignerSection() {
+    if (!el.dashboardDesignerSection) {
+      return;
+    }
+
+    el.dashboardDesignerSection.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start'
+    });
+  }
+
+
+  async function loadDesignerThemes() {
+    if (!window.AnalyticsAPI || !window.AnalyticsAPI.themes) {
+      return;
+    }
+
+    const result = await window.AnalyticsAPI.themes();
+    designerThemesCache = result.themes || [];
+
+    renderDesignerThemes(designerThemesCache);
+  }
+
+
+  function renderDesignerThemes(themes) {
+    if (!el.designerTheme) {
+      return;
+    }
+
+    const list = Array.isArray(themes) ? themes : [];
+
+    if (!list.length) {
+      el.designerTheme.innerHTML = '<option value="executive_blue">Executive Blue</option>';
+      return;
+    }
+
+    el.designerTheme.innerHTML = list.map(function (theme) {
+      return '<option value="' + escapeHtml(theme.themeId) + '">' +
+        escapeHtml(theme.themeName || theme.themeId) +
+        '</option>';
+    }).join('');
+
+    const defaultTheme = list.find(function (theme) {
+      return theme.isDefault;
+    });
+
+    if (defaultTheme) {
+      el.designerTheme.value = defaultTheme.themeId;
+    }
+  }
+
+
+  async function loadDesignerWidgetTemplates() {
+    if (!window.AnalyticsAPI || !window.AnalyticsAPI.widgetTemplates) {
+      return;
+    }
+
+    const result = await window.AnalyticsAPI.widgetTemplates();
+    designerWidgetTemplatesCache = result.templates || [];
+
+    renderDesignerWidgetGallery(designerWidgetTemplatesCache);
+  }
+
+
+  function renderDesignerWidgetGallery(templates) {
+    if (!el.designerWidgetGallery) {
+      return;
+    }
+
+    const list = Array.isArray(templates) ? templates : [];
+
+    if (!list.length) {
+      el.designerWidgetGallery.classList.add('empty');
+      el.designerWidgetGallery.textContent = 'ยังไม่มี Widget Template';
+      return;
+    }
+
+    el.designerWidgetGallery.classList.remove('empty');
+
+    el.designerWidgetGallery.innerHTML = list.map(function (tpl) {
+      return [
+        '<button class="widget-option-card" type="button" data-widget-type="' + escapeHtml(tpl.widgetType) + '">',
+          '<div class="widget-option-head">',
+            '<div class="widget-option-title">',
+              '<strong>' + escapeHtml(tpl.templateName || tpl.widgetType) + '</strong>',
+              '<small>' + escapeHtml(tpl.bestFor || '') + '</small>',
+            '</div>',
+            '<span class="widget-type-pill">' + escapeHtml(tpl.widgetType || '') + '</span>',
+          '</div>',
+          '<div class="widget-mini-preview">' + escapeHtml(tpl.miniPreviewText || '') + '</div>',
+          '<div class="widget-option-meta">',
+            'ต้องใช้: ' + escapeHtml(tpl.requiredFields || '-'),
+          '</div>',
+        '</button>'
+      ].join('');
+    }).join('');
+
+    el.designerWidgetGallery.querySelectorAll('[data-widget-type]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        const type = btn.getAttribute('data-widget-type') || '';
+        selectDesignerWidgetType(type);
+      });
+    });
+  }
+
+
+  async function loadDesignerSources() {
+    if (!el.designerSourceSelect) {
+      return;
+    }
+
+    let list = sourcesCache || [];
+
+    if (!list.length && window.AnalyticsAPI && window.AnalyticsAPI.listSources) {
+      const result = await window.AnalyticsAPI.listSources();
+      list = result.sources || result.data || [];
+      sourcesCache = list;
+    }
+
+    if (!list.length) {
+      el.designerSourceSelect.innerHTML = '<option value="">ยังไม่มี Source</option>';
+      return;
+    }
+
+    el.designerSourceSelect.innerHTML = '<option value="">เลือก Source</option>' + list.map(function (source) {
+      const id = source.sourceId ||
+        source['รหัสแหล่งข้อมูล'] ||
+        source.id ||
+        '';
+
+      const name = source.sourceName ||
+        source['ชื่อแหล่งข้อมูล'] ||
+        source.name ||
+        id;
+
+      return '<option value="' + escapeHtml(id) + '">' +
+        escapeHtml(name) +
+        '</option>';
+    }).join('');
+  }
+
+
+  async function loadDesignerDashboards() {
+    if (!el.designerDashboardSelect) {
+      return;
+    }
+
+    if (!window.AnalyticsAPI || !window.AnalyticsAPI.listDashboards) {
+      return;
+    }
+
+    const result = await window.AnalyticsAPI.listDashboards();
+    const list = result.dashboards || result.data || [];
+
+    if (!list.length) {
+      el.designerDashboardSelect.innerHTML = '<option value="">ยังไม่มี Dashboard</option>';
+      return;
+    }
+
+    el.designerDashboardSelect.innerHTML = '<option value="">เลือก Dashboard</option>' + list.map(function (dashboard) {
+      const id = dashboard.dashboardId ||
+        dashboard['Dashboard ID'] ||
+        dashboard.id ||
+        '';
+
+      const name = dashboard.dashboardName ||
+        dashboard['Dashboard Name'] ||
+        dashboard.name ||
+        id;
+
+      return '<option value="' + escapeHtml(id) + '">' +
+        escapeHtml(name) +
+        '</option>';
+    }).join('');
+  }
+
+
+  async function handleDesignerSourceChange() {
+    designerSelectedSourceId = el.designerSourceSelect ? el.designerSourceSelect.value : '';
+    designerSelectedSheetName = '';
+
+    if (!designerSelectedSourceId) {
+      if (el.designerSheetSelect) {
+        el.designerSheetSelect.innerHTML = '<option value="">เลือก Sheet</option>';
+      }
+      return;
+    }
+
+    try {
+      setDesignerMessage('กำลังโหลดรายชื่อ Sheet...', 'muted');
+
+      const result = await window.AnalyticsAPI.listSourceSheets({
+        sourceId: designerSelectedSourceId
+      });
+
+      const sheets = result.sheets || result.data || [];
+
+      renderDesignerSheetOptions(sheets);
+
+      setDesignerMessage('โหลดรายชื่อ Sheet สำเร็จ', 'success');
+
+    } catch (error) {
+      setDesignerMessage(error.message || 'โหลดรายชื่อ Sheet ไม่สำเร็จ', 'error');
+    }
+  }
+
+
+  function renderDesignerSheetOptions(sheets) {
+    if (!el.designerSheetSelect) {
+      return;
+    }
+
+    const list = Array.isArray(sheets) ? sheets : [];
+
+    if (!list.length) {
+      el.designerSheetSelect.innerHTML = '<option value="">ไม่พบ Sheet</option>';
+      return;
+    }
+
+    el.designerSheetSelect.innerHTML = '<option value="">เลือก Sheet</option>' + list.map(function (sheet) {
+      const name = typeof sheet === 'string'
+        ? sheet
+        : (sheet.sheetName || sheet.name || sheet['ชื่อชีท'] || '');
+
+      return '<option value="' + escapeHtml(name) + '">' +
+        escapeHtml(name) +
+        '</option>';
+    }).join('');
+  }
+
+
+  async function handleDesignerAnalyzeSheet() {
+    const sourceId = getDesignerSourceId();
+    const sheetName = getDesignerSheetName();
+    const sampleLimit = Number(el.designerSampleLimit ? el.designerSampleLimit.value : 200);
+
+    if (!sourceId || !sheetName) {
+      setDesignerMessage('กรุณาเลือก Source และ Sheet ก่อนวิเคราะห์ข้อมูล', 'error');
+      return;
+    }
+
+    try {
+      setDesignerMessage('กำลังวิเคราะห์ข้อมูล...', 'muted');
+      setDesignerBusy(true);
+
+      const result = await window.AnalyticsAPI.analyzeSheet({
+        sourceId: sourceId,
+        sheetName: sheetName,
+        sampleLimit: sampleLimit
+      });
+
+      designerFieldsCache = result.fields || [];
+
+      renderDesignerDetectedSummary(result);
+      renderDesignerFieldList(designerFieldsCache);
+      populateDesignerFieldSelects(designerFieldsCache);
+
+      setDesignerMessage('วิเคราะห์ข้อมูลสำเร็จ', 'success');
+
+      writeLog({
+        step: 'designer_analyze_sheet',
+        result: result
+      });
+
+    } catch (error) {
+      setDesignerMessage(error.message || 'วิเคราะห์ข้อมูลไม่สำเร็จ', 'error');
+
+      writeLog({
+        step: 'designer_analyze_error',
+        message: error.message,
+        payload: error.payload || null
+      });
+
+    } finally {
+      setDesignerBusy(false);
+    }
+  }
+
+
+  function renderDesignerDetectedSummary(result) {
+    if (!el.designerDetectedSummary) {
+      return;
+    }
+
+    const fields = result.fields || [];
+
+    const dateFields = fields.filter(function (f) { return f.isDateField; });
+    const numberFields = fields.filter(function (f) { return f.isNumberField; });
+    const categoryFields = fields.filter(function (f) { return f.isCategoryField; });
+    const statusFields = fields.filter(function (f) { return f.isStatusField; });
+    const filterFields = fields.filter(function (f) { return f.isFilterField; });
+
+    el.designerDetectedSummary.classList.remove('empty');
+
+    el.designerDetectedSummary.innerHTML = [
+      '<div><strong>จำนวนแถวทั้งหมด:</strong> ' + escapeHtml(result.totalRows || '-') + '</div>',
+      '<div><strong>จำนวนคอลัมน์:</strong> ' + escapeHtml(result.totalColumns || '-') + '</div>',
+      '<div><strong>วันที่:</strong> ' + escapeHtml(dateFields.map(function (f) { return f.columnName; }).join(', ') || '-') + '</div>',
+      '<div><strong>ตัวเลข:</strong> ' + escapeHtml(numberFields.map(function (f) { return f.columnName; }).join(', ') || '-') + '</div>',
+      '<div><strong>หมวดหมู่:</strong> ' + escapeHtml(categoryFields.map(function (f) { return f.columnName; }).join(', ') || '-') + '</div>',
+      '<div><strong>สถานะ:</strong> ' + escapeHtml(statusFields.map(function (f) { return f.columnName; }).join(', ') || '-') + '</div>',
+      '<div><strong>Filter:</strong> ' + escapeHtml(filterFields.map(function (f) { return f.columnName; }).join(', ') || '-') + '</div>'
+    ].join('');
+  }
+
+
+  function renderDesignerFieldList(fields) {
+    if (!el.designerFieldList) {
+      return;
+    }
+
+    const list = Array.isArray(fields) ? fields : [];
+
+    if (!list.length) {
+      el.designerFieldList.classList.add('empty');
+      el.designerFieldList.textContent = 'ไม่พบ Field ที่วิเคราะห์ได้';
+      return;
+    }
+
+    el.designerFieldList.classList.remove('empty');
+
+    el.designerFieldList.innerHTML = list.map(function (field, index) {
+      const type = field.manualType || field.detectedType || 'text';
+      const semantic = field.semanticType || '';
+
+      return [
+        '<div class="detected-field-card" data-field-index="' + index + '">',
+          '<div class="detected-field-head">',
+            '<div class="detected-field-name">',
+              '<strong>' + escapeHtml(field.columnName || '') + '</strong>',
+              '<small>ตัวอย่าง: ' + escapeHtml((field.sampleValues || []).join(' | ') || '-') + '</small>',
+            '</div>',
+            '<span class="field-badge ' + escapeHtml(type) + '">' + escapeHtml(type) + '</span>',
+          '</div>',
+
+          '<div class="field-badge-row">',
+            field.isDateField ? '<span class="field-badge">Date</span>' : '',
+            field.isNumberField ? '<span class="field-badge number">Number</span>' : '',
+            field.isCategoryField ? '<span class="field-badge category">Category</span>' : '',
+            field.isStatusField ? '<span class="field-badge status">Status</span>' : '',
+            field.isFilterField ? '<span class="field-badge text">Filter</span>' : '',
+          '</div>',
+
+          '<div class="detected-field-edit">',
+            '<select data-field-manual-type="' + index + '">',
+              renderTypeOptions(type),
+            '</select>',
+            '<input data-field-display-name="' + index + '" type="text" value="' + escapeHtml(field.displayName || field.columnName || '') + '" placeholder="ชื่อแสดงผล">',
+          '</div>',
+        '</div>'
+      ].join('');
+    }).join('');
+  }
+
+
+  function renderTypeOptions(selected) {
+    const types = [
+      'datetime',
+      'date',
+      'number',
+      'currency',
+      'percent',
+      'category',
+      'status',
+      'person',
+      'location',
+      'vehicle',
+      'text',
+      'boolean',
+      'image',
+      'url',
+      'id'
+    ];
+
+    return types.map(function (type) {
+      return '<option value="' + type + '"' + (type === selected ? ' selected' : '') + '>' + type + '</option>';
+    }).join('');
+  }
+
+
+  function populateDesignerFieldSelects(fields) {
+    const list = Array.isArray(fields) ? fields : [];
+
+    const allOptions = '<option value="">ไม่ใช้</option>' + list.map(function (field) {
+      return '<option value="' + escapeHtml(field.columnName) + '">' +
+        escapeHtml(field.displayName || field.columnName) +
+        '</option>';
+    }).join('');
+
+    const valueOptions = '<option value="">นับจำนวนรายการ</option>' + list
+      .filter(function (field) {
+        return field.isNumberField || field.semanticType === 'measure';
+      })
+      .map(function (field) {
+        return '<option value="' + escapeHtml(field.columnName) + '">' +
+          escapeHtml(field.displayName || field.columnName) +
+          '</option>';
+      }).join('');
+
+    if (el.designerDateField) el.designerDateField.innerHTML = allOptions;
+    if (el.designerXField) el.designerXField.innerHTML = allOptions;
+    if (el.designerStackField) el.designerStackField.innerHTML = allOptions;
+    if (el.designerCompareCategoryField) el.designerCompareCategoryField.innerHTML = allOptions;
+    if (el.designerValueField) el.designerValueField.innerHTML = valueOptions;
+
+    const firstDate = list.find(function (field) {
+      return field.isDateField;
+    });
+
+    const firstNumber = list.find(function (field) {
+      return field.isNumberField;
+    });
+
+    const firstCategory = list.find(function (field) {
+      return field.isCategoryField || field.semanticType === 'location' || field.semanticType === 'category';
+    });
+
+    if (firstDate && el.designerDateField) el.designerDateField.value = firstDate.columnName;
+    if (firstNumber && el.designerValueField) el.designerValueField.value = firstNumber.columnName;
+    if (firstCategory && el.designerXField) el.designerXField.value = firstCategory.columnName;
+    if (firstCategory && el.designerCompareCategoryField) el.designerCompareCategoryField.value = firstCategory.columnName;
+  }
+
+
+  async function handleDesignerSaveFieldAnalysis() {
+    if (!designerFieldsCache.length) {
+      setDesignerMessage('ยังไม่มี Field Analysis ให้บันทึก', 'error');
+      return;
+    }
+
+    const sourceId = getDesignerSourceId();
+    const sheetName = getDesignerSheetName();
+
+    const fields = designerFieldsCache.map(function (field, index) {
+      const typeEl = el.designerFieldList.querySelector('[data-field-manual-type="' + index + '"]');
+      const nameEl = el.designerFieldList.querySelector('[data-field-display-name="' + index + '"]');
+
+      return {
+        ...field,
+        sourceId: sourceId,
+        sheetName: sheetName,
+        columnName: field.columnName,
+        displayName: nameEl ? nameEl.value : field.displayName,
+        manualType: typeEl ? typeEl.value : field.manualType
+      };
+    });
+
+    try {
+      setDesignerMessage('กำลังบันทึก Field Analysis...', 'muted');
+
+      await window.AnalyticsAPI.fieldAnalysis({
+        mode: 'save',
+        fields: fields
+      });
+
+      designerFieldsCache = fields;
+      renderDesignerFieldList(designerFieldsCache);
+      populateDesignerFieldSelects(designerFieldsCache);
+
+      setDesignerMessage('บันทึก Field Analysis สำเร็จ', 'success');
+
+    } catch (error) {
+      setDesignerMessage(error.message || 'บันทึก Field Analysis ไม่สำเร็จ', 'error');
+    }
+  }
+
+
+  async function handleDesignerSuggestWidgets() {
+    const sourceId = getDesignerSourceId();
+    const sheetName = getDesignerSheetName();
+    const dashboardType = el.designerDashboardType ? el.designerDashboardType.value : 'operation';
+
+    if (!sourceId || !sheetName) {
+      setDesignerMessage('กรุณาเลือก Source และ Sheet ก่อนแนะนำ Widget', 'error');
+      return;
+    }
+
+    try {
+      setDesignerMessage('กำลังสร้าง Widget แนะนำ...', 'muted');
+      setDesignerBusy(true);
+
+      const result = await window.AnalyticsAPI.suggestWidgets({
+        sourceId: sourceId,
+        sheetName: sheetName,
+        dashboardType: dashboardType
+      });
+
+      designerSuggestedWidgetsCache = result.suggestions || [];
+
+      renderDesignerSuggestedWidgets(designerSuggestedWidgetsCache);
+
+      setDesignerMessage('แนะนำ Widget สำเร็จ', 'success');
+
+      writeLog({
+        step: 'designer_suggest_widgets',
+        result: result
+      });
+
+    } catch (error) {
+      setDesignerMessage(error.message || 'แนะนำ Widget ไม่สำเร็จ', 'error');
+
+      writeLog({
+        step: 'designer_suggest_error',
+        message: error.message,
+        payload: error.payload || null
+      });
+
+    } finally {
+      setDesignerBusy(false);
+    }
+  }
+
+
+  function renderDesignerSuggestedWidgets(suggestions) {
+    if (!el.designerSuggestedWidgets) {
+      return;
+    }
+
+    const list = Array.isArray(suggestions) ? suggestions : [];
+
+    if (!list.length) {
+      el.designerSuggestedWidgets.classList.add('empty');
+      el.designerSuggestedWidgets.textContent = 'ยังไม่มี Widget ที่ระบบแนะนำ';
+      return;
+    }
+
+    el.designerSuggestedWidgets.classList.remove('empty');
+
+    el.designerSuggestedWidgets.innerHTML = list.map(function (item, index) {
+      return [
+        '<div class="suggested-widget-card" data-suggest-index="' + index + '">',
+          '<div class="suggested-widget-top">',
+            '<div>',
+              '<strong>' + escapeHtml(item.title || item.widgetType || '') + '</strong>',
+              '<small>' + escapeHtml(item.reason || item.description || '') + '</small>',
+            '</div>',
+            '<span class="widget-type-pill">' + escapeHtml(item.widgetType || '') + '</span>',
+          '</div>',
+          '<div class="suggested-widget-actions">',
+            '<button class="btn btn-primary" type="button" data-use-suggestion="' + index + '">ใช้รายการนี้</button>',
+            '<button class="btn btn-ghost" type="button" data-mini-suggestion="' + index + '">ดูตัวอย่างเล็ก</button>',
+          '</div>',
+        '</div>'
+      ].join('');
+    }).join('');
+
+    el.designerSuggestedWidgets.querySelectorAll('[data-use-suggestion]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        const index = Number(btn.getAttribute('data-use-suggestion'));
+        applyDesignerSuggestion(index);
+      });
+    });
+
+    el.designerSuggestedWidgets.querySelectorAll('[data-mini-suggestion]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        const index = Number(btn.getAttribute('data-mini-suggestion'));
+        const item = designerSuggestedWidgetsCache[index];
+        renderDesignerSuggestionMiniPreview(item);
+      });
+    });
+  }
+
+
+  function selectDesignerWidgetType(type) {
+    designerSelectedWidgetType = type;
+
+    if (el.designerWidgetType) {
+      el.designerWidgetType.value = type;
+    }
+
+    if (el.designerWidgetGallery) {
+      el.designerWidgetGallery.querySelectorAll('.widget-option-card').forEach(function (card) {
+        card.classList.toggle('active', card.getAttribute('data-widget-type') === type);
+      });
+    }
+
+    renderDesignerMiniPreviewByType(type);
+  }
+
+
+  function applyDesignerSuggestion(index) {
+    const item = designerSuggestedWidgetsCache[index];
+
+    if (!item) {
+      return;
+    }
+
+    if (el.designerWidgetType) el.designerWidgetType.value = item.widgetType || '';
+    if (el.designerWidgetTitle) el.designerWidgetTitle.value = item.title || '';
+    if (el.designerDateField && item.dateField) el.designerDateField.value = item.dateField;
+    if (el.designerXField && (item.xField || item.categoryField)) el.designerXField.value = item.xField || item.categoryField;
+    if (el.designerValueField && item.valueField !== undefined) el.designerValueField.value = item.valueField || '';
+    if (el.designerStackField && item.stackField) el.designerStackField.value = item.stackField;
+    if (el.designerAggregate) el.designerAggregate.value = item.aggregate || 'count';
+    if (el.designerLimit && item.limit !== undefined) el.designerLimit.value = item.limit || '';
+    if (el.designerTheme && item.theme) el.designerTheme.value = item.theme;
+
+    designerSelectedWidgetType = item.widgetType || '';
+
+    renderDesignerSuggestionMiniPreview(item);
+    setDesignerMessage('เลือก Widget แนะนำแล้ว สามารถแก้ไขค่าก่อน Preview ได้', 'success');
+  }
+
+
+  function renderDesignerMiniPreviewByType(type) {
+    if (!el.designerLivePreview) {
+      return;
+    }
+
+    if (!type) {
+      el.designerLivePreview.classList.add('empty');
+      el.designerLivePreview.textContent = 'เลือก Widget เพื่อแสดง Mini Preview';
+      return;
+    }
+
+    const template = designerWidgetTemplatesCache.find(function (tpl) {
+      return tpl.widgetType === type;
+    });
+
+    const title = template ? template.templateName : type;
+    const preview = template ? template.miniPreviewText : type;
+
+    el.designerLivePreview.classList.remove('empty');
+
+    el.designerLivePreview.innerHTML = [
+      '<div class="preview-widget-card">',
+        '<div class="widget-option-head">',
+          '<div class="widget-option-title">',
+            '<strong>' + escapeHtml(title) + '</strong>',
+            '<small>Mini Preview</small>',
+          '</div>',
+          '<span class="widget-type-pill">' + escapeHtml(type) + '</span>',
+        '</div>',
+        '<div class="widget-mini-preview" style="min-height:120px;margin-top:14px;">',
+          escapeHtml(preview || ''),
+        '</div>',
+        '<p class="widget-option-meta" style="margin-top:12px;">',
+          escapeHtml(template ? template.bestFor : ''),
+        '</p>',
+      '</div>'
+    ].join('');
+  }
+
+
+  function renderDesignerSuggestionMiniPreview(item) {
+    if (!item || !el.designerLivePreview) {
+      return;
+    }
+
+    el.designerLivePreview.classList.remove('empty');
+
+    el.designerLivePreview.innerHTML = [
+      '<div class="preview-widget-card">',
+        '<div class="widget-option-head">',
+          '<div class="widget-option-title">',
+            '<strong>' + escapeHtml(item.title || item.widgetType || '') + '</strong>',
+            '<small>' + escapeHtml(item.description || item.reason || '') + '</small>',
+          '</div>',
+          '<span class="widget-type-pill">' + escapeHtml(item.widgetType || '') + '</span>',
+        '</div>',
+        '<div class="designer-summary-box" style="margin-top:14px;">',
+          '<div><strong>Source:</strong> ' + escapeHtml(item.sourceId || '-') + '</div>',
+          '<div><strong>Sheet:</strong> ' + escapeHtml(item.sheetName || '-') + '</div>',
+          '<div><strong>Date:</strong> ' + escapeHtml(item.dateField || '-') + '</div>',
+          '<div><strong>X/Category:</strong> ' + escapeHtml(item.xField || item.categoryField || '-') + '</div>',
+          '<div><strong>Value:</strong> ' + escapeHtml(item.valueField || 'Count rows') + '</div>',
+          '<div><strong>Aggregate:</strong> ' + escapeHtml(item.aggregate || '-') + '</div>',
+        '</div>',
+      '</div>'
+    ].join('');
+  }
+
+
+  function getDesignerSourceId() {
+    return el.designerSourceSelect ? String(el.designerSourceSelect.value || '').trim() : '';
+  }
+
+
+  function getDesignerSheetName() {
+    return el.designerSheetSelect ? String(el.designerSheetSelect.value || '').trim() : '';
+  }
+
+
+  function setDesignerMessage(message, type) {
+    if (!el.designerMessage) {
+      return;
+    }
+
+    el.designerMessage.textContent = message || '';
+
+    el.designerMessage.classList.remove('success', 'error', 'muted');
+
+    if (type) {
+      el.designerMessage.classList.add(type);
+    }
+  }
+
+
+  function setDesignerBusy(isBusy) {
+    const buttons = [
+      el.designerAnalyzeBtn,
+      el.designerSuggestBtn,
+      el.designerReloadBtn,
+      el.designerResetBtn
+    ];
+
+    buttons.forEach(function (btn) {
+      if (btn) {
+        btn.disabled = !!isBusy;
+      }
+    });
+  }
+    function escapeHtml(value) {
+    return String(value === undefined || value === null ? '' : value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
 })();
