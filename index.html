@@ -1,815 +1,3546 @@
-<!doctype html>
-<html lang="th">
-<head>
-  <meta charset="utf-8">
-  <title>Data Analytics Dashboard</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-
-  <meta name="theme-color" content="#0f172a">
-  <meta name="description" content="Universal Data Analytics Dashboard">
-
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-
-  <link
-    href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap"
-    rel="stylesheet"
-  >
-
-  <link rel="stylesheet" href="./style.css">
-</head>
-
-<body>
-  <div id="app" class="app">
-
-    <!-- ================= LOGIN ================= -->
-    <section id="loginView" class="login-page hidden">
-      <div class="login-card">
-        <div class="brand">
-          <div class="brand-icon">DA</div>
-          <div>
-            <h1>Data Analytics Dashboard</h1>
-            <p>ระบบวิเคราะห์ข้อมูลจาก Google Sheets</p>
-          </div>
-        </div>
-
-        <div id="apiStatus" class="status-box status-muted">
-          กำลังตรวจสอบสถานะระบบ...
-        </div>
-
-        <form id="loginForm" class="form">
-          <label class="field">
-            <span>ชื่อผู้ใช้</span>
-            <input
-              id="username"
-              type="text"
-              autocomplete="username"
-              placeholder="เช่น admin"
-              required
-            >
-          </label>
-
-          <label class="field">
-            <span>รหัสผ่าน</span>
-            <input
-              id="password"
-              type="password"
-              autocomplete="current-password"
-              placeholder="กรอกรหัสผ่าน"
-              required
-            >
-          </label>
-
-          <button id="loginBtn" class="btn btn-primary" type="submit">
-            เข้าสู่ระบบ
-          </button>
-
-          <p id="loginMessage" class="form-message"></p>
-        </form>
-
-        <div class="login-hint">
-          <strong>ค่าเริ่มต้น:</strong>
-          Username: <code>admin</code>,
-          Password: <code>admin123</code>
-        </div>
-      </div>
-    </section>
-
-
-    <!-- ================= DASHBOARD PAGE ================= -->
-    <section id="dashboardView" class="dashboard-page hidden">
-
-      <!-- TOPBAR -->
-      <header class="topbar">
-        <div class="topbar-left">
-          <div class="brand-icon small">DA</div>
-          <div>
-            <h2>Data Analytics Dashboard</h2>
-            <p id="systemStatusText">พร้อมใช้งาน</p>
-          </div>
-        </div>
-
-        <div class="topbar-right">
-          <div class="user-chip">
-            <span id="userDisplayName">-</span>
-            <small id="userRole">-</small>
-          </div>
-
-          <button id="logoutBtn" class="btn btn-ghost" type="button">
-            ออกจากระบบ
-          </button>
-        </div>
-      </header>
-
-
-      <main class="main">
-
-        <!-- HERO -->
-        <section class="hero-card">
-          <div>
-            <h1>Admin Console</h1>
-            <p>
-              เพิ่ม Google Sheet ID เป็นแหล่งข้อมูล จากนั้นเลือกรายชื่อชีท
-              อ่านหัวคอลัมน์ ทำ Mapping สร้าง Preview และบันทึกเป็น Dashboard จริง
-            </p>
-          </div>
-
-          <button id="refreshMeBtn" class="btn btn-secondary" type="button">
-            Refresh ผู้ใช้
-          </button>
-        </section>
-       <section id="modeSwitcher" class="mode-switcher hidden">
-  <button id="adminModeBtn" class="mode-btn active" type="button">
-    Admin Console
-  </button>
-
-  <button id="userModeBtn" class="mode-btn" type="button">
-    User Dashboard
-  </button>
-</section>
-
-        <!-- SOURCE MANAGER -->
-        <section class="admin-layout admin-only">
-          <article class="panel">
-            <div class="panel-header">
-              <div>
-                <h3>เพิ่มแหล่งข้อมูล Google Sheet</h3>
-                <p>Admin สามารถเพิ่ม Sheet ID ที่ต้องการนำมาวิเคราะห์</p>
-              </div>
-            </div>
-
-            <form id="sourceForm" class="source-form">
-              <div class="form-grid">
-                <label class="field">
-                  <span>ชื่อแหล่งข้อมูล</span>
-                  <input
-                    id="sourceName"
-                    type="text"
-                    placeholder="เช่น ข้อมูลพาเลทขาออก"
-                    required
-                  >
-                </label>
-
-                <label class="field">
-                  <span>ประเภทข้อมูล</span>
-                  <select id="sourceDataType">
-                    <option value="Operation">Operation</option>
-                    <option value="Audit">Audit</option>
-                    <option value="HR">HR</option>
-                    <option value="Vehicle">Vehicle</option>
-                    <option value="Inventory">Inventory</option>
-                    <option value="Incident">Incident / Error</option>
-                    <option value="Other">Other</option>
-                  </select>
-                </label>
-
-                <label class="field field-wide">
-                  <span>Google Sheet ID</span>
-                  <input
-                    id="sourceSpreadsheetId"
-                    type="text"
-                    placeholder="วาง Google Sheet ID"
-                    required
-                  >
-                </label>
-
-                <label class="field">
-                  <span>เจ้าของข้อมูล</span>
-                  <input
-                    id="sourceOwner"
-                    type="text"
-                    placeholder="เช่น LPS / Operation / DC906"
-                  >
-                </label>
-
-                <label class="field">
-                  <span>คำอธิบาย</span>
-                  <input
-                    id="sourceDescription"
-                    type="text"
-                    placeholder="รายละเอียดเพิ่มเติม"
-                  >
-                </label>
-              </div>
-
-              <div class="actions-row">
-                <button id="createSourceBtn" class="btn btn-primary" type="submit">
-                  เพิ่มแหล่งข้อมูล
-                </button>
-
-                <button id="reloadSourcesBtn" class="btn btn-secondary" type="button">
-                  โหลดรายการใหม่
-                </button>
-              </div>
-
-              <p id="sourceFormMessage" class="form-message"></p>
-            </form>
-          </article>
-
-          <article class="panel">
-            <div class="panel-header">
-              <div>
-                <h3>แหล่งข้อมูลที่ลงทะเบียนแล้ว</h3>
-                <p>เลือกแหล่งข้อมูลเพื่ออ่านรายชื่อชีท</p>
-              </div>
-            </div>
-
-            <div id="sourcesList" class="list-box empty">
-              ยังไม่มีข้อมูล
-            </div>
-          </article>
-        </section>
-
-
-        <!-- SHEET + MAPPING -->
-        <section class="admin-layout">
-          <article class="panel">
-            <div class="panel-header">
-              <div>
-                <h3>ชีทในแหล่งข้อมูล</h3>
-                <p>เลือกชีทเพื่ออ่านหัวคอลัมน์</p>
-              </div>
-            </div>
-
-            <div id="sourceSheetsList" class="list-box empty">
-              กรุณาเลือกแหล่งข้อมูลก่อน
-            </div>
-          </article>
-
-          <article class="panel">
-            <div class="panel-header">
-              <div>
-                <h3>หัวคอลัมน์และการเดาประเภทข้อมูล</h3>
-                <p>ระบบจะเดาประเภทข้อมูลเบื้องต้นให้ก่อนทำ Mapping</p>
-              </div>
-            </div>
-
-            <div id="headersResult" class="headers-box empty">
-              กรุณาเลือกชีทก่อน
-            </div>
-
-            <div class="mapping-actions">
-              <button id="saveMappingBtn" class="btn btn-primary" type="button" disabled>
-                บันทึก Mapping
-              </button>
-
-              <span id="mappingMessage" class="mapping-message"></span>
-            </div>
-          </article>
-        </section>
-
-
-        <!-- DASHBOARD PREVIEW -->
-       <section class="panel admin-only">
-  <div class="panel-header">
-    <div>
-      <h3>Dashboard Preview จาก Mapping</h3>
-              <p>สร้าง KPI / กราฟ / ตารางตัวอย่างจากโครงสร้างข้อมูลที่บันทึกไว้</p>
-            </div>
-
-            <button id="previewDashboardBtn" class="btn btn-primary" type="button">
-              สร้าง Dashboard Preview
-            </button>
-          </div>
-
-          <div class="dashboard-create-box">
-            <div class="form-grid">
-              <label class="field">
-                <span>ชื่อ Dashboard</span>
-                <input
-                  id="dashboardName"
-                  type="text"
-                  placeholder="เช่น Dashboard งานพาเลทขาออก"
-                >
-              </label>
-
-              <label class="field">
-                <span>ประเภท Dashboard</span>
-                <select id="dashboardType">
-                  <option value="Operation">Operation</option>
-                  <option value="Executive">Executive</option>
-                  <option value="Error">Error / Incident</option>
-                  <option value="Performance">Performance</option>
-                  <option value="Audit">Audit</option>
-                  <option value="Vehicle">Vehicle</option>
-                  <option value="Custom">Custom</option>
-                </select>
-              </label>
-            </div>
-
-            <div class="actions-row">
-              <button id="createDashboardBtn" class="btn btn-secondary" type="button">
-                บันทึกเป็น Dashboard จริง
-              </button>
-
-              <span id="createDashboardMessage" class="mapping-message"></span>
-            </div>
-          </div>
-
-          <div id="previewResult" class="preview-box empty">
-            กรุณาบันทึก Mapping ก่อน แล้วกดสร้าง Dashboard Preview
-          </div>
-        </section>
-
-      <!-- DASHBOARD MANAGEMENT -->
-<section class="panel admin-only dashboard-management-section">
-  <div class="panel-header">
-    <div>
-      <h3>จัดการ Dashboard ที่สร้างแล้ว</h3>
-      <p>
-        แก้ชื่อ Dashboard, ประเภท, Publish, Export, สิทธิ์การมองเห็น และลบแบบ Soft Delete
-      </p>
-    </div>
-
-    <div class="actions-row">
-      <button id="reloadManageDashboardsBtn" class="btn btn-secondary" type="button">
-        โหลดรายการ Dashboard
-      </button>
-    </div>
-  </div>
-
-  <div class="dashboard-manage-box">
-    <div class="form-grid">
-     <div class="dashboard-manage-toolbar field-wide">
-  <label class="field">
-    <span>ค้นหา Dashboard</span>
-    <input
-      id="manageDashboardSearch"
-      type="text"
-      placeholder="ค้นหาจากชื่อ / ID / ประเภท"
-    >
-  </label>
-
-  <label class="field">
-    <span>กรองประเภท</span>
-    <select id="manageDashboardTypeFilter">
-      <option value="">ทุกประเภท</option>
-      <option value="Operation">Operation</option>
-      <option value="Performance">Performance</option>
-      <option value="Audit">Audit</option>
-      <option value="Vehicle">Vehicle</option>
-      <option value="Inventory">Inventory</option>
-      <option value="Incident">Incident / Error</option>
-      <option value="Custom">Custom</option>
-      <option value="Other">Other</option>
-    </select>
-  </label>
-
-  <label class="field">
-    <span>สถานะ</span>
-    <select id="manageDashboardStatusFilter">
-      <option value="">ทั้งหมด</option>
-      <option value="published">Published</option>
-      <option value="unpublished">Unpublished</option>
-      <option value="export_on">Export เปิด</option>
-      <option value="export_off">Export ปิด</option>
-    </select>
-  </label>
-</div>
-
-<div class="dashboard-manage-count" id="manageDashboardCount">
-  Dashboard ทั้งหมด 0 รายการ
-</div>
-
-<label class="field field-wide">
-  <span>เลือก Dashboard ที่ต้องการจัดการ</span>
-  <select id="manageDashboardSelect">
-    <option value="">ยังไม่มีรายการ Dashboard</option>
-  </select>
-</label>
-
-      <label class="field">
-        <span>ชื่อ Dashboard</span>
-        <input
-          id="manageDashboardName"
-          type="text"
-          placeholder="ชื่อ Dashboard"
-        >
-      </label>
-
-      <label class="field">
-        <span>ประเภท Dashboard</span>
-        <select id="manageDashboardType">
-          <option value="Operation">Operation</option>
-          <option value="Performance">Performance</option>
-          <option value="Audit">Audit</option>
-          <option value="Vehicle">Vehicle</option>
-          <option value="Inventory">Inventory</option>
-          <option value="Incident">Incident / Error</option>
-          <option value="Custom">Custom</option>
-          <option value="Other">Other</option>
-        </select>
-      </label>
-
-      <label class="field field-wide">
-        <span>คำอธิบาย</span>
-        <input
-          id="manageDashboardDescription"
-          type="text"
-          placeholder="คำอธิบาย Dashboard"
-        >
-      </label>
-    </div>
-
-    <div class="dashboard-toggle-grid">
-      <label class="toggle-card">
-        <input id="manageDashboardPublish" type="checkbox">
-        <span>
-          <strong>Publish</strong>
-          <small>เปิดให้ผู้ใช้เห็น Dashboard นี้</small>
-        </span>
-      </label>
-
-      <label class="toggle-card">
-        <input id="manageDashboardExport" type="checkbox">
-        <span>
-          <strong>Export CSV</strong>
-          <small>อนุญาตให้ส่งออกข้อมูลได้</small>
-        </span>
-      </label>
-
-      <label class="toggle-card">
-        <input id="manageDashboardHidden" type="checkbox">
-        <span>
-          <strong>ซ่อน Dashboard</strong>
-          <small>ซ่อนจากผู้ใช้ทั่วไปโดยไม่ลบข้อมูล</small>
-        </span>
-      </label>
-    </div>
-
-    <div class="permission-box">
-      <div class="permission-title">
-        สิทธิ์ที่มองเห็น Dashboard
-      </div>
-
-      <div class="permission-grid">
-        <label>
-          <input class="manage-dashboard-role" type="checkbox" value="Super Admin">
-          <span>Super Admin</span>
-        </label>
-
-        <label>
-          <input class="manage-dashboard-role" type="checkbox" value="Admin">
-          <span>Admin</span>
-        </label>
-
-        <label>
-          <input class="manage-dashboard-role" type="checkbox" value="Editor">
-          <span>Editor</span>
-        </label>
-
-        <label>
-          <input class="manage-dashboard-role" type="checkbox" value="User">
-          <span>User</span>
-        </label>
-
-        <label>
-          <input class="manage-dashboard-role" type="checkbox" value="Viewer">
-          <span>Viewer</span>
-        </label>
-      </div>
-    </div>
-
-    <div class="actions-row dashboard-manage-actions">
-  <button id="saveManageDashboardBtn" class="btn btn-primary" type="button">
-    บันทึกการแก้ไข
-  </button>
-
-  <button id="regenerateManageDashboardBtn" class="btn btn-secondary" type="button">
-    Regenerate จาก Mapping ล่าสุด
-  </button>
-
-  <button id="hideManageDashboardBtn" class="btn btn-secondary" type="button">
-    ซ่อน / เปิดกลับ
-  </button>
-
-  <button id="deleteManageDashboardBtn" class="btn btn-danger" type="button">
-    Soft Delete
-  </button>
-
-  <span id="manageDashboardMessage" class="mapping-message"></span>
-</div>
-
-    <div id="manageDashboardSummary" class="dashboard-manage-summary empty">
-      เลือก Dashboard เพื่อดูรายละเอียดและแก้ไข
-    </div>
-    <div class="dashboard-card-list-wrap">
-  <div class="dashboard-card-list-header">
-    <h4>รายการ Dashboard</h4>
-    <span id="manageDashboardCardCount">0 รายการ</span>
-  </div>
-
-  <div id="manageDashboardCardList" class="dashboard-card-list empty">
-    กดโหลดรายการ Dashboard เพื่อแสดงรายการ
-  </div>
-</div>
-  </div>
-</section>
-        <!-- DASHBOARD VIEWER -->
-        <section class="panel user-dashboard-section">
-  <div class="panel-header">
-    <div>
-      <h3>Dashboard Viewer</h3>
-              <p>เปิดดู Dashboard ที่บันทึกจริงแล้วจาก Google Sheet Config</p>
-            </div>
-
-            <div class="actions-row">
-              <button id="reloadDashboardListBtn" class="btn btn-secondary" type="button">
-                โหลดรายการ Dashboard
-              </button>
-            </div>
-          </div>
-
-          <div class="dashboard-viewer-box">
-            <div class="form-grid">
-              <label class="field">
-                <span>เลือก Dashboard</span>
-                <select id="dashboardSelect">
-                  <option value="">ยังไม่มีรายการ Dashboard</option>
-                </select>
-              </label>
-
-              <label class="field">
-                <span>จำนวนแถวที่อ่าน</span>
-                <select id="dashboardLimit">
-                  <option value="500">500 แถว</option>
-                  <option value="1000" selected>1,000 แถว</option>
-                  <option value="3000">3,000 แถว</option>
-                  <option value="5000">5,000 แถว</option>
-                </select>
-              </label>
-            </div>
-
-            <div id="dashboardFilterBox" class="dashboard-filter-box empty">
-              เมื่อเปิด Dashboard แล้ว ระบบจะแสดงตัวกรองที่ตั้งไว้ตรงนี้
-            </div>
-
-           <div class="dashboard-viewer-actions">
-  <button id="openDashboardBtn" class="btn btn-primary" type="button">
-    เปิด Dashboard
-  </button>
-
-  <button id="refreshDashboardBtn" class="btn btn-secondary" type="button">
-    Refresh Dashboard
-  </button>
-
-  <button id="applyDashboardFilterBtn" class="btn btn-secondary" type="button">
-    กรองข้อมูล Dashboard
-  </button>
-
-  <button id="resetDashboardFilterBtn" class="btn btn-ghost" type="button">
-    ล้างตัวกรอง
-  </button>
-
-  <button id="exportDashboardBtn" class="btn btn-secondary" type="button">
-    Export CSV
-  </button>
-
-  <button id="exportDashboardExcelBtn" class="btn btn-secondary" type="button">
-    Export Excel
-  </button>
-
-  <span id="dashboardViewMessage" class="mapping-message dashboard-viewer-message"></span>
-</div>
-              
-
-
-          </div>
-
-          <div id="dashboardViewResult" class="preview-box empty">
-            กรุณาเลือก Dashboard แล้วกดเปิด Dashboard
-          </div>
-        </section>
-
-
-        <!-- STATUS CARDS -->
-        <section class="grid admin-debug-only">
-          <article class="card">
-            <h3>สถานะ API</h3>
-            <p id="healthResult">-</p>
-          </article>
-
-          <article class="card">
-            <h3>ผู้ใช้งาน</h3>
-            <p id="meResult">-</p>
-          </article>
-
-          <article class="card">
-            <h3>Dashboard</h3>
-            <p id="dashboardResult">ยังไม่ได้โหลดข้อมูล</p>
-
-            <button id="loadDashboardsBtn" class="btn btn-secondary" type="button">
-              โหลด Dashboard
-            </button>
-          </article>
-
-          <article class="card">
-            <h3>แหล่งข้อมูล</h3>
-            <p id="sourceResult">ยังไม่ได้โหลดข้อมูล</p>
-
-            <button id="loadSourcesBtn" class="btn btn-secondary" type="button">
-              โหลดแหล่งข้อมูล
-            </button>
-          </article>
-        </section>
-
-
-        <!-- USER MANAGEMENT -->
-<section class="panel admin-only user-management-section">
-  <div class="panel-header">
-    <div>
-      <h3>จัดการผู้ใช้งานระบบ</h3>
-      <p>เพิ่มผู้ใช้ แก้สิทธิ์ Reset Password และเปิด/ปิดการใช้งาน</p>
-    </div>
-
-    <div class="actions-row">
-      <button id="reloadUsersBtn" class="btn btn-secondary" type="button">
-        โหลดรายชื่อผู้ใช้
-      </button>
-    </div>
-  </div>
-
-  <div class="user-manage-box">
-    <div class="form-grid">
-      <label class="field">
-        <span>ชื่อผู้ใช้</span>
-        <input id="userManageUsername" type="text" placeholder="เช่น user01">
-      </label>
-
-      <label class="field">
-        <span>ชื่อแสดงผล</span>
-        <input id="userManageDisplayName" type="text" placeholder="ชื่อที่แสดงในระบบ">
-      </label>
-
-      <label class="field">
-        <span>อีเมล</span>
-        <input id="userManageEmail" type="email" placeholder="example@email.com">
-      </label>
-
-      <label class="field">
-        <span>สิทธิ์หลัก</span>
-        <select id="userManageRole">
-          <option value="Viewer">Viewer</option>
-          <option value="User">User</option>
-          <option value="Editor">Editor</option>
-          <option value="Admin">Admin</option>
-          <option value="Super Admin">Super Admin</option>
-        </select>
-      </label>
-
-      <label class="field">
-        <span>สถานะ</span>
-        <select id="userManageStatus">
-          <option value="active">active</option>
-          <option value="inactive">inactive</option>
-        </select>
-      </label>
-
-      <label class="field">
-        <span>รหัสผ่านเริ่มต้น</span>
-        <input id="userManagePassword" type="text" placeholder="ว่างไว้เพื่อให้ระบบสร้างอัตโนมัติ">
-      </label>
-
-      <label class="field field-wide">
-        <span>Dashboard ที่ดูได้</span>
-        <input id="userManageDashboards" type="text" placeholder="เช่น DASH_xxx,DASH_yyy หรือเว้นว่างไว้ตาม Role">
-      </label>
-    </div>
-
-    <div class="user-permission-grid">
-      <label class="check-item">
-        <input id="userCanExport" type="checkbox">
-        <span>Export ได้</span>
-      </label>
-
-      <label class="check-item">
-        <input id="userCanAddSource" type="checkbox">
-        <span>เพิ่มแหล่งข้อมูลได้</span>
-      </label>
-
-      <label class="check-item">
-        <input id="userCanEditDashboard" type="checkbox">
-        <span>แก้ไข Dashboard ได้</span>
-      </label>
-
-      <label class="check-item">
-        <input id="userCanViewAuditLog" type="checkbox">
-        <span>ดู Audit Log ได้</span>
-      </label>
-
-      <label class="check-item">
-        <input id="userCanManageUser" type="checkbox">
-        <span>จัดการ User ได้</span>
-      </label>
-    </div>
-
-    <div class="actions-row">
-      <button id="createUserBtn" class="btn btn-primary" type="button">
-        เพิ่มผู้ใช้ใหม่
-      </button>
-
-      <button id="updateUserBtn" class="btn btn-secondary" type="button">
-        บันทึกการแก้ไข
-      </button>
-
-      <button id="resetUserPasswordBtn" class="btn btn-ghost" type="button">
-        Reset Password
-      </button>
-
-      <button id="clearUserFormBtn" class="btn btn-ghost" type="button">
-        ล้างฟอร์ม
-      </button>
-
-      <span id="userManageMessage" class="mapping-message"></span>
-    </div>
-  </div>
-
-  <div class="user-list-wrap">
-    <div class="user-list-header">
-      <h4>รายการผู้ใช้งาน</h4>
-      <span id="userManageCount">0 รายการ</span>
-    </div>
-
-    <div id="userManageList" class="user-manage-list empty">
-      กดโหลดรายชื่อผู้ใช้เพื่อแสดงรายการ
-    </div>
-  </div>
-</section>
-<!-- AUDIT LOG VIEWER -->
-<section class="panel admin-only audit-log-section">
-  <div class="panel-header">
-    <div>
-      <h3>ประวัติการใช้งานระบบ</h3>
-      <p>ดูรายการ Login, Save Mapping, Create Dashboard, Export, Error และการจัดการ Dashboard</p>
-    </div>
-
-    <div class="actions-row">
-      <select id="auditLimitSelect" class="compact-select">
-        <option value="50">ล่าสุด 50 รายการ</option>
-        <option value="100" selected>ล่าสุด 100 รายการ</option>
-        <option value="200">ล่าสุด 200 รายการ</option>
-        <option value="500">ล่าสุด 500 รายการ</option>
-      </select>
-
-      <button id="reloadAuditLogBtn" class="btn btn-secondary" type="button">
-        โหลดประวัติ
-      </button>
-    </div>
-  </div>
-
-  <div id="auditLogResult" class="audit-log-result empty">
-    กดโหลดประวัติเพื่อดูรายการใช้งานล่าสุด
-  </div>
-</section>
-
-
-        <!-- SYSTEM CHECK -->
-<section class="panel admin-debug-only system-check-section">
-  <div class="panel-header">
-    <div>
-      <h3>ตรวจสอบระบบก่อนใช้งานจริง</h3>
-      <p>ตรวจ API, Version, Library, ปุ่มหลัก และสถานะ Frontend</p>
-    </div>
-
-    <div class="actions-row">
-      <button id="runSystemCheckBtn" class="btn btn-secondary" type="button">
-        Run System Check
-      </button>
-    </div>
-  </div>
-
-  <div id="systemCheckResult" class="system-check-result empty">
-    กด Run System Check เพื่อตรวจสอบระบบ
-  </div>
-</section>
-        <!-- DEBUG LOG -->
-       <section class="panel admin-debug-only">
-  <div class="panel-header">
-    <div>
-      <h3>ผลลัพธ์ API ล่าสุด</h3>
-              <p>ใช้ตรวจสอบข้อมูลที่ Worker ส่งกลับมา</p>
-            </div>
-
-            <button id="clearLogBtn" class="btn btn-ghost" type="button">
-              ล้าง Log
-            </button>
-          </div>
-
-          <pre id="debugLog" class="debug-log">ยังไม่มีข้อมูล</pre>
-        </section>
-
-      </main>
-    </section>
-
-  </div>
-
-<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="./api.js?v=20260522-10"></script>
-<script src="./app.js?v=20260522-10"></script>
-<script>
-  window.DASHBOARD_FRONTEND_VERSION = '20260522-01';
-  console.log('Dashboard Frontend Version:', window.DASHBOARD_FRONTEND_VERSION);
-</script>
-</body>
-</html>
+:root {
+  --bg: #f8fafc;
+  --card: #ffffff;
+  --text: #0f172a;
+  --muted: #64748b;
+  --border: #e2e8f0;
+  --primary: #2563eb;
+  --primary-dark: #1d4ed8;
+  --danger: #dc2626;
+  --success: #16a34a;
+  --warning: #d97706;
+  --shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
+  --radius: 22px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  min-height: 100%;
+  margin: 0;
+  font-family: "Noto Sans Thai", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+button,
+input {
+  font-family: inherit;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.app {
+  min-height: 100vh;
+}
+
+.login-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background:
+    radial-gradient(circle at top left, rgba(37, 99, 235, 0.18), transparent 36%),
+    radial-gradient(circle at bottom right, rgba(15, 23, 42, 0.14), transparent 32%),
+    #f8fafc;
+}
+
+.login-card {
+  width: 100%;
+  max-width: 460px;
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-radius: 28px;
+  padding: 28px;
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(14px);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 22px;
+}
+
+.brand h1 {
+  margin: 0;
+  font-size: 22px;
+  line-height: 1.25;
+  font-weight: 700;
+}
+
+.brand p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.brand-icon {
+  width: 52px;
+  height: 52px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #0f172a, #2563eb);
+  color: #ffffff;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  box-shadow: 0 12px 28px rgba(37, 99, 235, 0.28);
+}
+
+.brand-icon.small {
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  font-size: 14px;
+}
+
+.status-box {
+  border-radius: 16px;
+  padding: 12px 14px;
+  font-size: 14px;
+  margin-bottom: 18px;
+  border: 1px solid var(--border);
+}
+
+.status-muted {
+  color: var(--muted);
+  background: #f8fafc;
+}
+
+.status-success {
+  color: #166534;
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+}
+
+.status-error {
+  color: #991b1b;
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+
+.form {
+  display: grid;
+  gap: 14px;
+}
+
+.field {
+  display: grid;
+  gap: 7px;
+}
+
+.field span {
+  font-size: 14px;
+  color: #334155;
+  font-weight: 600;
+}
+
+.field input {
+  width: 100%;
+  height: 46px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 0 14px;
+  font-size: 15px;
+  color: var(--text);
+  background: #ffffff;
+  outline: none;
+  transition: 0.18s ease;
+}
+
+.field input:focus {
+  border-color: rgba(37, 99, 235, 0.72);
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+}
+
+.btn {
+  min-height: 42px;
+  border: 0;
+  border-radius: 14px;
+  padding: 10px 16px;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 14px;
+  transition: 0.18s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  color: #ffffff;
+  background: var(--primary);
+  box-shadow: 0 12px 24px rgba(37, 99, 235, 0.22);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--primary-dark);
+}
+
+.btn-secondary {
+  color: #1e3a8a;
+  background: #dbeafe;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: #bfdbfe;
+}
+
+.btn-ghost {
+  color: #334155;
+  background: #f1f5f9;
+}
+
+.btn-ghost:hover:not(:disabled) {
+  background: #e2e8f0;
+}
+
+.form-message {
+  min-height: 20px;
+  margin: 0;
+  color: var(--danger);
+  font-size: 14px;
+}
+
+.login-hint {
+  margin-top: 18px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: #f8fafc;
+  color: var(--muted);
+  font-size: 13px;
+  border: 1px dashed var(--border);
+}
+
+.login-hint code {
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.dashboard-page {
+  min-height: 100vh;
+}
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  min-height: 72px;
+  padding: 12px 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(16px);
+}
+
+.topbar-left,
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.topbar h2 {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.2;
+}
+
+.topbar p {
+  margin: 3px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.user-chip {
+  display: grid;
+  gap: 2px;
+  min-width: 150px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: #ffffff;
+}
+
+.user-chip span {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.user-chip small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.main {
+  padding: 22px;
+  display: grid;
+  gap: 18px;
+}
+
+.hero-card,
+.card,
+.panel {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.05);
+}
+
+.hero-card {
+  padding: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.hero-card h1 {
+  margin: 0;
+  font-size: 26px;
+  line-height: 1.2;
+}
+
+.hero-card p {
+  margin: 8px 0 0;
+  color: var(--muted);
+  max-width: 780px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.card {
+  padding: 18px;
+  min-height: 156px;
+}
+
+.card h3 {
+  margin: 0 0 8px;
+  font-size: 17px;
+}
+
+.card p {
+  margin: 0 0 14px;
+  color: var(--muted);
+  font-size: 14px;
+  word-break: break-word;
+}
+
+.panel {
+  overflow: hidden;
+}
+
+.panel-header {
+  padding: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.panel-header h3 {
+  margin: 0;
+  font-size: 17px;
+}
+
+.panel-header p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.debug-log {
+  margin: 0;
+  padding: 18px;
+  min-height: 220px;
+  max-height: 460px;
+  overflow: auto;
+  background: #020617;
+  color: #dbeafe;
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+@media (max-width: 1100px) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .hero-card {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 720px) {
+  .login-page {
+    padding: 14px;
+  }
+
+  .login-card {
+    padding: 20px;
+    border-radius: 22px;
+  }
+
+  .brand h1 {
+    font-size: 19px;
+  }
+
+  .topbar {
+    position: static;
+    padding: 12px;
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .topbar-left,
+  .topbar-right {
+    width: 100%;
+  }
+
+  .topbar-right {
+    justify-content: space-between;
+  }
+
+  .user-chip {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .main {
+    padding: 12px;
+  }
+
+  .hero-card {
+    padding: 16px;
+  }
+
+  .hero-card h1 {
+    font-size: 22px;
+  }
+
+  .grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .card {
+    min-height: auto;
+  }
+
+  .panel-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .debug-log {
+    font-size: 12px;
+  }
+}
+.admin-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+  gap: 16px;
+}
+
+.source-form {
+  padding: 18px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.field-wide {
+  grid-column: 1 / -1;
+}
+
+.field select {
+  width: 100%;
+  height: 46px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 0 14px;
+  font-size: 15px;
+  color: var(--text);
+  background: #ffffff;
+  outline: none;
+  transition: 0.18s ease;
+}
+
+.field select:focus {
+  border-color: rgba(37, 99, 235, 0.72);
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+}
+
+.actions-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.list-box,
+.headers-box {
+  padding: 14px;
+  min-height: 220px;
+  max-height: 520px;
+  overflow: auto;
+}
+
+.empty {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.source-item,
+.sheet-item {
+  width: 100%;
+  border: 1px solid var(--border);
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 12px;
+  margin-bottom: 10px;
+  text-align: left;
+  cursor: pointer;
+  transition: 0.18s ease;
+}
+
+.source-item:hover,
+.sheet-item:hover {
+  border-color: rgba(37, 99, 235, 0.45);
+  background: #f8fbff;
+}
+
+.source-item.active,
+.sheet-item.active {
+  border-color: rgba(37, 99, 235, 0.85);
+  background: #eff6ff;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.08);
+}
+
+.item-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-weight: 700;
+  color: var(--text);
+  font-size: 14px;
+}
+
+.item-meta {
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  background: #f1f5f9;
+  color: #334155;
+}
+
+.badge-success {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.badge-muted {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.headers-table-wrap {
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+}
+
+.headers-table {
+  width: 100%;
+  min-width: 720px;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+
+.headers-table th,
+.headers-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  font-size: 13px;
+  vertical-align: top;
+}
+
+.headers-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #0f172a;
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.headers-table tr:last-child td {
+  border-bottom: 0;
+}
+
+.header-name {
+  font-weight: 700;
+  color: var(--text);
+}
+
+.sample-box {
+  margin-top: 14px;
+  border: 1px dashed var(--border);
+  border-radius: 16px;
+  padding: 12px;
+  background: #f8fafc;
+}
+
+.sample-box h4 {
+  margin: 0 0 8px;
+  font-size: 14px;
+}
+
+.sample-box pre {
+  margin: 0;
+  max-height: 240px;
+  overflow: auto;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #0f172a;
+}
+
+@media (max-width: 1100px) {
+  .admin-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .source-form {
+    padding: 14px;
+  }
+
+  .list-box,
+  .headers-box {
+    max-height: none;
+  }
+
+  .item-title {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+.mapping-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 14px 14px;
+  flex-wrap: wrap;
+}
+
+.mapping-message {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.mapping-control {
+  display: grid;
+  gap: 8px;
+  min-width: 180px;
+}
+
+.mapping-control input,
+.mapping-control select {
+  width: 100%;
+  height: 36px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0 10px;
+  font-size: 12px;
+  background: #ffffff;
+}
+
+.mapping-checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 260px;
+}
+
+.mapping-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 28px;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: #f8fafc;
+  font-size: 11px;
+  color: #334155;
+  cursor: pointer;
+  user-select: none;
+}
+
+.mapping-check input {
+  width: 14px;
+  height: 14px;
+  margin: 0;
+}
+
+.headers-table.mapping-table {
+  min-width: 1180px;
+}
+
+@media (max-width: 720px) {
+  .mapping-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .mapping-actions .btn {
+    width: 100%;
+  }
+}
+.mapping-card-list {
+  display: grid;
+  gap: 12px;
+}
+
+.mapping-card {
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: #ffffff;
+  padding: 14px;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.035);
+}
+
+.mapping-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.mapping-index {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.mapping-title {
+  margin-top: 4px;
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 800;
+  word-break: break-word;
+}
+
+.mapping-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.mapping-form-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.mapping-control {
+  display: grid;
+  gap: 6px;
+}
+
+.mapping-control span {
+  color: #334155;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.mapping-control input,
+.mapping-control select {
+  width: 100%;
+  height: 38px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0 10px;
+  font-size: 13px;
+  background: #ffffff;
+  color: var(--text);
+  outline: none;
+}
+
+.mapping-control input:focus,
+.mapping-control select:focus {
+  border-color: rgba(37, 99, 235, 0.72);
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
+}
+
+.mapping-check-section {
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 16px;
+  background: #f8fafc;
+  border: 1px dashed var(--border);
+}
+
+.mapping-check-title {
+  margin-bottom: 8px;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.mapping-checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.mapping-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 5px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: #ffffff;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  user-select: none;
+}
+
+.mapping-check:hover {
+  border-color: rgba(37, 99, 235, 0.45);
+  background: #eff6ff;
+}
+
+.mapping-check input {
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  accent-color: var(--primary);
+}
+
+.mapping-sample {
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: 12px;
+  word-break: break-word;
+}
+
+.mapping-sample strong {
+  color: #334155;
+}
+
+@media (max-width: 1100px) {
+  .mapping-form-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .mapping-card {
+    padding: 12px;
+    border-radius: 16px;
+  }
+
+  .mapping-card-head {
+    flex-direction: column;
+  }
+
+  .mapping-badges {
+    justify-content: flex-start;
+  }
+
+  .mapping-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .mapping-check {
+    width: 100%;
+    justify-content: flex-start;
+  }
+}
+.preview-box {
+  padding: 16px;
+}
+
+.preview-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.preview-kpi {
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: #ffffff;
+  padding: 14px;
+}
+
+.preview-kpi-title {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.preview-kpi-value {
+  margin-top: 8px;
+  color: var(--text);
+  font-size: 26px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.preview-kpi-unit {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.preview-chart-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.preview-chart {
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: #ffffff;
+  padding: 14px;
+  min-height: 240px;
+}
+
+.preview-chart h4 {
+  margin: 0 0 12px;
+  font-size: 15px;
+}
+
+.simple-bar-list {
+  display: grid;
+  gap: 8px;
+}
+
+.simple-bar-item {
+  display: grid;
+  grid-template-columns: minmax(100px, 1fr) 3fr auto;
+  gap: 8px;
+  align-items: center;
+  font-size: 12px;
+}
+
+.simple-bar-label {
+  color: #334155;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.simple-bar-track {
+  height: 10px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  overflow: hidden;
+}
+
+.simple-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--primary);
+}
+
+.simple-bar-value {
+  color: var(--muted);
+  font-weight: 700;
+  min-width: 34px;
+  text-align: right;
+}
+
+.preview-table-wrap {
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: #ffffff;
+}
+
+.preview-table {
+  width: 100%;
+  min-width: 900px;
+  border-collapse: collapse;
+}
+
+.preview-table th,
+.preview-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.preview-table th {
+  position: sticky;
+  top: 0;
+  background: #0f172a;
+  color: #ffffff;
+  z-index: 1;
+}
+
+.preview-table tr:last-child td {
+  border-bottom: 0;
+}
+
+@media (max-width: 1100px) {
+  .preview-kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .preview-chart-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .preview-kpi-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .simple-bar-item {
+    grid-template-columns: 1fr;
+    gap: 5px;
+  }
+
+  .simple-bar-value {
+    text-align: left;
+  }
+}
+.dashboard-create-box {
+  padding: 16px;
+  border-bottom: 1px solid var(--border);
+  background: #f8fafc;
+}
+.dashboard-viewer-box {
+  padding: 16px;
+  border-bottom: 1px solid var(--border);
+  background: #f8fafc;
+}
+
+.dashboard-title-box {
+  margin-bottom: 16px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: #ffffff;
+}
+
+.dashboard-title-box h3 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.dashboard-title-box p {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.dashboard-section-title {
+  margin: 18px 0 10px;
+  font-size: 16px;
+  font-weight: 800;
+}
+.dashboard-filter-box {
+  margin-top: 14px;
+  padding: 14px;
+  border: 1px dashed var(--border);
+  border-radius: 18px;
+  background: #ffffff;
+}
+
+.dashboard-filter-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.dashboard-filter-item {
+  display: grid;
+  gap: 6px;
+}
+
+.dashboard-filter-item span {
+  color: #334155;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.dashboard-filter-item input,
+.dashboard-filter-item select {
+  width: 100%;
+  height: 38px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0 10px;
+  background: #ffffff;
+  color: var(--text);
+  font-size: 13px;
+  outline: none;
+}
+
+.dashboard-filter-item input:focus,
+.dashboard-filter-item select:focus {
+  border-color: rgba(37, 99, 235, 0.72);
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
+}
+
+.dashboard-filter-date-pair,
+.dashboard-filter-number-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+@media (max-width: 1100px) {
+  .dashboard-filter-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .dashboard-filter-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-filter-date-pair,
+  .dashboard-filter-number-pair {
+    grid-template-columns: 1fr;
+  }
+}
+.mode-switcher {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.04);
+}
+
+.mode-btn {
+  min-height: 42px;
+  border: 0;
+  border-radius: 14px;
+  padding: 10px 18px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  color: #334155;
+  background: #f1f5f9;
+}
+
+.mode-btn.active {
+  color: #ffffff;
+  background: var(--primary);
+  box-shadow: 0 10px 22px rgba(37, 99, 235, 0.2);
+}
+
+.mode-user .admin-only {
+  display: none !important;
+}
+
+.mode-admin .admin-only {
+  display: block;
+}
+
+.mode-admin .admin-layout.admin-only {
+  display: grid;
+}
+
+.role-viewer-only .admin-only {
+  display: none !important;
+}
+
+.role-viewer-only #adminModeBtn {
+  display: none !important;
+}
+
+.role-viewer-only #userModeBtn {
+  pointer-events: none;
+}
+
+@media (max-width: 720px) {
+  .mode-switcher {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .mode-btn {
+    width: 100%;
+  }
+}
+.echart-box {
+  width: 100%;
+  height: 320px;
+  min-height: 280px;
+}
+
+.preview-chart.chart-large .echart-box {
+  height: 380px;
+}
+
+.preview-chart.chart-small .echart-box {
+  height: 260px;
+}
+
+.preview-chart-empty {
+  min-height: 220px;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  font-size: 13px;
+  border: 1px dashed var(--border);
+  border-radius: 14px;
+  background: #f8fafc;
+}
+
+@media (max-width: 720px) {
+  .echart-box {
+    height: 280px;
+  }
+
+  .preview-chart.chart-large .echart-box {
+    height: 300px;
+  }
+}
+/* =====================================================
+   MODE SWITCHER / ROLE UI
+   ===================================================== */
+
+.mode-switcher {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.04);
+}
+
+.mode-btn {
+  min-height: 42px;
+  border: 0;
+  border-radius: 14px;
+  padding: 10px 18px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  color: #334155;
+  background: #f1f5f9;
+  transition: 0.18s ease;
+}
+
+.mode-btn:hover {
+  background: #e2e8f0;
+}
+
+.mode-btn.active {
+  color: #ffffff;
+  background: var(--primary);
+  box-shadow: 0 10px 22px rgba(37, 99, 235, 0.2);
+}
+
+.mode-user .admin-only,
+.mode-user .admin-debug-only {
+  display: none !important;
+}
+
+.mode-admin .admin-only {
+  display: block;
+}
+
+.mode-admin .admin-layout.admin-only {
+  display: grid;
+}
+
+.role-viewer-only .admin-only,
+.role-viewer-only .admin-debug-only {
+  display: none !important;
+}
+
+.role-viewer-only #adminModeBtn {
+  display: none !important;
+}
+
+.role-viewer-only #userModeBtn {
+  pointer-events: none;
+}
+
+
+/* =====================================================
+   USER DASHBOARD POLISH
+   ===================================================== */
+
+.mode-user .hero-card {
+  display: none !important;
+}
+
+.mode-user .main {
+  padding-top: 14px;
+}
+
+.mode-user .user-dashboard-section {
+  border-radius: 24px;
+  overflow: hidden;
+}
+
+.mode-user .dashboard-viewer-box {
+  background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
+}
+
+.mode-user .panel-header {
+  align-items: center;
+}
+
+.mode-user .preview-kpi-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.mode-user .preview-kpi {
+  min-height: 112px;
+  border-radius: 20px;
+  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.045);
+}
+
+.mode-user .preview-kpi-title {
+  font-size: 13px;
+}
+
+.mode-user .preview-kpi-value {
+  font-size: 30px;
+}
+
+.mode-user .preview-chart {
+  border-radius: 22px;
+  min-height: 300px;
+  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.045);
+}
+
+.mode-user .preview-table-wrap {
+  max-height: 520px;
+}
+
+
+/* =====================================================
+   MOBILE RESPONSIVE PERFECT
+   ===================================================== */
+
+@media (max-width: 900px) {
+  .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    padding: 10px 12px;
+    gap: 10px;
+  }
+
+  .topbar-left {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .topbar-left h2 {
+    font-size: 16px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .topbar-left p {
+    font-size: 12px;
+  }
+
+  .topbar-right {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 8px;
+  }
+
+  .user-chip {
+    min-width: 0;
+  }
+
+  .user-chip span,
+  .user-chip small {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .mode-switcher {
+    margin: 0 12px;
+  }
+
+  .main {
+    padding: 12px;
+    gap: 12px;
+  }
+
+  .panel-header {
+    padding: 14px;
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .panel-header .actions-row {
+    width: 100%;
+  }
+
+  .panel-header .btn {
+    width: 100%;
+  }
+
+  .dashboard-viewer-box,
+  .dashboard-create-box {
+    padding: 12px;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr !important;
+    gap: 10px;
+  }
+
+  .actions-row {
+    display: grid;
+    grid-template-columns: 1fr;
+    width: 100%;
+    gap: 8px;
+  }
+
+  .actions-row .btn {
+    width: 100%;
+  }
+
+  .dashboard-filter-box {
+    margin-top: 12px;
+    padding: 12px;
+    border-radius: 16px;
+  }
+
+  .dashboard-filter-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .dashboard-filter-date-pair,
+  .dashboard-filter-number-pair {
+    grid-template-columns: 1fr !important;
+  }
+
+  .preview-kpi-grid,
+  .mode-user .preview-kpi-grid {
+    grid-template-columns: 1fr !important;
+    gap: 10px;
+  }
+
+  .preview-kpi {
+    min-height: 96px;
+    padding: 14px;
+  }
+
+  .preview-kpi-value {
+    font-size: 28px;
+  }
+
+  .preview-chart-grid {
+    grid-template-columns: 1fr !important;
+    gap: 12px;
+  }
+
+  .preview-chart {
+    min-height: 300px;
+    padding: 12px;
+  }
+
+  .preview-chart h4 {
+    font-size: 14px;
+    line-height: 1.35;
+  }
+
+  .echart-box {
+    height: 280px !important;
+  }
+
+  .dashboard-title-box {
+    padding: 14px;
+    border-radius: 18px;
+  }
+
+  .dashboard-title-box h3 {
+    font-size: 18px;
+  }
+
+  .dashboard-title-box p {
+    font-size: 12px;
+    line-height: 1.7;
+  }
+
+  .dashboard-section-title {
+    font-size: 15px;
+    margin: 14px 0 8px;
+  }
+
+  .preview-table-wrap {
+    border-radius: 16px;
+    max-height: 420px;
+  }
+
+  .preview-table {
+    min-width: 760px;
+  }
+
+  .preview-table th,
+  .preview-table td {
+    padding: 9px 10px;
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 520px) {
+  .brand-icon.small {
+    width: 38px;
+    height: 38px;
+    border-radius: 13px;
+    font-size: 13px;
+  }
+
+  .topbar {
+    padding: 8px 10px;
+  }
+
+  .topbar h2 {
+    font-size: 15px;
+  }
+
+  .topbar .btn {
+    min-height: 38px;
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+
+  .user-chip {
+    padding: 7px 10px;
+    border-radius: 14px;
+  }
+
+  .mode-switcher {
+    grid-template-columns: 1fr;
+    margin: 0;
+    padding: 5px;
+    border-radius: 16px;
+  }
+
+  .mode-btn {
+    width: 100%;
+    min-height: 40px;
+    font-size: 13px;
+  }
+
+  .main {
+    padding: 10px;
+  }
+
+  .panel {
+    border-radius: 18px;
+  }
+
+  .panel-header h3 {
+    font-size: 17px;
+  }
+
+  .panel-header p {
+    font-size: 12px;
+  }
+
+  .field input,
+  .field select {
+    height: 42px;
+    font-size: 14px;
+  }
+
+  .btn {
+    min-height: 42px;
+  }
+
+  .preview-box {
+    padding: 12px;
+  }
+
+  .preview-kpi-value {
+    font-size: 26px;
+  }
+
+  .simple-bar-item {
+    grid-template-columns: 1fr !important;
+  }
+
+  .simple-bar-label {
+    white-space: normal;
+  }
+
+  .echart-box {
+    height: 260px !important;
+  }
+}
+/* =====================================================
+   DASHBOARD MANAGEMENT
+   เพิ่มส่วนนี้ท้ายไฟล์ style.css
+   ===================================================== */
+
+.dashboard-management-section {
+  overflow: visible;
+}
+
+.dashboard-manage-box {
+  padding: 18px;
+  display: grid;
+  gap: 18px;
+}
+
+.dashboard-manage-box select,
+.dashboard-manage-box input[type="text"] {
+  width: 100%;
+  min-height: 46px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 0 14px;
+  font-size: 15px;
+  color: var(--text);
+  background: #ffffff;
+  outline: none;
+  transition: 0.18s ease;
+}
+
+.dashboard-manage-box select:focus,
+.dashboard-manage-box input[type="text"]:focus {
+  border-color: rgba(37, 99, 235, 0.72);
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+}
+
+.dashboard-toggle-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.toggle-card {
+  min-height: 86px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: #ffffff;
+  cursor: pointer;
+  transition: 0.18s ease;
+}
+
+.toggle-card:hover {
+  border-color: rgba(37, 99, 235, 0.45);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+}
+
+.toggle-card input {
+  width: 18px;
+  height: 18px;
+  margin-top: 3px;
+  flex: 0 0 auto;
+  accent-color: var(--primary);
+}
+
+.toggle-card span {
+  display: grid;
+  gap: 4px;
+}
+
+.toggle-card strong {
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.25;
+}
+
+.toggle-card small {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.permission-box {
+  padding: 14px;
+  border: 1px dashed var(--border);
+  border-radius: 18px;
+  background: #f8fafc;
+}
+
+.permission-title {
+  margin-bottom: 12px;
+  color: #334155;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.permission-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.permission-grid label {
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 10px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: #ffffff;
+  cursor: pointer;
+  transition: 0.18s ease;
+}
+
+.permission-grid label:hover {
+  border-color: rgba(37, 99, 235, 0.45);
+}
+
+.permission-grid input {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  accent-color: var(--primary);
+}
+
+.permission-grid span {
+  font-size: 13px;
+  font-weight: 600;
+  color: #334155;
+  white-space: nowrap;
+}
+
+.dashboard-manage-actions {
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.dashboard-manage-actions .btn {
+  min-width: 130px;
+}
+
+.btn-danger {
+  color: #ffffff;
+  background: var(--danger);
+  box-shadow: 0 12px 24px rgba(220, 38, 38, 0.18);
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: #b91c1c;
+}
+
+.dashboard-manage-summary {
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: #ffffff;
+  color: #334155;
+  font-size: 14px;
+  line-height: 1.65;
+  overflow: auto;
+}
+
+.dashboard-manage-summary.empty {
+  color: var(--muted);
+  background: #f8fafc;
+  border-style: dashed;
+}
+
+.dashboard-manage-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.dashboard-manage-summary-item {
+  min-height: 72px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: #f8fafc;
+}
+
+.dashboard-manage-summary-item span {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.dashboard-manage-summary-item strong {
+  display: block;
+  color: var(--text);
+  font-size: 14px;
+  word-break: break-word;
+}
+
+.dashboard-status-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.dashboard-status-pill.is-on {
+  color: #166534;
+  background: #dcfce7;
+}
+
+.dashboard-status-pill.is-off {
+  color: #991b1b;
+  background: #fee2e2;
+}
+
+.dashboard-status-pill.is-muted {
+  color: #475569;
+  background: #e2e8f0;
+}
+
+/* =====================================================
+   DASHBOARD MANAGEMENT RESPONSIVE
+   ===================================================== */
+
+@media (max-width: 1100px) {
+  .dashboard-toggle-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .permission-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .dashboard-manage-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .dashboard-manage-box {
+    padding: 14px;
+    gap: 14px;
+  }
+
+  .dashboard-toggle-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .toggle-card {
+    min-height: auto;
+    padding: 12px;
+    border-radius: 16px;
+  }
+
+  .permission-box {
+    padding: 12px;
+    border-radius: 16px;
+  }
+
+  .permission-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .permission-grid label {
+    min-height: 40px;
+    padding: 8px 9px;
+  }
+
+  .permission-grid span {
+    font-size: 12px;
+  }
+
+  .dashboard-manage-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .dashboard-manage-actions .btn {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .dashboard-manage-actions .mapping-message {
+    width: 100%;
+    min-height: 20px;
+  }
+
+  .dashboard-manage-summary {
+    padding: 12px;
+    border-radius: 16px;
+    font-size: 13px;
+  }
+
+  .dashboard-manage-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-manage-summary-item {
+    min-height: auto;
+    padding: 10px;
+  }
+}
+
+@media (max-width: 420px) {
+  .permission-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-manage-box select,
+  .dashboard-manage-box input[type="text"] {
+    min-height: 44px;
+    font-size: 14px;
+  }
+
+  .toggle-card strong {
+    font-size: 14px;
+  }
+
+  .toggle-card small {
+    font-size: 12px;
+  }
+}
+/* =====================================================
+   DASHBOARD LIVE HEADER
+   ===================================================== */
+
+.dashboard-live-header {
+  display: grid;
+  gap: 14px;
+}
+
+.dashboard-live-title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.dashboard-live-time {
+  min-width: 170px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: #f8fafc;
+  text-align: right;
+}
+
+.dashboard-live-time span {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.dashboard-live-time strong {
+  display: block;
+  margin-top: 3px;
+  color: var(--text);
+  font-size: 13px;
+}
+
+.dashboard-live-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.dashboard-live-meta-item {
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: #f8fafc;
+}
+
+.dashboard-live-meta-item span {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.dashboard-live-meta-item strong {
+  display: block;
+  color: var(--text);
+  font-size: 20px;
+  font-weight: 900;
+}
+
+@media (max-width: 900px) {
+  .dashboard-live-title-row {
+    flex-direction: column;
+  }
+
+  .dashboard-live-time {
+    width: 100%;
+    min-width: 0;
+    text-align: left;
+  }
+
+  .dashboard-live-meta-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
+  .dashboard-live-meta-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-live-meta-item strong {
+    font-size: 18px;
+  }
+}
+/* =====================================================
+   USER / VIEWER MODE FINAL
+   ===================================================== */
+
+.mode-user .admin-only,
+.mode-user .admin-debug-only,
+.role-viewer-only .admin-only,
+.role-viewer-only .admin-debug-only {
+  display: none !important;
+}
+
+.role-viewer-only #adminModeBtn {
+  display: none !important;
+}
+
+.role-viewer-only #userModeBtn {
+  width: 100%;
+  pointer-events: none;
+}
+
+.mode-user .hero-card {
+  display: none !important;
+}
+
+.mode-user .main {
+  padding-top: 14px;
+}
+
+.mode-user .mode-switcher {
+  order: -1;
+}
+
+.mode-user .user-dashboard-section {
+  display: block !important;
+  border-radius: 24px;
+  overflow: hidden;
+}
+
+.mode-user .user-dashboard-section .panel-header {
+  align-items: flex-start;
+}
+
+.mode-user .dashboard-viewer-box {
+  padding: 16px;
+  background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
+}
+
+.mode-user .dashboard-filter-box {
+  margin-bottom: 14px;
+}
+
+.mode-user .dashboard-filter-grid {
+  gap: 10px;
+}
+
+.mode-user .actions-row {
+  flex-wrap: wrap;
+}
+
+.mode-user #dashboardViewResult {
+  min-height: 260px;
+}
+
+.mode-user .preview-kpi-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.mode-user .preview-kpi {
+  min-height: 112px;
+  border-radius: 20px;
+  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.045);
+}
+
+.mode-user .preview-kpi-title {
+  font-size: 13px;
+}
+
+.mode-user .preview-kpi-value {
+  font-size: 30px;
+}
+
+.mode-user .preview-chart-grid {
+  gap: 14px;
+}
+
+.mode-user .preview-chart {
+  border-radius: 22px;
+  min-height: 300px;
+  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.045);
+}
+
+.mode-user .preview-table-wrap {
+  width: 100%;
+  max-height: 520px;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.mode-user .preview-table {
+  min-width: 760px;
+}
+
+.mode-user .dashboard-live-meta-grid {
+  gap: 10px;
+}
+
+/* =====================================================
+   USER / VIEWER MOBILE
+   ===================================================== */
+
+@media (max-width: 900px) {
+  .mode-user .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+  }
+
+  .mode-user .main {
+    padding: 12px;
+    gap: 12px;
+  }
+
+  .mode-user .mode-switcher {
+    display: grid;
+    grid-template-columns: 1fr;
+    padding: 5px;
+  }
+
+  .mode-user .mode-btn {
+    width: 100%;
+  }
+
+  .mode-user .user-dashboard-section {
+    border-radius: 20px;
+  }
+
+  .mode-user .dashboard-viewer-box {
+    padding: 12px;
+  }
+
+  .mode-user .preview-kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .mode-user .preview-chart {
+    min-height: 280px;
+  }
+
+  .mode-user .echart-box {
+    height: 280px;
+    min-height: 260px;
+  }
+}
+
+@media (max-width: 560px) {
+  .mode-user .topbar {
+    gap: 10px;
+  }
+
+  .mode-user .topbar-left {
+    align-items: center;
+  }
+
+  .mode-user .topbar h2 {
+    font-size: 15px;
+  }
+
+  .mode-user .topbar p {
+    font-size: 12px;
+  }
+
+  .mode-user .topbar-right {
+    gap: 8px;
+  }
+
+  .mode-user .user-chip {
+    padding: 7px 9px;
+  }
+
+  .mode-user .user-chip span {
+    font-size: 13px;
+  }
+
+  .mode-user .user-chip small {
+    font-size: 11px;
+  }
+
+  .mode-user #logoutBtn {
+    min-height: 38px;
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+
+  .mode-user .panel-header {
+    padding: 14px;
+  }
+
+  .mode-user .panel-header h3 {
+    font-size: 16px;
+  }
+
+  .mode-user .panel-header p {
+    font-size: 12px;
+  }
+
+  .mode-user .dashboard-viewer-box .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .mode-user .actions-row {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .mode-user .actions-row .btn {
+    width: 100%;
+  }
+
+  .mode-user .preview-kpi-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .mode-user .preview-kpi {
+    min-height: auto;
+    padding: 14px;
+  }
+
+  .mode-user .preview-kpi-value {
+    font-size: 26px;
+  }
+
+  .mode-user .preview-chart {
+    min-height: 260px;
+    padding: 12px;
+  }
+
+  .mode-user .echart-box {
+    height: 250px;
+    min-height: 240px;
+  }
+
+  .mode-user .dashboard-section-title {
+    font-size: 14px;
+  }
+
+  .mode-user .preview-table {
+    min-width: 680px;
+    font-size: 12px;
+  }
+}
+/* =====================================================
+   DASHBOARD VIEWER ACTIONS RESPONSIVE
+   ===================================================== */
+
+@media (max-width: 560px) {
+  .mode-user #refreshDashboardBtn,
+  .mode-user #exportDashboardBtn,
+  .mode-user #applyDashboardFilterBtn,
+  .mode-user #resetDashboardFilterBtn {
+    width: 100%;
+  }
+}
+/* =====================================================
+   REGENERATE DASHBOARD BUTTON
+   ===================================================== */
+
+#regenerateManageDashboardBtn {
+  min-width: 210px;
+}
+
+@media (max-width: 720px) {
+  #regenerateManageDashboardBtn {
+    width: 100%;
+    min-width: 0;
+  }
+}
+/* =====================================================
+   DASHBOARD MANAGEMENT FILTER TOOLBAR
+   ===================================================== */
+
+.dashboard-manage-toolbar {
+  display: grid;
+  grid-template-columns: minmax(260px, 2fr) minmax(180px, 1fr) minmax(180px, 1fr);
+  gap: 12px;
+  align-items: end;
+}
+
+.dashboard-manage-count {
+  display: inline-flex;
+  align-items: center;
+  min-height: 38px;
+  width: fit-content;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: #f8fafc;
+  color: #334155;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+@media (max-width: 900px) {
+  .dashboard-manage-toolbar {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .dashboard-manage-count {
+    width: 100%;
+    justify-content: center;
+    border-radius: 14px;
+  }
+}
+
+@media (max-width: 560px) {
+  .dashboard-manage-toolbar {
+    gap: 8px;
+  }
+
+  .dashboard-manage-count {
+    font-size: 12px;
+  }
+}
+/* =====================================================
+   GLOBAL LOADING / SKELETON UI
+   ===================================================== */
+
+.global-loading-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(15, 23, 42, 0.32);
+  backdrop-filter: blur(5px);
+}
+
+.global-loading-overlay.hidden {
+  display: none !important;
+}
+
+.global-loading-card {
+  width: min(360px, 100%);
+  display: grid;
+  justify-items: center;
+  gap: 14px;
+  padding: 24px;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.22);
+}
+
+.global-loading-text {
+  color: #0f172a;
+  font-size: 15px;
+  font-weight: 800;
+  text-align: center;
+}
+
+.loading-spinner {
+  width: 42px;
+  height: 42px;
+  border: 4px solid #dbeafe;
+  border-top-color: var(--primary);
+  border-radius: 999px;
+  animation: dashboard-spin 0.8s linear infinite;
+}
+
+.loading-spinner.small {
+  width: 28px;
+  height: 28px;
+  border-width: 3px;
+}
+
+.loading-spinner.mini {
+  width: 16px;
+  height: 16px;
+  border-width: 2px;
+}
+
+@keyframes dashboard-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.panel-loading-box {
+  min-height: 120px;
+  display: grid;
+  place-items: center;
+  gap: 12px;
+  padding: 22px;
+  color: #475569;
+  font-weight: 800;
+  text-align: center;
+}
+
+.inline-loading {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #475569;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.skeleton-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  padding: 0 16px 16px;
+}
+
+.skeleton-card {
+  min-height: 96px;
+  border-radius: 18px;
+  background:
+    linear-gradient(
+      90deg,
+      #f1f5f9 25%,
+      #e2e8f0 37%,
+      #f1f5f9 63%
+    );
+  background-size: 400% 100%;
+  animation: dashboard-skeleton 1.15s ease infinite;
+}
+
+@keyframes dashboard-skeleton {
+  0% {
+    background-position: 100% 0;
+  }
+
+  100% {
+    background-position: 0 0;
+  }
+}
+
+body.is-loading {
+  cursor: wait;
+}
+
+body.is-loading button,
+body.is-loading select,
+body.is-loading input {
+  cursor: wait;
+}
+
+@media (max-width: 720px) {
+  .global-loading-card {
+    padding: 20px;
+    border-radius: 20px;
+  }
+
+  .skeleton-grid {
+    grid-template-columns: 1fr;
+    padding: 0 12px 12px;
+  }
+
+  .panel-loading-box {
+    min-height: 100px;
+    padding: 18px;
+  }
+}
+.form-message,
+.mapping-message {
+  font-weight: 700;
+}
+
+.error-text {
+  color: var(--danger);
+  font-weight: 800;
+}
+
+.warning-text {
+  color: var(--warning);
+  font-weight: 800;
+}
+
+.success-text {
+  color: var(--success);
+  font-weight: 800;
+}
+/* =====================================================
+   RETRY BOX
+   ===================================================== */
+
+.retry-box {
+  display: grid;
+  gap: 10px;
+  padding: 18px;
+  border: 1px solid #fecaca;
+  border-radius: 18px;
+  background: #fff7f7;
+}
+
+.retry-title {
+  color: #991b1b;
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.retry-message {
+  color: #7f1d1d;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.retry-box .btn {
+  width: fit-content;
+}
+
+@media (max-width: 560px) {
+  .retry-box {
+    padding: 14px;
+  }
+
+  .retry-box .btn {
+    width: 100%;
+  }
+}
+
+/* =====================================================
+   RETRY BOX
+   ===================================================== */
+
+.retry-box {
+  display: grid;
+  gap: 10px;
+  padding: 18px;
+  border: 1px solid #fecaca;
+  border-radius: 18px;
+  background: #fff7f7;
+}
+
+.retry-title {
+  color: #991b1b;
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.retry-message {
+  color: #7f1d1d;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.retry-box .btn {
+  width: fit-content;
+}
+
+@media (max-width: 560px) {
+  .retry-box {
+    padding: 14px;
+  }
+
+  .retry-box .btn {
+    width: 100%;
+  }
+}
+/* =====================================================
+   EXPORT EXCEL BUTTON RESPONSIVE
+   ===================================================== */
+
+@media (max-width: 560px) {
+  .mode-user #exportDashboardExcelBtn,
+  #exportDashboardExcelBtn {
+    width: 100%;
+  }
+}
+/* =====================================================
+   AUDIT LOG VIEWER
+   ===================================================== */
+
+.audit-log-section {
+  overflow: hidden;
+}
+
+.compact-select {
+  min-height: 42px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 0 12px;
+  background: #ffffff;
+  color: var(--text);
+  font-size: 14px;
+  outline: none;
+}
+
+.audit-log-result {
+  padding: 16px;
+}
+
+.audit-table-wrap {
+  width: 100%;
+  max-height: 520px;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: #ffffff;
+  -webkit-overflow-scrolling: touch;
+}
+
+.audit-table {
+  width: 100%;
+  min-width: 860px;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.audit-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 12px;
+  border-bottom: 1px solid var(--border);
+  background: #f8fafc;
+  color: #334155;
+  text-align: left;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.audit-table td {
+  padding: 12px;
+  border-bottom: 1px solid #eef2f7;
+  vertical-align: top;
+  color: #334155;
+}
+
+.audit-table td small {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.audit-detail {
+  max-width: 520px;
+  line-height: 1.55;
+  word-break: break-word;
+}
+
+.audit-meta {
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.audit-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.audit-badge.success {
+  color: #166534;
+  background: #dcfce7;
+}
+
+.audit-badge.info {
+  color: #1d4ed8;
+  background: #dbeafe;
+}
+
+.audit-badge.warning {
+  color: #92400e;
+  background: #fef3c7;
+}
+
+.audit-badge.danger {
+  color: #991b1b;
+  background: #fee2e2;
+}
+
+.audit-badge.muted {
+  color: #475569;
+  background: #e2e8f0;
+}
+
+@media (max-width: 720px) {
+  .audit-log-result {
+    padding: 12px;
+  }
+
+  .audit-table {
+    min-width: 760px;
+    font-size: 12px;
+  }
+
+  .audit-table th,
+  .audit-table td {
+    padding: 10px;
+  }
+
+  .compact-select {
+    width: 100%;
+  }
+}
+/* =====================================================
+   DASHBOARD MANAGEMENT CARD LIST
+   ===================================================== */
+
+.dashboard-card-list-wrap {
+  display: grid;
+  gap: 12px;
+}
+
+.dashboard-card-list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.dashboard-card-list-header h4 {
+  margin: 0;
+  color: var(--text);
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.dashboard-card-list-header span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 5px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: #f8fafc;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.dashboard-card-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.dashboard-card-list.empty {
+  display: block;
+  padding: 16px;
+  border: 1px dashed var(--border);
+  border-radius: 18px;
+  background: #f8fafc;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.dashboard-manage-card {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: #ffffff;
+  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.045);
+}
+
+.dashboard-manage-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.dashboard-manage-card-head h4 {
+  margin: 0;
+  color: var(--text);
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.dashboard-manage-card-head p {
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.dashboard-type-pill {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  color: #1d4ed8;
+  background: #dbeafe;
+  font-size: 12px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.dashboard-manage-card-meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.dashboard-manage-card-meta div {
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid #eef2f7;
+  border-radius: 14px;
+  background: #f8fafc;
+}
+
+.dashboard-manage-card-meta span {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.dashboard-manage-card-meta strong {
+  display: block;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 800;
+  word-break: break-word;
+}
+
+.dashboard-manage-card-status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.dashboard-manage-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.dashboard-manage-card-actions .btn {
+  min-height: 38px;
+  padding: 8px 11px;
+  font-size: 12px;
+}
+
+@media (max-width: 980px) {
+  .dashboard-card-list {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 560px) {
+  .dashboard-card-list-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .dashboard-manage-card {
+    padding: 12px;
+    border-radius: 18px;
+  }
+
+  .dashboard-manage-card-head {
+    flex-direction: column;
+  }
+
+  .dashboard-type-pill {
+    width: fit-content;
+  }
+
+  .dashboard-manage-card-meta {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-manage-card-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-manage-card-actions .btn {
+    width: 100%;
+  }
+}
+/* =====================================================
+   USER MANAGEMENT
+   ===================================================== */
+
+.user-management-section {
+  overflow: hidden;
+}
+
+.user-manage-box {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.user-permission-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.check-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 9px 11px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: #f8fafc;
+  color: #334155;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.check-item input {
+  width: 16px;
+  height: 16px;
+}
+
+.user-list-wrap {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+}
+
+.user-list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.user-list-header h4 {
+  margin: 0;
+  color: var(--text);
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.user-list-header span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 5px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: #f8fafc;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.user-manage-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.user-manage-list.empty {
+  display: block;
+  padding: 16px;
+  border: 1px dashed var(--border);
+  border-radius: 18px;
+  background: #f8fafc;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.user-card {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: #ffffff;
+  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.045);
+}
+
+.user-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.user-card-head h4 {
+  margin: 0;
+  color: var(--text);
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.user-card-head p {
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.user-role-pill {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  color: #1d4ed8;
+  background: #dbeafe;
+  font-size: 12px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.user-card-meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.user-card-meta div {
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid #eef2f7;
+  border-radius: 14px;
+  background: #f8fafc;
+}
+
+.user-card-meta span {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.user-card-meta strong {
+  display: block;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 800;
+  word-break: break-word;
+}
+
+.user-card-permissions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.user-permission-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.user-permission-badge.on {
+  color: #166534;
+  background: #dcfce7;
+}
+
+.user-permission-badge.off {
+  color: #475569;
+  background: #e2e8f0;
+}
+
+.user-permission-badge.warning {
+  color: #92400e;
+  background: #fef3c7;
+}
+
+.user-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.user-card-actions .btn {
+  min-height: 38px;
+  padding: 8px 11px;
+  font-size: 12px;
+}
+
+@media (max-width: 980px) {
+  .user-permission-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .user-manage-list {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 560px) {
+  .user-manage-box,
+  .user-list-wrap {
+    padding: 12px;
+  }
+
+  .user-permission-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .user-list-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .user-card {
+    padding: 12px;
+    border-radius: 18px;
+  }
+
+  .user-card-head {
+    flex-direction: column;
+  }
+
+  .user-role-pill {
+    width: fit-content;
+  }
+
+  .user-card-meta {
+    grid-template-columns: 1fr;
+  }
+
+  .user-card-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .user-card-actions .btn {
+    width: 100%;
+  }
+}
+/* =====================================================
+   ADVANCED ECHARTS DASHBOARD
+   ===================================================== */
+
+.dashboard-chart-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.dashboard-chart-card {
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  background: #ffffff;
+  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.045);
+}
+
+.echart-box {
+  width: 100%;
+  height: 360px;
+  min-height: 300px;
+}
+
+.dashboard-chart-card.is-large,
+.dashboard-chart-card.large {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 900px) {
+  .dashboard-chart-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .echart-box {
+    height: 340px;
+  }
+}
+
+@media (max-width: 560px) {
+  .dashboard-chart-grid {
+    gap: 10px;
+    margin-top: 10px;
+  }
+
+  .dashboard-chart-card {
+    padding: 10px;
+    border-radius: 18px;
+  }
+
+  .echart-box {
+    height: 300px;
+    min-height: 280px;
+  }
+}
+/* =====================================================
+   DASHBOARD VIEWER ACTIONS
+   ===================================================== */
+
+.dashboard-viewer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin-top: 12px;
+}
+
+.dashboard-viewer-actions .btn {
+  min-height: 42px;
+}
+
+.dashboard-viewer-message {
+  flex: 1 1 260px;
+  min-width: 220px;
+}
+
+#refreshDashboardBtn {
+  font-weight: 900;
+}
+
+@media (max-width: 720px) {
+  .dashboard-viewer-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .dashboard-viewer-actions .btn,
+  .dashboard-viewer-message {
+    width: 100%;
+  }
+
+  .dashboard-viewer-message {
+    grid-column: 1 / -1;
+    min-width: 0;
+  }
+}
+
+@media (max-width: 420px) {
+  .dashboard-viewer-actions {
+    grid-template-columns: 1fr;
+  }
+}
+/* =====================================================
+   DASHBOARD TABLE PAGINATION
+   ===================================================== */
+
+.dashboard-table-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 10px 0 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: #f8fafc;
+  color: #475569;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.dashboard-table-pager {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dashboard-table-pager span {
+  color: #334155;
+  font-size: 13px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.dashboard-table-pager .btn {
+  min-height: 34px;
+  padding: 6px 10px;
+  font-size: 12px;
+}
+
+@media (max-width: 640px) {
+  .dashboard-table-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .dashboard-table-pager {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    width: 100%;
+  }
+
+  .dashboard-table-pager .btn {
+    width: 100%;
+  }
+}
+/* =====================================================
+   DASHBOARD LIMIT WARNING
+   ===================================================== */
+
+.dashboard-warning-box,
+.dashboard-note-box {
+  margin-top: 12px;
+  padding: 11px 13px;
+  border-radius: 14px;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.55;
+}
+
+.dashboard-warning-box {
+  border: 1px solid #fde68a;
+  background: #fffbeb;
+  color: #92400e;
+}
+
+.dashboard-note-box {
+  border: 1px solid #bfdbfe;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+@media (max-width: 560px) {
+  .dashboard-warning-box,
+  .dashboard-note-box {
+    padding: 10px;
+    font-size: 12px;
+  }
+}
+/* =====================================================
+   DASHBOARD LIMIT WARNING
+   ===================================================== */
+
+.dashboard-warning-box,
+.dashboard-note-box {
+  margin-top: 12px;
+  padding: 11px 13px;
+  border-radius: 14px;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.55;
+}
+
+.dashboard-warning-box {
+  border: 1px solid #fde68a;
+  background: #fffbeb;
+  color: #92400e;
+}
+
+.dashboard-note-box {
+  border: 1px solid #bfdbfe;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+@media (max-width: 560px) {
+  .dashboard-warning-box,
+  .dashboard-note-box {
+    padding: 10px;
+    font-size: 12px;
+  }
+}
+/* =====================================================
+   SYSTEM CHECK
+   ===================================================== */
+
+.system-check-section {
+  overflow: hidden;
+}
+
+.system-check-result {
+  padding: 16px;
+}
+
+.system-check-summary {
+  margin-bottom: 12px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.system-check-summary.is-pass {
+  border: 1px solid #bbf7d0;
+  background: #f0fdf4;
+  color: #166534;
+}
+
+.system-check-summary.is-warn {
+  border: 1px solid #fde68a;
+  background: #fffbeb;
+  color: #92400e;
+}
+
+.system-check-list {
+  display: grid;
+  gap: 10px;
+}
+
+.system-check-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: #ffffff;
+}
+
+.system-check-item div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.system-check-item strong {
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.system-check-item span {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.system-check-item b {
+  flex: 0 0 auto;
+  min-width: 58px;
+  padding: 5px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  text-align: center;
+}
+
+.system-check-item.is-pass b {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.system-check-item.is-fail b {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+@media (max-width: 560px) {
+  .system-check-result {
+    padding: 12px;
+  }
+
+  .system-check-item {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .system-check-item b {
+    width: fit-content;
+  }
+}
