@@ -118,15 +118,60 @@
             Refresh ผู้ใช้
           </button>
         </section>
-       <section id="modeSwitcher" class="mode-switcher hidden">
-  <button id="adminModeBtn" class="mode-btn active" type="button">
-    Admin Console
-  </button>
 
-  <button id="userModeBtn" class="mode-btn" type="button">
-    User Dashboard
-  </button>
-</section>
+        <section id="modeSwitcher" class="mode-switcher hidden">
+          <button id="adminModeBtn" class="mode-btn active" type="button">
+            Admin Console
+          </button>
+
+          <button id="userModeBtn" class="mode-btn" type="button">
+            User Dashboard
+          </button>
+        </section>
+
+
+        <!-- QUICK MENU / STATUS CARDS -->
+        <section class="grid admin-debug-only">
+          <article class="card">
+            <h3>สถานะ API</h3>
+            <p id="healthResult">-</p>
+          </article>
+
+          <article class="card">
+            <h3>ผู้ใช้งาน</h3>
+            <p id="meResult">-</p>
+          </article>
+
+          <article class="card">
+            <h3>Dashboard</h3>
+            <p id="dashboardResult">ยังไม่ได้โหลดข้อมูล</p>
+
+            <button id="loadDashboardsBtn" class="btn btn-secondary" type="button">
+              โหลด Dashboard
+            </button>
+          </article>
+
+          <article class="card">
+            <h3>แหล่งข้อมูล</h3>
+            <p id="sourceResult">ยังไม่ได้โหลดข้อมูล</p>
+
+            <button id="loadSourcesBtn" class="btn btn-secondary" type="button">
+              โหลดแหล่งข้อมูล
+            </button>
+          </article>
+
+          <article class="card admin-only">
+            <h3>Dashboard Designer</h3>
+            <p>
+              วิเคราะห์ข้อมูล เลือกกราฟ เลือก Card กำหนด Comparison และดู Preview ก่อน Publish
+            </p>
+
+            <button id="openDesignerBtn" class="btn btn-primary" type="button">
+              เปิด Dashboard Designer
+            </button>
+          </article>
+        </section>
+
 
         <!-- SOURCE MANAGER -->
         <section class="admin-layout admin-only">
@@ -222,7 +267,7 @@
 
 
         <!-- SHEET + MAPPING -->
-        <section class="admin-layout">
+        <section class="admin-layout admin-only">
           <article class="panel">
             <div class="panel-header">
               <div>
@@ -260,10 +305,10 @@
 
 
         <!-- DASHBOARD PREVIEW -->
-       <section class="panel admin-only">
-  <div class="panel-header">
-    <div>
-      <h3>Dashboard Preview จาก Mapping</h3>
+        <section class="panel admin-only">
+          <div class="panel-header">
+            <div>
+              <h3>Dashboard Preview จาก Mapping</h3>
               <p>สร้าง KPI / กราฟ / ตารางตัวอย่างจากโครงสร้างข้อมูลที่บันทึกไว้</p>
             </div>
 
@@ -311,687 +356,676 @@
           </div>
         </section>
 
-          <!-- ================= DASHBOARD DESIGNER / BUILDER ================= -->
-<section id="dashboardDesignerSection" class="designer-section admin-only">
-  <article class="panel designer-panel-main">
 
-    <div class="panel-header designer-header">
-      <div>
-        <h3>Dashboard Designer</h3>
-        <p>
-          วิเคราะห์ข้อมูลจาก Google Sheet แล้วเลือก Card / Chart / Table /
-          Comparison / Layout ได้เอง พร้อมดูตัวอย่างก่อนบันทึก
-        </p>
-      </div>
+        <!-- DASHBOARD DESIGNER / BUILDER -->
+        <section id="dashboardDesignerSection" class="designer-section admin-only">
+          <article class="panel designer-panel-main">
 
-      <div class="designer-header-actions">
-        <button id="designerReloadBtn" class="btn btn-secondary" type="button">
-          โหลดข้อมูล Designer
-        </button>
+            <div class="panel-header designer-header">
+              <div>
+                <h3>Dashboard Designer</h3>
+                <p>
+                  วิเคราะห์ข้อมูลจาก Google Sheet แล้วเลือก Card / Chart / Table /
+                  Comparison / Layout ได้เอง พร้อมดูตัวอย่างก่อนบันทึก
+                </p>
+              </div>
 
-        <button id="designerResetBtn" class="btn btn-ghost" type="button">
-          ล้างค่า
-        </button>
-      </div>
-    </div>
+              <div class="designer-header-actions">
+                <button id="designerReloadBtn" class="btn btn-secondary" type="button">
+                  โหลดข้อมูล Designer
+                </button>
 
-    <!-- STEP STATUS -->
-    <div class="designer-stepper">
-      <div class="designer-step active" data-step="1">
-        <strong>1</strong>
-        <span>เลือกข้อมูล</span>
-      </div>
+                <button id="designerResetBtn" class="btn btn-ghost" type="button">
+                  ล้างค่า
+                </button>
+              </div>
+            </div>
 
-      <div class="designer-step" data-step="2">
-        <strong>2</strong>
-        <span>วิเคราะห์ Field</span>
-      </div>
+            <div class="designer-stepper">
+              <div class="designer-step active" data-step="1">
+                <strong>1</strong>
+                <span>เลือกข้อมูล</span>
+              </div>
 
-      <div class="designer-step" data-step="3">
-        <strong>3</strong>
-        <span>เลือก Widget</span>
-      </div>
+              <div class="designer-step" data-step="2">
+                <strong>2</strong>
+                <span>วิเคราะห์ Field</span>
+              </div>
 
-      <div class="designer-step" data-step="4">
-        <strong>4</strong>
-        <span>ตั้งค่า / เปรียบเทียบ</span>
-      </div>
+              <div class="designer-step" data-step="3">
+                <strong>3</strong>
+                <span>เลือก Widget</span>
+              </div>
 
-      <div class="designer-step" data-step="5">
-        <strong>5</strong>
-        <span>Preview / Save</span>
-      </div>
-    </div>
+              <div class="designer-step" data-step="4">
+                <strong>4</strong>
+                <span>ตั้งค่า / เปรียบเทียบ</span>
+              </div>
 
-    <!-- DESIGNER BODY -->
-    <div class="designer-shell">
+              <div class="designer-step" data-step="5">
+                <strong>5</strong>
+                <span>Preview / Save</span>
+              </div>
+            </div>
 
-      <!-- LEFT: DATA PANEL -->
-      <aside class="designer-panel designer-data-panel">
-        <div class="designer-panel-title">
-          <h4>1. เลือกข้อมูล</h4>
-          <p>เลือกแหล่งข้อมูลและชีทที่ต้องการออกแบบ Dashboard</p>
-        </div>
+            <div class="designer-shell">
 
-        <div class="designer-form-grid">
-          <label class="field">
-            <span>Dashboard ที่ต้องการออกแบบ</span>
-            <select id="designerDashboardSelect">
-              <option value="">เลือก Dashboard</option>
-            </select>
-          </label>
+              <!-- LEFT: DATA PANEL -->
+              <aside class="designer-panel designer-data-panel">
+                <div class="designer-panel-title">
+                  <h4>1. เลือกข้อมูล</h4>
+                  <p>เลือกแหล่งข้อมูลและชีทที่ต้องการออกแบบ Dashboard</p>
+                </div>
 
-          <label class="field">
-            <span>ประเภท Dashboard</span>
-            <select id="designerDashboardType">
-              <option value="operation">Operation</option>
-              <option value="warehouse">Warehouse</option>
-              <option value="safety">Safety / Incident</option>
-              <option value="executive">Executive</option>
-              <option value="monitor">Command Center</option>
-              <option value="other">Other</option>
-            </select>
-          </label>
+                <div class="designer-form-grid">
+                  <label class="field">
+                    <span>Dashboard ที่ต้องการออกแบบ</span>
+                    <select id="designerDashboardSelect">
+                      <option value="">เลือก Dashboard</option>
+                    </select>
+                  </label>
 
-          <label class="field">
-            <span>Source</span>
-            <select id="designerSourceSelect">
-              <option value="">เลือก Source</option>
-            </select>
-          </label>
+                  <label class="field">
+                    <span>ประเภท Dashboard</span>
+                    <select id="designerDashboardType">
+                      <option value="operation">Operation</option>
+                      <option value="warehouse">Warehouse</option>
+                      <option value="safety">Safety / Incident</option>
+                      <option value="executive">Executive</option>
+                      <option value="monitor">Command Center</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </label>
 
-          <label class="field">
-            <span>Sheet</span>
-            <select id="designerSheetSelect">
-              <option value="">เลือก Sheet</option>
-            </select>
-          </label>
+                  <label class="field">
+                    <span>Source</span>
+                    <select id="designerSourceSelect">
+                      <option value="">เลือก Source</option>
+                    </select>
+                  </label>
 
-          <label class="field">
-            <span>จำนวนแถวตัวอย่าง</span>
-            <select id="designerSampleLimit">
-              <option value="100">100 แถว</option>
-              <option value="200" selected>200 แถว</option>
-              <option value="300">300 แถว</option>
-            </select>
-          </label>
-        </div>
+                  <label class="field">
+                    <span>Sheet</span>
+                    <select id="designerSheetSelect">
+                      <option value="">เลือก Sheet</option>
+                    </select>
+                  </label>
 
-        <div class="designer-action-stack">
-          <button id="designerAnalyzeBtn" class="btn btn-primary" type="button">
-            วิเคราะห์ข้อมูล
-          </button>
+                  <label class="field">
+                    <span>จำนวนแถวตัวอย่าง</span>
+                    <select id="designerSampleLimit">
+                      <option value="100">100 แถว</option>
+                      <option value="200" selected>200 แถว</option>
+                      <option value="300">300 แถว</option>
+                    </select>
+                  </label>
+                </div>
 
-          <button id="designerSuggestBtn" class="btn btn-secondary" type="button">
-            แนะนำ Widget
-          </button>
-        </div>
+                <div class="designer-action-stack">
+                  <button id="designerAnalyzeBtn" class="btn btn-primary" type="button">
+                    วิเคราะห์ข้อมูล
+                  </button>
 
-        <p id="designerMessage" class="form-message"></p>
+                  <button id="designerSuggestBtn" class="btn btn-secondary" type="button">
+                    แนะนำ Widget
+                  </button>
+                </div>
 
-        <div class="designer-mini-summary">
-          <h5>สรุปข้อมูลที่ตรวจพบ</h5>
-          <div id="designerDetectedSummary" class="designer-summary-box empty">
-            ยังไม่ได้วิเคราะห์ข้อมูล
-          </div>
-        </div>
-      </aside>
+                <p id="designerMessage" class="form-message"></p>
+
+                <div class="designer-mini-summary">
+                  <h5>สรุปข้อมูลที่ตรวจพบ</h5>
+                  <div id="designerDetectedSummary" class="designer-summary-box empty">
+                    ยังไม่ได้วิเคราะห์ข้อมูล
+                  </div>
+                </div>
+              </aside>
 
 
-      <!-- CENTER: FIELD + WIDGET CONFIG -->
-      <section class="designer-panel designer-config-panel">
+              <!-- CENTER: FIELD + WIDGET CONFIG -->
+              <section class="designer-panel designer-config-panel">
 
-        <!-- FIELD ANALYSIS -->
-        <div class="designer-block">
-          <div class="designer-block-header">
+                <div class="designer-block">
+                  <div class="designer-block-header">
+                    <div>
+                      <h4>2. Field Analysis</h4>
+                      <p>ระบบจะเดาว่าคอลัมน์ใดคือวันที่ ตัวเลข หมวดหมู่ สถานะ หรือข้อมูลสำหรับ Filter</p>
+                    </div>
+
+                    <button id="designerSaveFieldAnalysisBtn" class="btn btn-ghost" type="button">
+                      บันทึกการแก้ไข Field
+                    </button>
+                  </div>
+
+                  <div id="designerFieldList" class="field-analysis-list empty">
+                    กด “วิเคราะห์ข้อมูล” เพื่อแสดง Field ที่ตรวจพบ
+                  </div>
+                </div>
+
+
+                <div class="designer-block">
+                  <div class="designer-block-header">
+                    <div>
+                      <h4>3. Widget Gallery</h4>
+                      <p>เลือกชนิดการแสดงผลที่ต้องการ เช่น KPI, Line, Bar, Donut, Ranking หรือ Table</p>
+                    </div>
+                  </div>
+
+                  <div id="designerWidgetGallery" class="widget-gallery empty">
+                    กำลังรอโหลด Widget Template
+                  </div>
+                </div>
+
+
+                <div class="designer-block">
+                  <div class="designer-block-header">
+                    <div>
+                      <h4>Widget ที่ระบบแนะนำ</h4>
+                      <p>ระบบจะแนะนำจากชนิดข้อมูลที่วิเคราะห์ได้ และคุณสามารถเลือก/แก้ไขเองได้</p>
+                    </div>
+                  </div>
+
+                  <div id="designerSuggestedWidgets" class="suggested-widget-list empty">
+                    กด “แนะนำ Widget” เพื่อให้ระบบสร้างรายการแนะนำ
+                  </div>
+                </div>
+
+
+                <div class="designer-block">
+                  <div class="designer-block-header">
+                    <div>
+                      <h4>4. ตั้งค่า Widget</h4>
+                      <p>เลือก Field, สูตรคำนวณ, สี, Limit, Sort และการแสดงผล</p>
+                    </div>
+                  </div>
+
+                  <div class="widget-config-form">
+                    <div class="form-grid">
+                      <label class="field">
+                        <span>Widget Type</span>
+                        <select id="designerWidgetType">
+                          <option value="">เลือก Widget</option>
+                          <option value="kpi">KPI Card</option>
+                          <option value="line">Line Chart</option>
+                          <option value="bar">Bar Chart</option>
+                          <option value="donut">Donut Chart</option>
+                          <option value="stacked_bar">Stacked Bar</option>
+                          <option value="gauge">Gauge</option>
+                          <option value="ranking">Ranking</option>
+                          <option value="table">Table / Card List</option>
+                          <option value="heatmap">Heatmap</option>
+                        </select>
+                      </label>
+
+                      <label class="field">
+                        <span>ชื่อ Widget</span>
+                        <input id="designerWidgetTitle" type="text" placeholder="เช่น จำนวนพาเลทแยกตาม DC">
+                      </label>
+
+                      <label class="field">
+                        <span>Date Field</span>
+                        <select id="designerDateField">
+                          <option value="">ไม่ใช้</option>
+                        </select>
+                      </label>
+
+                      <label class="field">
+                        <span>X / Category Field</span>
+                        <select id="designerXField">
+                          <option value="">ไม่ใช้</option>
+                        </select>
+                      </label>
+
+                      <label class="field">
+                        <span>Value Field</span>
+                        <select id="designerValueField">
+                          <option value="">นับจำนวนรายการ</option>
+                        </select>
+                      </label>
+
+                      <label class="field">
+                        <span>Group / Stack Field</span>
+                        <select id="designerStackField">
+                          <option value="">ไม่ใช้</option>
+                        </select>
+                      </label>
+
+                      <label class="field">
+                        <span>วิธีคำนวณ</span>
+                        <select id="designerAggregate">
+                          <option value="count">Count - นับจำนวน</option>
+                          <option value="sum">Sum - รวม</option>
+                          <option value="avg">Average - ค่าเฉลี่ย</option>
+                          <option value="min">Min - ค่าน้อยสุด</option>
+                          <option value="max">Max - ค่าสูงสุด</option>
+                          <option value="distinct">Distinct - นับไม่ซ้ำ</option>
+                        </select>
+                      </label>
+
+                      <label class="field">
+                        <span>หน่วย</span>
+                        <input id="designerUnit" type="text" placeholder="เช่น รายการ, แผ่น, ครั้ง, บาท, %">
+                      </label>
+
+                      <label class="field">
+                        <span>Sort</span>
+                        <select id="designerSortMethod">
+                          <option value="desc">มากไปน้อย</option>
+                          <option value="asc">น้อยไปมาก</option>
+                        </select>
+                      </label>
+
+                      <label class="field">
+                        <span>Limit</span>
+                        <input id="designerLimit" type="number" min="0" step="1" placeholder="เช่น 10">
+                      </label>
+
+                      <label class="field">
+                        <span>Theme</span>
+                        <select id="designerTheme">
+                          <option value="executive_blue">Executive Blue</option>
+                        </select>
+                      </label>
+
+                      <label class="field">
+                        <span>Target Value</span>
+                        <input id="designerTargetValue" type="number" step="0.01" placeholder="ใช้กับ Gauge / Target">
+                      </label>
+                    </div>
+
+                    <div class="option-grid">
+                      <label class="check-card">
+                        <input id="designerShowLegend" type="checkbox" checked>
+                        <span>แสดง Legend</span>
+                      </label>
+
+                      <label class="check-card">
+                        <input id="designerShowLabel" type="checkbox">
+                        <span>แสดง Label</span>
+                      </label>
+
+                      <label class="check-card">
+                        <input id="designerShowPercent" type="checkbox">
+                        <span>แสดง %</span>
+                      </label>
+
+                      <label class="check-card">
+                        <input id="designerEnableExport" type="checkbox" checked>
+                        <span>Export ได้</span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+
+                <div class="designer-block">
+                  <div class="designer-block-header">
+                    <div>
+                      <h4>Comparison Builder</h4>
+                      <p>กำหนดว่าจะเปรียบเทียบข้อมูลกับอะไร เช่น Target หรือหมวดหมู่ A เทียบ B</p>
+                    </div>
+                  </div>
+
+                  <div class="comparison-builder">
+                    <label class="check-card compare-enable">
+                      <input id="designerCompareEnabled" type="checkbox">
+                      <span>เปิดการเปรียบเทียบ</span>
+                    </label>
+
+                    <div class="form-grid">
+                      <label class="field">
+                        <span>Compare Type</span>
+                        <select id="designerCompareType">
+                          <option value="none">ไม่เปรียบเทียบ</option>
+                          <option value="target">ค่าจริงเทียบ Target</option>
+                          <option value="category_vs_category">หมวดหมู่ A เทียบหมวดหมู่ B</option>
+                          <option value="previous_month">เดือนนี้เทียบเดือนก่อน</option>
+                          <option value="moving_average">เทียบค่าเฉลี่ยย้อนหลัง</option>
+                        </select>
+                      </label>
+
+                      <label class="field">
+                        <span>Category Field</span>
+                        <select id="designerCompareCategoryField">
+                          <option value="">ไม่ใช้</option>
+                        </select>
+                      </label>
+
+                      <label class="field">
+                        <span>Category A</span>
+                        <input id="designerCompareCategoryA" type="text" placeholder="เช่น 906">
+                      </label>
+
+                      <label class="field">
+                        <span>Category B</span>
+                        <input id="designerCompareCategoryB" type="text" placeholder="เช่น 903">
+                      </label>
+
+                      <label class="field">
+                        <span>Target Value</span>
+                        <input id="designerCompareTargetValue" type="number" step="0.01" placeholder="เช่น 100">
+                      </label>
+
+                      <label class="field">
+                        <span>Average Window</span>
+                        <input id="designerCompareAverageWindow" type="number" min="1" step="1" placeholder="เช่น 7">
+                      </label>
+                    </div>
+
+                    <div class="actions-row">
+                      <button id="designerComparisonPreviewBtn" class="btn btn-secondary" type="button">
+                        Preview Comparison
+                      </button>
+                    </div>
+
+                    <div id="designerComparisonResult" class="comparison-result empty">
+                      ยังไม่ได้คำนวณ Comparison
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+
+              <!-- RIGHT: LIVE PREVIEW -->
+              <aside class="designer-panel designer-preview-panel">
+                <div class="designer-panel-title">
+                  <h4>5. Live Preview</h4>
+                  <p>ดูตัวอย่างจากข้อมูลจริงก่อนบันทึก Widget</p>
+                </div>
+
+                <div class="preview-toolbar">
+                  <button id="designerMiniPreviewBtn" class="btn btn-ghost" type="button">
+                    Mini Preview
+                  </button>
+
+                  <button id="designerRealPreviewBtn" class="btn btn-primary" type="button">
+                    Preview จากข้อมูลจริง
+                  </button>
+                </div>
+
+                <div id="designerLivePreview" class="designer-live-preview empty">
+                  เลือก Widget และกด Preview เพื่อแสดงตัวอย่าง
+                </div>
+
+                <div class="designer-save-box">
+                  <button id="designerSaveWidgetBtn" class="btn btn-primary" type="button">
+                    บันทึก Widget
+                  </button>
+
+                  <button id="designerUpdateWidgetBtn" class="btn btn-secondary" type="button" disabled>
+                    อัปเดต Widget
+                  </button>
+                </div>
+
+                <div class="device-layout-box">
+                  <h5>Device Layout</h5>
+
+                  <div class="device-tabs">
+                    <button class="device-tab active" type="button" data-device="desktop">
+                      Desktop
+                    </button>
+                    <button class="device-tab" type="button" data-device="tablet">
+                      Tablet
+                    </button>
+                    <button class="device-tab" type="button" data-device="mobile">
+                      Mobile
+                    </button>
+                  </div>
+
+                  <div class="form-grid device-layout-form">
+                    <label class="field">
+                      <span>Desktop W</span>
+                      <input id="designerDesktopW" type="number" min="1" max="12" value="4">
+                    </label>
+
+                    <label class="field">
+                      <span>Desktop H</span>
+                      <input id="designerDesktopH" type="number" min="1" max="12" value="3">
+                    </label>
+
+                    <label class="field">
+                      <span>Tablet Order</span>
+                      <input id="designerTabletOrder" type="number" min="1" value="1">
+                    </label>
+
+                    <label class="field">
+                      <span>Mobile Order</span>
+                      <input id="designerMobileOrder" type="number" min="1" value="1">
+                    </label>
+                  </div>
+
+                  <label class="check-card">
+                    <input id="designerMobileHidden" type="checkbox">
+                    <span>ซ่อน Widget นี้บนมือถือ</span>
+                  </label>
+                </div>
+              </aside>
+            </div>
+
+
+            <div class="designer-saved-section">
+              <div class="designer-block-header">
+                <div>
+                  <h4>Widget ที่บันทึกแล้ว</h4>
+                  <p>รายการ Widget ที่อยู่ใน Dashboard นี้ สามารถเลือกกลับมาแก้ไขหรือลบได้</p>
+                </div>
+
+                <button id="designerLoadSavedWidgetsBtn" class="btn btn-secondary" type="button">
+                  โหลด Widget เดิม
+                </button>
+              </div>
+
+              <div id="designerSavedWidgetList" class="saved-widget-list empty">
+                ยังไม่มี Widget ที่บันทึกไว้
+              </div>
+            </div>
+
+          </article>
+        </section>
+
+
+        <!-- DASHBOARD MANAGEMENT -->
+        <section class="panel admin-only dashboard-management-section">
+          <div class="panel-header">
             <div>
-              <h4>2. Field Analysis</h4>
-              <p>ระบบจะเดาว่าคอลัมน์ใดคือวันที่ ตัวเลข หมวดหมู่ สถานะ หรือข้อมูลสำหรับ Filter</p>
-            </div>
-
-            <button id="designerSaveFieldAnalysisBtn" class="btn btn-ghost" type="button">
-              บันทึกการแก้ไข Field
-            </button>
-          </div>
-
-          <div id="designerFieldList" class="field-analysis-list empty">
-            กด “วิเคราะห์ข้อมูล” เพื่อแสดง Field ที่ตรวจพบ
-          </div>
-        </div>
-
-
-        <!-- WIDGET GALLERY -->
-        <div class="designer-block">
-          <div class="designer-block-header">
-            <div>
-              <h4>3. Widget Gallery</h4>
-              <p>เลือกชนิดการแสดงผลที่ต้องการ เช่น KPI, Line, Bar, Donut, Ranking หรือ Table</p>
-            </div>
-          </div>
-
-          <div id="designerWidgetGallery" class="widget-gallery empty">
-            กำลังรอโหลด Widget Template
-          </div>
-        </div>
-
-
-        <!-- SUGGESTED WIDGETS -->
-        <div class="designer-block">
-          <div class="designer-block-header">
-            <div>
-              <h4>Widget ที่ระบบแนะนำ</h4>
-              <p>ระบบจะแนะนำจากชนิดข้อมูลที่วิเคราะห์ได้ และคุณสามารถเลือก/แก้ไขเองได้</p>
-            </div>
-          </div>
-
-          <div id="designerSuggestedWidgets" class="suggested-widget-list empty">
-            กด “แนะนำ Widget” เพื่อให้ระบบสร้างรายการแนะนำ
-          </div>
-        </div>
-
-
-        <!-- WIDGET CONFIG -->
-        <div class="designer-block">
-          <div class="designer-block-header">
-            <div>
-              <h4>4. ตั้งค่า Widget</h4>
-              <p>เลือก Field, สูตรคำนวณ, สี, Limit, Sort และการแสดงผล</p>
-            </div>
-          </div>
-
-          <div class="widget-config-form">
-
-            <div class="form-grid">
-              <label class="field">
-                <span>Widget Type</span>
-                <select id="designerWidgetType">
-                  <option value="">เลือก Widget</option>
-                  <option value="kpi">KPI Card</option>
-                  <option value="line">Line Chart</option>
-                  <option value="bar">Bar Chart</option>
-                  <option value="donut">Donut Chart</option>
-                  <option value="stacked_bar">Stacked Bar</option>
-                  <option value="gauge">Gauge</option>
-                  <option value="ranking">Ranking</option>
-                  <option value="table">Table / Card List</option>
-                  <option value="heatmap">Heatmap</option>
-                </select>
-              </label>
-
-              <label class="field">
-                <span>ชื่อ Widget</span>
-                <input id="designerWidgetTitle" type="text" placeholder="เช่น จำนวนพาเลทแยกตาม DC">
-              </label>
-
-              <label class="field">
-                <span>Date Field</span>
-                <select id="designerDateField">
-                  <option value="">ไม่ใช้</option>
-                </select>
-              </label>
-
-              <label class="field">
-                <span>X / Category Field</span>
-                <select id="designerXField">
-                  <option value="">ไม่ใช้</option>
-                </select>
-              </label>
-
-              <label class="field">
-                <span>Value Field</span>
-                <select id="designerValueField">
-                  <option value="">นับจำนวนรายการ</option>
-                </select>
-              </label>
-
-              <label class="field">
-                <span>Group / Stack Field</span>
-                <select id="designerStackField">
-                  <option value="">ไม่ใช้</option>
-                </select>
-              </label>
-
-              <label class="field">
-                <span>วิธีคำนวณ</span>
-                <select id="designerAggregate">
-                  <option value="count">Count - นับจำนวน</option>
-                  <option value="sum">Sum - รวม</option>
-                  <option value="avg">Average - ค่าเฉลี่ย</option>
-                  <option value="min">Min - ค่าน้อยสุด</option>
-                  <option value="max">Max - ค่าสูงสุด</option>
-                  <option value="distinct">Distinct - นับไม่ซ้ำ</option>
-                </select>
-              </label>
-
-              <label class="field">
-                <span>หน่วย</span>
-                <input id="designerUnit" type="text" placeholder="เช่น รายการ, แผ่น, ครั้ง, บาท, %">
-              </label>
-
-              <label class="field">
-                <span>Sort</span>
-                <select id="designerSortMethod">
-                  <option value="desc">มากไปน้อย</option>
-                  <option value="asc">น้อยไปมาก</option>
-                </select>
-              </label>
-
-              <label class="field">
-                <span>Limit</span>
-                <input id="designerLimit" type="number" min="0" step="1" placeholder="เช่น 10">
-              </label>
-
-              <label class="field">
-                <span>Theme</span>
-                <select id="designerTheme">
-                  <option value="executive_blue">Executive Blue</option>
-                </select>
-              </label>
-
-              <label class="field">
-                <span>Target Value</span>
-                <input id="designerTargetValue" type="number" step="0.01" placeholder="ใช้กับ Gauge / Target">
-              </label>
-            </div>
-
-            <div class="option-grid">
-              <label class="check-card">
-                <input id="designerShowLegend" type="checkbox" checked>
-                <span>แสดง Legend</span>
-              </label>
-
-              <label class="check-card">
-                <input id="designerShowLabel" type="checkbox">
-                <span>แสดง Label</span>
-              </label>
-
-              <label class="check-card">
-                <input id="designerShowPercent" type="checkbox">
-                <span>แสดง %</span>
-              </label>
-
-              <label class="check-card">
-                <input id="designerEnableExport" type="checkbox" checked>
-                <span>Export ได้</span>
-              </label>
-            </div>
-          </div>
-        </div>
-
-
-        <!-- COMPARISON BUILDER -->
-        <div class="designer-block">
-          <div class="designer-block-header">
-            <div>
-              <h4>Comparison Builder</h4>
-              <p>กำหนดว่าจะเปรียบเทียบข้อมูลกับอะไร เช่น Target หรือหมวดหมู่ A เทียบ B</p>
-            </div>
-          </div>
-
-          <div class="comparison-builder">
-            <label class="check-card compare-enable">
-              <input id="designerCompareEnabled" type="checkbox">
-              <span>เปิดการเปรียบเทียบ</span>
-            </label>
-
-            <div class="form-grid">
-              <label class="field">
-                <span>Compare Type</span>
-                <select id="designerCompareType">
-                  <option value="none">ไม่เปรียบเทียบ</option>
-                  <option value="target">ค่าจริงเทียบ Target</option>
-                  <option value="category_vs_category">หมวดหมู่ A เทียบหมวดหมู่ B</option>
-                  <option value="previous_month">เดือนนี้เทียบเดือนก่อน</option>
-                  <option value="moving_average">เทียบค่าเฉลี่ยย้อนหลัง</option>
-                </select>
-              </label>
-
-              <label class="field">
-                <span>Category Field</span>
-                <select id="designerCompareCategoryField">
-                  <option value="">ไม่ใช้</option>
-                </select>
-              </label>
-
-              <label class="field">
-                <span>Category A</span>
-                <input id="designerCompareCategoryA" type="text" placeholder="เช่น 906">
-              </label>
-
-              <label class="field">
-                <span>Category B</span>
-                <input id="designerCompareCategoryB" type="text" placeholder="เช่น 903">
-              </label>
-
-              <label class="field">
-                <span>Target Value</span>
-                <input id="designerCompareTargetValue" type="number" step="0.01" placeholder="เช่น 100">
-              </label>
-
-              <label class="field">
-                <span>Average Window</span>
-                <input id="designerCompareAverageWindow" type="number" min="1" step="1" placeholder="เช่น 7">
-              </label>
+              <h3>จัดการ Dashboard ที่สร้างแล้ว</h3>
+              <p>
+                แก้ชื่อ Dashboard, ประเภท, Publish, Export, สิทธิ์การมองเห็น และลบแบบ Soft Delete
+              </p>
             </div>
 
             <div class="actions-row">
-              <button id="designerComparisonPreviewBtn" class="btn btn-secondary" type="button">
-                Preview Comparison
+              <button id="reloadManageDashboardsBtn" class="btn btn-secondary" type="button">
+                โหลดรายการ Dashboard
               </button>
             </div>
+          </div>
 
-            <div id="designerComparisonResult" class="comparison-result empty">
-              ยังไม่ได้คำนวณ Comparison
+          <div class="dashboard-manage-box">
+            <div class="form-grid">
+              <div class="dashboard-manage-toolbar field-wide">
+                <label class="field">
+                  <span>ค้นหา Dashboard</span>
+                  <input
+                    id="manageDashboardSearch"
+                    type="text"
+                    placeholder="ค้นหาจากชื่อ / ID / ประเภท"
+                  >
+                </label>
+
+                <label class="field">
+                  <span>กรองประเภท</span>
+                  <select id="manageDashboardTypeFilter">
+                    <option value="">ทุกประเภท</option>
+                    <option value="Operation">Operation</option>
+                    <option value="Performance">Performance</option>
+                    <option value="Audit">Audit</option>
+                    <option value="Vehicle">Vehicle</option>
+                    <option value="Inventory">Inventory</option>
+                    <option value="Incident">Incident / Error</option>
+                    <option value="Custom">Custom</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </label>
+
+                <label class="field">
+                  <span>สถานะ</span>
+                  <select id="manageDashboardStatusFilter">
+                    <option value="">ทั้งหมด</option>
+                    <option value="published">Published</option>
+                    <option value="unpublished">Unpublished</option>
+                    <option value="export_on">Export เปิด</option>
+                    <option value="export_off">Export ปิด</option>
+                  </select>
+                </label>
+              </div>
+
+              <div class="dashboard-manage-count" id="manageDashboardCount">
+                Dashboard ทั้งหมด 0 รายการ
+              </div>
+
+              <label class="field field-wide">
+                <span>เลือก Dashboard ที่ต้องการจัดการ</span>
+                <select id="manageDashboardSelect">
+                  <option value="">ยังไม่มีรายการ Dashboard</option>
+                </select>
+              </label>
+
+              <label class="field">
+                <span>ชื่อ Dashboard</span>
+                <input
+                  id="manageDashboardName"
+                  type="text"
+                  placeholder="ชื่อ Dashboard"
+                >
+              </label>
+
+              <label class="field">
+                <span>ประเภท Dashboard</span>
+                <select id="manageDashboardType">
+                  <option value="Operation">Operation</option>
+                  <option value="Performance">Performance</option>
+                  <option value="Audit">Audit</option>
+                  <option value="Vehicle">Vehicle</option>
+                  <option value="Inventory">Inventory</option>
+                  <option value="Incident">Incident / Error</option>
+                  <option value="Custom">Custom</option>
+                  <option value="Other">Other</option>
+                </select>
+              </label>
+
+              <label class="field field-wide">
+                <span>คำอธิบาย</span>
+                <input
+                  id="manageDashboardDescription"
+                  type="text"
+                  placeholder="คำอธิบาย Dashboard"
+                >
+              </label>
+            </div>
+
+            <div class="dashboard-toggle-grid">
+              <label class="toggle-card">
+                <input id="manageDashboardPublish" type="checkbox">
+                <span>
+                  <strong>Publish</strong>
+                  <small>เปิดให้ผู้ใช้เห็น Dashboard นี้</small>
+                </span>
+              </label>
+
+              <label class="toggle-card">
+                <input id="manageDashboardExport" type="checkbox">
+                <span>
+                  <strong>Export CSV</strong>
+                  <small>อนุญาตให้ส่งออกข้อมูลได้</small>
+                </span>
+              </label>
+
+              <label class="toggle-card">
+                <input id="manageDashboardHidden" type="checkbox">
+                <span>
+                  <strong>ซ่อน Dashboard</strong>
+                  <small>ซ่อนจากผู้ใช้ทั่วไปโดยไม่ลบข้อมูล</small>
+                </span>
+              </label>
+            </div>
+
+            <div class="permission-box">
+              <div class="permission-title">
+                สิทธิ์ที่มองเห็น Dashboard
+              </div>
+
+              <div class="permission-grid">
+                <label>
+                  <input class="manage-dashboard-role" type="checkbox" value="Super Admin">
+                  <span>Super Admin</span>
+                </label>
+
+                <label>
+                  <input class="manage-dashboard-role" type="checkbox" value="Admin">
+                  <span>Admin</span>
+                </label>
+
+                <label>
+                  <input class="manage-dashboard-role" type="checkbox" value="Editor">
+                  <span>Editor</span>
+                </label>
+
+                <label>
+                  <input class="manage-dashboard-role" type="checkbox" value="User">
+                  <span>User</span>
+                </label>
+
+                <label>
+                  <input class="manage-dashboard-role" type="checkbox" value="Viewer">
+                  <span>Viewer</span>
+                </label>
+              </div>
+            </div>
+
+            <div class="actions-row dashboard-manage-actions">
+              <button id="saveManageDashboardBtn" class="btn btn-primary" type="button">
+                บันทึกการแก้ไข
+              </button>
+
+              <button id="regenerateManageDashboardBtn" class="btn btn-secondary" type="button">
+                Regenerate จาก Mapping ล่าสุด
+              </button>
+
+              <button id="hideManageDashboardBtn" class="btn btn-secondary" type="button">
+                ซ่อน / เปิดกลับ
+              </button>
+
+              <button id="deleteManageDashboardBtn" class="btn btn-danger" type="button">
+                Soft Delete
+              </button>
+
+              <span id="manageDashboardMessage" class="mapping-message"></span>
+            </div>
+
+            <div id="manageDashboardSummary" class="dashboard-manage-summary empty">
+              เลือก Dashboard เพื่อดูรายละเอียดและแก้ไข
+            </div>
+
+            <div class="dashboard-card-list-wrap">
+              <div class="dashboard-card-list-header">
+                <h4>รายการ Dashboard</h4>
+                <span id="manageDashboardCardCount">0 รายการ</span>
+              </div>
+
+              <div id="manageDashboardCardList" class="dashboard-card-list empty">
+                กดโหลดรายการ Dashboard เพื่อแสดงรายการ
+              </div>
             </div>
           </div>
-        </div>
-      </section>
-
-    <article class="card admin-only">
-  <h3>Dashboard Designer</h3>
-  <p>
-    วิเคราะห์ข้อมูล เลือกกราฟ เลือก Card กำหนด Comparison และดู Preview ก่อน Publish
-  </p>
-  <button id="openDesignerBtn" class="btn btn-primary" type="button">
-    เปิด Dashboard Designer
-  </button>
-</article>
-      <!-- RIGHT: LIVE PREVIEW -->
-      <aside class="designer-panel designer-preview-panel">
-        <div class="designer-panel-title">
-          <h4>5. Live Preview</h4>
-          <p>ดูตัวอย่างจากข้อมูลจริงก่อนบันทึก Widget</p>
-        </div>
-
-        <div class="preview-toolbar">
-          <button id="designerMiniPreviewBtn" class="btn btn-ghost" type="button">
-            Mini Preview
-          </button>
-
-          <button id="designerRealPreviewBtn" class="btn btn-primary" type="button">
-            Preview จากข้อมูลจริง
-          </button>
-        </div>
-
-        <div id="designerLivePreview" class="designer-live-preview empty">
-          เลือก Widget และกด Preview เพื่อแสดงตัวอย่าง
-        </div>
-
-        <div class="designer-save-box">
-          <button id="designerSaveWidgetBtn" class="btn btn-primary" type="button">
-            บันทึก Widget
-          </button>
-
-          <button id="designerUpdateWidgetBtn" class="btn btn-secondary" type="button" disabled>
-            อัปเดต Widget
-          </button>
-        </div>
-
-        <div class="device-layout-box">
-          <h5>Device Layout</h5>
-
-          <div class="device-tabs">
-            <button class="device-tab active" type="button" data-device="desktop">
-              Desktop
-            </button>
-            <button class="device-tab" type="button" data-device="tablet">
-              Tablet
-            </button>
-            <button class="device-tab" type="button" data-device="mobile">
-              Mobile
-            </button>
-          </div>
-
-          <div class="form-grid device-layout-form">
-            <label class="field">
-              <span>Desktop W</span>
-              <input id="designerDesktopW" type="number" min="1" max="12" value="4">
-            </label>
-
-            <label class="field">
-              <span>Desktop H</span>
-              <input id="designerDesktopH" type="number" min="1" max="12" value="3">
-            </label>
-
-            <label class="field">
-              <span>Tablet Order</span>
-              <input id="designerTabletOrder" type="number" min="1" value="1">
-            </label>
-
-            <label class="field">
-              <span>Mobile Order</span>
-              <input id="designerMobileOrder" type="number" min="1" value="1">
-            </label>
-          </div>
-
-          <label class="check-card">
-            <input id="designerMobileHidden" type="checkbox">
-            <span>ซ่อน Widget นี้บนมือถือ</span>
-          </label>
-        </div>
-      </aside>
-    </div>
+        </section>
 
 
-    <!-- SAVED WIDGET LIST -->
-    <div class="designer-saved-section">
-      <div class="designer-block-header">
-        <div>
-          <h4>Widget ที่บันทึกแล้ว</h4>
-          <p>รายการ Widget ที่อยู่ใน Dashboard นี้ สามารถเลือกกลับมาแก้ไขหรือลบได้</p>
-        </div>
-
-        <button id="designerLoadSavedWidgetsBtn" class="btn btn-secondary" type="button">
-          โหลด Widget เดิม
-        </button>
-      </div>
-
-      <div id="designerSavedWidgetList" class="saved-widget-list empty">
-        ยังไม่มี Widget ที่บันทึกไว้
-      </div>
-    </div>
-
-  </article>
-</section>
-      <!-- DASHBOARD MANAGEMENT -->
-<section class="panel admin-only dashboard-management-section">
-  <div class="panel-header">
-    <div>
-      <h3>จัดการ Dashboard ที่สร้างแล้ว</h3>
-      <p>
-        แก้ชื่อ Dashboard, ประเภท, Publish, Export, สิทธิ์การมองเห็น และลบแบบ Soft Delete
-      </p>
-    </div>
-
-    <div class="actions-row">
-      <button id="reloadManageDashboardsBtn" class="btn btn-secondary" type="button">
-        โหลดรายการ Dashboard
-      </button>
-    </div>
-  </div>
-
-  <div class="dashboard-manage-box">
-    <div class="form-grid">
-     <div class="dashboard-manage-toolbar field-wide">
-  <label class="field">
-    <span>ค้นหา Dashboard</span>
-    <input
-      id="manageDashboardSearch"
-      type="text"
-      placeholder="ค้นหาจากชื่อ / ID / ประเภท"
-    >
-  </label>
-
-  <label class="field">
-    <span>กรองประเภท</span>
-    <select id="manageDashboardTypeFilter">
-      <option value="">ทุกประเภท</option>
-      <option value="Operation">Operation</option>
-      <option value="Performance">Performance</option>
-      <option value="Audit">Audit</option>
-      <option value="Vehicle">Vehicle</option>
-      <option value="Inventory">Inventory</option>
-      <option value="Incident">Incident / Error</option>
-      <option value="Custom">Custom</option>
-      <option value="Other">Other</option>
-    </select>
-  </label>
-
-  <label class="field">
-    <span>สถานะ</span>
-    <select id="manageDashboardStatusFilter">
-      <option value="">ทั้งหมด</option>
-      <option value="published">Published</option>
-      <option value="unpublished">Unpublished</option>
-      <option value="export_on">Export เปิด</option>
-      <option value="export_off">Export ปิด</option>
-    </select>
-  </label>
-</div>
-
-<div class="dashboard-manage-count" id="manageDashboardCount">
-  Dashboard ทั้งหมด 0 รายการ
-</div>
-
-<label class="field field-wide">
-  <span>เลือก Dashboard ที่ต้องการจัดการ</span>
-  <select id="manageDashboardSelect">
-    <option value="">ยังไม่มีรายการ Dashboard</option>
-  </select>
-</label>
-
-      <label class="field">
-        <span>ชื่อ Dashboard</span>
-        <input
-          id="manageDashboardName"
-          type="text"
-          placeholder="ชื่อ Dashboard"
-        >
-      </label>
-
-      <label class="field">
-        <span>ประเภท Dashboard</span>
-        <select id="manageDashboardType">
-          <option value="Operation">Operation</option>
-          <option value="Performance">Performance</option>
-          <option value="Audit">Audit</option>
-          <option value="Vehicle">Vehicle</option>
-          <option value="Inventory">Inventory</option>
-          <option value="Incident">Incident / Error</option>
-          <option value="Custom">Custom</option>
-          <option value="Other">Other</option>
-        </select>
-      </label>
-
-      <label class="field field-wide">
-        <span>คำอธิบาย</span>
-        <input
-          id="manageDashboardDescription"
-          type="text"
-          placeholder="คำอธิบาย Dashboard"
-        >
-      </label>
-    </div>
-
-    <div class="dashboard-toggle-grid">
-      <label class="toggle-card">
-        <input id="manageDashboardPublish" type="checkbox">
-        <span>
-          <strong>Publish</strong>
-          <small>เปิดให้ผู้ใช้เห็น Dashboard นี้</small>
-        </span>
-      </label>
-
-      <label class="toggle-card">
-        <input id="manageDashboardExport" type="checkbox">
-        <span>
-          <strong>Export CSV</strong>
-          <small>อนุญาตให้ส่งออกข้อมูลได้</small>
-        </span>
-      </label>
-
-      <label class="toggle-card">
-        <input id="manageDashboardHidden" type="checkbox">
-        <span>
-          <strong>ซ่อน Dashboard</strong>
-          <small>ซ่อนจากผู้ใช้ทั่วไปโดยไม่ลบข้อมูล</small>
-        </span>
-      </label>
-    </div>
-
-    <div class="permission-box">
-      <div class="permission-title">
-        สิทธิ์ที่มองเห็น Dashboard
-      </div>
-
-      <div class="permission-grid">
-        <label>
-          <input class="manage-dashboard-role" type="checkbox" value="Super Admin">
-          <span>Super Admin</span>
-        </label>
-
-        <label>
-          <input class="manage-dashboard-role" type="checkbox" value="Admin">
-          <span>Admin</span>
-        </label>
-
-        <label>
-          <input class="manage-dashboard-role" type="checkbox" value="Editor">
-          <span>Editor</span>
-        </label>
-
-        <label>
-          <input class="manage-dashboard-role" type="checkbox" value="User">
-          <span>User</span>
-        </label>
-
-        <label>
-          <input class="manage-dashboard-role" type="checkbox" value="Viewer">
-          <span>Viewer</span>
-        </label>
-      </div>
-    </div>
-
-    <div class="actions-row dashboard-manage-actions">
-  <button id="saveManageDashboardBtn" class="btn btn-primary" type="button">
-    บันทึกการแก้ไข
-  </button>
-
-  <button id="regenerateManageDashboardBtn" class="btn btn-secondary" type="button">
-    Regenerate จาก Mapping ล่าสุด
-  </button>
-
-  <button id="hideManageDashboardBtn" class="btn btn-secondary" type="button">
-    ซ่อน / เปิดกลับ
-  </button>
-
-  <button id="deleteManageDashboardBtn" class="btn btn-danger" type="button">
-    Soft Delete
-  </button>
-
-  <span id="manageDashboardMessage" class="mapping-message"></span>
-</div>
-
-    <div id="manageDashboardSummary" class="dashboard-manage-summary empty">
-      เลือก Dashboard เพื่อดูรายละเอียดและแก้ไข
-    </div>
-    <div class="dashboard-card-list-wrap">
-  <div class="dashboard-card-list-header">
-    <h4>รายการ Dashboard</h4>
-    <span id="manageDashboardCardCount">0 รายการ</span>
-  </div>
-
-  <div id="manageDashboardCardList" class="dashboard-card-list empty">
-    กดโหลดรายการ Dashboard เพื่อแสดงรายการ
-  </div>
-</div>
-  </div>
-</section>
         <!-- DASHBOARD VIEWER -->
         <section class="panel user-dashboard-section">
-  <div class="panel-header">
-    <div>
-      <h3>Dashboard Viewer</h3>
+          <div class="panel-header">
+            <div>
+              <h3>Dashboard Viewer</h3>
               <p>เปิดดู Dashboard ที่บันทึกจริงแล้วจาก Google Sheet Config</p>
             </div>
 
@@ -1026,36 +1060,33 @@
               เมื่อเปิด Dashboard แล้ว ระบบจะแสดงตัวกรองที่ตั้งไว้ตรงนี้
             </div>
 
-           <div class="dashboard-viewer-actions">
-  <button id="openDashboardBtn" class="btn btn-primary" type="button">
-    เปิด Dashboard
-  </button>
+            <div class="dashboard-viewer-actions">
+              <button id="openDashboardBtn" class="btn btn-primary" type="button">
+                เปิด Dashboard
+              </button>
 
-  <button id="refreshDashboardBtn" class="btn btn-secondary" type="button">
-    Refresh Dashboard
-  </button>
+              <button id="refreshDashboardBtn" class="btn btn-secondary" type="button">
+                Refresh Dashboard
+              </button>
 
-  <button id="applyDashboardFilterBtn" class="btn btn-secondary" type="button">
-    กรองข้อมูล Dashboard
-  </button>
+              <button id="applyDashboardFilterBtn" class="btn btn-secondary" type="button">
+                กรองข้อมูล Dashboard
+              </button>
 
-  <button id="resetDashboardFilterBtn" class="btn btn-ghost" type="button">
-    ล้างตัวกรอง
-  </button>
+              <button id="resetDashboardFilterBtn" class="btn btn-ghost" type="button">
+                ล้างตัวกรอง
+              </button>
 
-  <button id="exportDashboardBtn" class="btn btn-secondary" type="button">
-    Export CSV
-  </button>
+              <button id="exportDashboardBtn" class="btn btn-secondary" type="button">
+                Export CSV
+              </button>
 
-  <button id="exportDashboardExcelBtn" class="btn btn-secondary" type="button">
-    Export Excel
-  </button>
+              <button id="exportDashboardExcelBtn" class="btn btn-secondary" type="button">
+                Export Excel
+              </button>
 
-  <span id="dashboardViewMessage" class="mapping-message dashboard-viewer-message"></span>
-</div>
-              
-
-
+              <span id="dashboardViewMessage" class="mapping-message dashboard-viewer-message"></span>
+            </div>
           </div>
 
           <div id="dashboardViewResult" class="preview-box empty">
@@ -1064,211 +1095,183 @@
         </section>
 
 
-        <!-- STATUS CARDS -->
-        <section class="grid admin-debug-only">
-          <article class="card">
-            <h3>สถานะ API</h3>
-            <p id="healthResult">-</p>
-          </article>
+        <!-- USER MANAGEMENT -->
+        <section class="panel admin-only user-management-section">
+          <div class="panel-header">
+            <div>
+              <h3>จัดการผู้ใช้งานระบบ</h3>
+              <p>เพิ่มผู้ใช้ แก้สิทธิ์ Reset Password และเปิด/ปิดการใช้งาน</p>
+            </div>
 
-          <article class="card">
-            <h3>ผู้ใช้งาน</h3>
-            <p id="meResult">-</p>
-          </article>
+            <div class="actions-row">
+              <button id="reloadUsersBtn" class="btn btn-secondary" type="button">
+                โหลดรายชื่อผู้ใช้
+              </button>
+            </div>
+          </div>
 
-          <article class="card">
-            <h3>Dashboard</h3>
-            <p id="dashboardResult">ยังไม่ได้โหลดข้อมูล</p>
+          <div class="user-manage-box">
+            <div class="form-grid">
+              <label class="field">
+                <span>ชื่อผู้ใช้</span>
+                <input id="userManageUsername" type="text" placeholder="เช่น user01">
+              </label>
 
-            <button id="loadDashboardsBtn" class="btn btn-secondary" type="button">
-              โหลด Dashboard
-            </button>
-          </article>
+              <label class="field">
+                <span>ชื่อแสดงผล</span>
+                <input id="userManageDisplayName" type="text" placeholder="ชื่อที่แสดงในระบบ">
+              </label>
 
-          <article class="card">
-            <h3>แหล่งข้อมูล</h3>
-            <p id="sourceResult">ยังไม่ได้โหลดข้อมูล</p>
+              <label class="field">
+                <span>อีเมล</span>
+                <input id="userManageEmail" type="email" placeholder="example@email.com">
+              </label>
 
-            <button id="loadSourcesBtn" class="btn btn-secondary" type="button">
-              โหลดแหล่งข้อมูล
-            </button>
-          </article>
+              <label class="field">
+                <span>สิทธิ์หลัก</span>
+                <select id="userManageRole">
+                  <option value="Viewer">Viewer</option>
+                  <option value="User">User</option>
+                  <option value="Editor">Editor</option>
+                  <option value="Admin">Admin</option>
+                  <option value="Super Admin">Super Admin</option>
+                </select>
+              </label>
+
+              <label class="field">
+                <span>สถานะ</span>
+                <select id="userManageStatus">
+                  <option value="active">active</option>
+                  <option value="inactive">inactive</option>
+                </select>
+              </label>
+
+              <label class="field">
+                <span>รหัสผ่านเริ่มต้น</span>
+                <input id="userManagePassword" type="text" placeholder="ว่างไว้เพื่อให้ระบบสร้างอัตโนมัติ">
+              </label>
+
+              <label class="field field-wide">
+                <span>Dashboard ที่ดูได้</span>
+                <input id="userManageDashboards" type="text" placeholder="เช่น DASH_xxx,DASH_yyy หรือเว้นว่างไว้ตาม Role">
+              </label>
+            </div>
+
+            <div class="user-permission-grid">
+              <label class="check-item">
+                <input id="userCanExport" type="checkbox">
+                <span>Export ได้</span>
+              </label>
+
+              <label class="check-item">
+                <input id="userCanAddSource" type="checkbox">
+                <span>เพิ่มแหล่งข้อมูลได้</span>
+              </label>
+
+              <label class="check-item">
+                <input id="userCanEditDashboard" type="checkbox">
+                <span>แก้ไข Dashboard ได้</span>
+              </label>
+
+              <label class="check-item">
+                <input id="userCanViewAuditLog" type="checkbox">
+                <span>ดู Audit Log ได้</span>
+              </label>
+
+              <label class="check-item">
+                <input id="userCanManageUser" type="checkbox">
+                <span>จัดการ User ได้</span>
+              </label>
+            </div>
+
+            <div class="actions-row">
+              <button id="createUserBtn" class="btn btn-primary" type="button">
+                เพิ่มผู้ใช้ใหม่
+              </button>
+
+              <button id="updateUserBtn" class="btn btn-secondary" type="button">
+                บันทึกการแก้ไข
+              </button>
+
+              <button id="resetUserPasswordBtn" class="btn btn-ghost" type="button">
+                Reset Password
+              </button>
+
+              <button id="clearUserFormBtn" class="btn btn-ghost" type="button">
+                ล้างฟอร์ม
+              </button>
+
+              <span id="userManageMessage" class="mapping-message"></span>
+            </div>
+          </div>
+
+          <div class="user-list-wrap">
+            <div class="user-list-header">
+              <h4>รายการผู้ใช้งาน</h4>
+              <span id="userManageCount">0 รายการ</span>
+            </div>
+
+            <div id="userManageList" class="user-manage-list empty">
+              กดโหลดรายชื่อผู้ใช้เพื่อแสดงรายการ
+            </div>
+          </div>
         </section>
 
 
-        <!-- USER MANAGEMENT -->
-<section class="panel admin-only user-management-section">
-  <div class="panel-header">
-    <div>
-      <h3>จัดการผู้ใช้งานระบบ</h3>
-      <p>เพิ่มผู้ใช้ แก้สิทธิ์ Reset Password และเปิด/ปิดการใช้งาน</p>
-    </div>
+        <!-- AUDIT LOG VIEWER -->
+        <section class="panel admin-only audit-log-section">
+          <div class="panel-header">
+            <div>
+              <h3>ประวัติการใช้งานระบบ</h3>
+              <p>ดูรายการ Login, Save Mapping, Create Dashboard, Export, Error และการจัดการ Dashboard</p>
+            </div>
 
-    <div class="actions-row">
-      <button id="reloadUsersBtn" class="btn btn-secondary" type="button">
-        โหลดรายชื่อผู้ใช้
-      </button>
-    </div>
-  </div>
+            <div class="actions-row">
+              <select id="auditLimitSelect" class="compact-select">
+                <option value="50">ล่าสุด 50 รายการ</option>
+                <option value="100" selected>ล่าสุด 100 รายการ</option>
+                <option value="200">ล่าสุด 200 รายการ</option>
+                <option value="500">ล่าสุด 500 รายการ</option>
+              </select>
 
-  <div class="user-manage-box">
-    <div class="form-grid">
-      <label class="field">
-        <span>ชื่อผู้ใช้</span>
-        <input id="userManageUsername" type="text" placeholder="เช่น user01">
-      </label>
+              <button id="reloadAuditLogBtn" class="btn btn-secondary" type="button">
+                โหลดประวัติ
+              </button>
+            </div>
+          </div>
 
-      <label class="field">
-        <span>ชื่อแสดงผล</span>
-        <input id="userManageDisplayName" type="text" placeholder="ชื่อที่แสดงในระบบ">
-      </label>
-
-      <label class="field">
-        <span>อีเมล</span>
-        <input id="userManageEmail" type="email" placeholder="example@email.com">
-      </label>
-
-      <label class="field">
-        <span>สิทธิ์หลัก</span>
-        <select id="userManageRole">
-          <option value="Viewer">Viewer</option>
-          <option value="User">User</option>
-          <option value="Editor">Editor</option>
-          <option value="Admin">Admin</option>
-          <option value="Super Admin">Super Admin</option>
-        </select>
-      </label>
-
-      <label class="field">
-        <span>สถานะ</span>
-        <select id="userManageStatus">
-          <option value="active">active</option>
-          <option value="inactive">inactive</option>
-        </select>
-      </label>
-
-      <label class="field">
-        <span>รหัสผ่านเริ่มต้น</span>
-        <input id="userManagePassword" type="text" placeholder="ว่างไว้เพื่อให้ระบบสร้างอัตโนมัติ">
-      </label>
-
-      <label class="field field-wide">
-        <span>Dashboard ที่ดูได้</span>
-        <input id="userManageDashboards" type="text" placeholder="เช่น DASH_xxx,DASH_yyy หรือเว้นว่างไว้ตาม Role">
-      </label>
-    </div>
-
-    <div class="user-permission-grid">
-      <label class="check-item">
-        <input id="userCanExport" type="checkbox">
-        <span>Export ได้</span>
-      </label>
-
-      <label class="check-item">
-        <input id="userCanAddSource" type="checkbox">
-        <span>เพิ่มแหล่งข้อมูลได้</span>
-      </label>
-
-      <label class="check-item">
-        <input id="userCanEditDashboard" type="checkbox">
-        <span>แก้ไข Dashboard ได้</span>
-      </label>
-
-      <label class="check-item">
-        <input id="userCanViewAuditLog" type="checkbox">
-        <span>ดู Audit Log ได้</span>
-      </label>
-
-      <label class="check-item">
-        <input id="userCanManageUser" type="checkbox">
-        <span>จัดการ User ได้</span>
-      </label>
-    </div>
-
-    <div class="actions-row">
-      <button id="createUserBtn" class="btn btn-primary" type="button">
-        เพิ่มผู้ใช้ใหม่
-      </button>
-
-      <button id="updateUserBtn" class="btn btn-secondary" type="button">
-        บันทึกการแก้ไข
-      </button>
-
-      <button id="resetUserPasswordBtn" class="btn btn-ghost" type="button">
-        Reset Password
-      </button>
-
-      <button id="clearUserFormBtn" class="btn btn-ghost" type="button">
-        ล้างฟอร์ม
-      </button>
-
-      <span id="userManageMessage" class="mapping-message"></span>
-    </div>
-  </div>
-
-  <div class="user-list-wrap">
-    <div class="user-list-header">
-      <h4>รายการผู้ใช้งาน</h4>
-      <span id="userManageCount">0 รายการ</span>
-    </div>
-
-    <div id="userManageList" class="user-manage-list empty">
-      กดโหลดรายชื่อผู้ใช้เพื่อแสดงรายการ
-    </div>
-  </div>
-</section>
-<!-- AUDIT LOG VIEWER -->
-<section class="panel admin-only audit-log-section">
-  <div class="panel-header">
-    <div>
-      <h3>ประวัติการใช้งานระบบ</h3>
-      <p>ดูรายการ Login, Save Mapping, Create Dashboard, Export, Error และการจัดการ Dashboard</p>
-    </div>
-
-    <div class="actions-row">
-      <select id="auditLimitSelect" class="compact-select">
-        <option value="50">ล่าสุด 50 รายการ</option>
-        <option value="100" selected>ล่าสุด 100 รายการ</option>
-        <option value="200">ล่าสุด 200 รายการ</option>
-        <option value="500">ล่าสุด 500 รายการ</option>
-      </select>
-
-      <button id="reloadAuditLogBtn" class="btn btn-secondary" type="button">
-        โหลดประวัติ
-      </button>
-    </div>
-  </div>
-
-  <div id="auditLogResult" class="audit-log-result empty">
-    กดโหลดประวัติเพื่อดูรายการใช้งานล่าสุด
-  </div>
-</section>
+          <div id="auditLogResult" class="audit-log-result empty">
+            กดโหลดประวัติเพื่อดูรายการใช้งานล่าสุด
+          </div>
+        </section>
 
 
         <!-- SYSTEM CHECK -->
-<section class="panel admin-debug-only system-check-section">
-  <div class="panel-header">
-    <div>
-      <h3>ตรวจสอบระบบก่อนใช้งานจริง</h3>
-      <p>ตรวจ API, Version, Library, ปุ่มหลัก และสถานะ Frontend</p>
-    </div>
+        <section class="panel admin-debug-only system-check-section">
+          <div class="panel-header">
+            <div>
+              <h3>ตรวจสอบระบบก่อนใช้งานจริง</h3>
+              <p>ตรวจ API, Version, Library, ปุ่มหลัก และสถานะ Frontend</p>
+            </div>
 
-    <div class="actions-row">
-      <button id="runSystemCheckBtn" class="btn btn-secondary" type="button">
-        Run System Check
-      </button>
-    </div>
-  </div>
+            <div class="actions-row">
+              <button id="runSystemCheckBtn" class="btn btn-secondary" type="button">
+                Run System Check
+              </button>
+            </div>
+          </div>
 
-  <div id="systemCheckResult" class="system-check-result empty">
-    กด Run System Check เพื่อตรวจสอบระบบ
-  </div>
-</section>
+          <div id="systemCheckResult" class="system-check-result empty">
+            กด Run System Check เพื่อตรวจสอบระบบ
+          </div>
+        </section>
+
+
         <!-- DEBUG LOG -->
-       <section class="panel admin-debug-only">
-  <div class="panel-header">
-    <div>
-      <h3>ผลลัพธ์ API ล่าสุด</h3>
+        <section class="panel admin-debug-only">
+          <div class="panel-header">
+            <div>
+              <h3>ผลลัพธ์ API ล่าสุด</h3>
               <p>ใช้ตรวจสอบข้อมูลที่ Worker ส่งกลับมา</p>
             </div>
 
@@ -1285,13 +1288,13 @@
 
   </div>
 
-<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="./api.js?v=20260522-12"></script>
-<script src="./app.js?v=20260522-12"></script>
-<script>
-  window.DASHBOARD_FRONTEND_VERSION = '20260522-01';
-  console.log('Dashboard Frontend Version:', window.DASHBOARD_FRONTEND_VERSION);
-</script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="./api.js?v=20260528-builder-01"></script>
+  <script src="./app.js?v=20260528-builder-01"></script>
+  <script>
+    window.DASHBOARD_FRONTEND_VERSION = '20260528-builder-01';
+    console.log('Dashboard Frontend Version:', window.DASHBOARD_FRONTEND_VERSION);
+  </script>
 </body>
 </html>
