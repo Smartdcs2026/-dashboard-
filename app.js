@@ -234,23 +234,25 @@ const DASHBOARD_TABLE_PAGE_SIZE = 50;
 
   document.addEventListener('DOMContentLoaded', init);
 
-  async function init() {
-    bindEvents();
-    showLogin();
-    resetWorkingState();
+async function init() {
+  window.DASHBOARD_APP_READY = true;
 
-    if (FORCE_LOGIN_EVERY_OPEN && window.AnalyticsAPI && window.AnalyticsAPI.clearToken) {
-      window.AnalyticsAPI.clearToken();
-    }
+  bindEvents();
+  showLogin();
+  resetWorkingState();
 
-    await checkApiHealth();
-
-    if (!FORCE_LOGIN_EVERY_OPEN) {
-      await restoreSession();
-    } else {
-      showLogin();
-    }
+  if (FORCE_LOGIN_EVERY_OPEN && window.AnalyticsAPI && window.AnalyticsAPI.clearToken) {
+    window.AnalyticsAPI.clearToken();
   }
+
+  await checkApiHealth();
+
+  if (!FORCE_LOGIN_EVERY_OPEN) {
+    await restoreSession();
+  } else {
+    showLogin();
+  }
+}
 
   function bindEvents() {
     if (el.loginForm) {
