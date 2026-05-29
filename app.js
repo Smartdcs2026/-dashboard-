@@ -467,43 +467,60 @@ if (el.userManageCount) {
   }
 
   async function checkApiHealth() {
-    setApiStatus('กำลังตรวจสอบสถานะระบบ...', 'muted');
+  setApiStatus('กำลังตรวจสอบสถานะระบบ...', 'muted');
 
-    try {
-      const health = await window.AnalyticsAPI.health();
-      const setup = await window.AnalyticsAPI.setupStatus();
-
-      setApiStatus('เชื่อมต่อ API สำเร็จ: ' + (health.message || 'พร้อมใช้งาน'), 'success');
-
-      if (el.healthResult) {
-        el.healthResult.textContent =
-          'API พร้อมใช้งาน | Setup: ' + (setup.ok ? 'ครบถ้วน' : 'ยังไม่ครบ');
-      }
-
-      setSystemStatus('API พร้อมใช้งาน');
-
-      writeLog({
-        step: 'health',
-        health,
-        setup
-      });
-
-    } catch (error) {
-      setApiStatus(error.message, 'error');
-
-      if (el.healthResult) {
-        el.healthResult.textContent = 'เชื่อมต่อ API ไม่สำเร็จ';
-      }
-
-      setSystemStatus('API มีปัญหา');
-
-      writeLog({
-        step: 'health_error',
-        message: error.message,
-        payload: error.payload || null
-      });
+  try {
+    if (!window.AnalyticsAPI || typeof window.AnalyticsAPI.health !== 'function') {
+      throw new Error('ไม่พบ window.AnalyticsAPI.health กรุณาตรวจสอบ api.js');
     }
+
+    const health = await window.AnalyticsAPI.health();
+
+    let setup = {
+      ok: false,
+      message: 'ยังไม่ได้ตรวจ Setup'
+    };
+
+    if (typeof window.AnalyticsAPI.setupStatus === 'function') {
+      setup = await window.AnalyticsAPI.setupStatus();
+    }
+
+    setApiStatus(
+      'เชื่อมต่อ API สำเร็จ: ' + (health.message || 'พร้อมใช้งาน'),
+      'success'
+    );
+
+    if (el.healthResult) {
+      el.healthResult.textContent =
+        'API พร้อมใช้งาน | Setup: ' + (setup.ok ? 'ครบถ้วน' : 'ยังไม่ครบ');
+    }
+
+    setSystemStatus('API พร้อมใช้งาน');
+
+    writeLog({
+      step: 'health',
+      health,
+      setup
+    });
+
+  } catch (error) {
+    const message = error.message || 'ตรวจสอบ API ไม่สำเร็จ';
+
+    setApiStatus(message, 'error');
+
+    if (el.healthResult) {
+      el.healthResult.textContent = message;
+    }
+
+    setSystemStatus('API มีปัญหา');
+
+    writeLog({
+      step: 'health_error',
+      message: message,
+      payload: error.payload || null
+    });
   }
+}
 
   async function restoreSession() {
     const token = window.AnalyticsAPI.getToken();
