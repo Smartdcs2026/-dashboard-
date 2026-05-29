@@ -195,9 +195,10 @@ systemCheckResult: document.getElementById('systemCheckResult'),
   let selectedSourceId = '';
   let selectedSheetName = '';
   let lastHeadersData = null;
-  let currentDashboardId = '';
-  let currentDashboardFilters = [];
-    let manageDashboardsCache = [];
+ let currentDashboardId = '';
+let currentDashboardFilters = [];
+let dashboardsCache = [];
+let manageDashboardsCache = [];
   let selectedManageDashboard = null;
   let chartRenderQueue = [];
 let chartInstances = [];
@@ -445,9 +446,33 @@ if (el.manageDashboardStatusFilter) {
       el.dashboardFilterBox.textContent = 'เมื่อเปิด Dashboard แล้ว ระบบจะแสดงตัวกรองที่ตั้งไว้ตรงนี้';
     }
 
-    if (el.dashboardSelect) {
-      el.dashboardSelect.innerHTML = '<option value="">ยังไม่มีรายการ Dashboard</option>';
-    }
+    dashboardsCache = [];
+manageDashboardsCache = [];
+
+if (el.dashboardSelect) {
+  el.dashboardSelect.innerHTML = '<option value="">ยังไม่มีรายการ Dashboard</option>';
+}
+
+if (el.designerDashboardSelect) {
+  el.designerDashboardSelect.innerHTML = '<option value="">ยังไม่มี Dashboard ให้เลือก</option>';
+}
+
+if (el.manageDashboardSelect) {
+  el.manageDashboardSelect.innerHTML = '<option value="">ยังไม่มี Dashboard ให้เลือก</option>';
+}
+
+if (el.manageDashboardCardList) {
+  el.manageDashboardCardList.classList.add('empty');
+  el.manageDashboardCardList.textContent = 'ยังไม่มี Dashboard ให้จัดการ';
+}
+
+if (el.manageDashboardCount) {
+  el.manageDashboardCount.textContent = '0 รายการ';
+}
+
+if (el.manageDashboardCardCount) {
+  el.manageDashboardCardCount.textContent = '0 รายการ';
+}
 
     usersCache = [];
 selectedManageUserId = '';
@@ -1484,6 +1509,29 @@ applyRoleUi(currentUser);
            await loadDashboards();
       await loadDashboardOptions();
       await loadManageDashboards();
+      
+
+const newDashboardId = String(
+  data.dashboardId ||
+  data.id ||
+  data['รหัส Dashboard'] ||
+  ''
+).trim();
+
+if (newDashboardId) {
+  if (el.dashboardSelect) {
+    el.dashboardSelect.value = newDashboardId;
+  }
+
+  if (el.designerDashboardSelect) {
+    el.designerDashboardSelect.value = newDashboardId;
+  }
+
+  if (el.manageDashboardSelect) {
+    el.manageDashboardSelect.value = newDashboardId;
+    handleSelectManageDashboard();
+  }
+}
 
     } catch (error) {
       setCreateDashboardMessage(error.message);
@@ -1499,52 +1547,284 @@ applyRoleUi(currentUser);
     }
   }
 
-  async function loadDashboardOptions() {
-    if (!el.dashboardSelect) {
-      return;
+  function normalizeDashboardRows(data) {
+  if (!data) {
+    return [];
+  }
+
+  if (Array.isArray(data)) {
+    return data;
+  }
+
+  if (Array.isArray(data.dashboards)) {
+    return data.dashboards;
+  }
+
+  if (Array.isArray(data.rows)) {
+    return data.rows;
+  }
+
+  if (Array.isArray(data.items)) {
+    return data.items;
+  }
+
+  if (data.data && Array.isArray(data.data.dashboards)) {
+    return data.data.dashboards;
+  }
+
+  return [];
+}
+
+function getDashboardId(dash) {
+  dash = dash || {};
+
+  return String(
+    dash.dashboardId ||
+    dash.id ||
+    dash['รหัส Dashboard'] ||
+    ''
+  ).trim();
+}
+
+function getDashboardName(dash) {
+  dash = dash || {};
+  const id = getDashboardId(dash);
+
+  return String(
+    dash.dashboardName ||
+    dash.name ||
+    dash.title ||
+    dash['ชื่อ Dashboard'] ||
+    id ||
+    ''
+  ).trim();
+}
+
+function getDashboardType(dash) {
+  dash = dash || {};
+
+  return String(
+    dash.dashboardType ||
+    dash.type ||
+    dash['ประเภท Dashboard'] ||
+    ''
+  ).trim();
+}
+
+function getDashboardDescription(dash) {
+  dash = dash || {};
+
+  return String(
+    dash.description ||
+    dash.dashboardDescription ||
+    dash['คำอธิบาย'] ||
+    ''
+  ).trim();
+}
+
+function getDashboardPublish(dash) {
+  dash = dash || {};
+
+  return toBool(
+    dash.publish !== undefined
+      ? dash.publish
+      : dash.published !== undefined
+        ? dash.published
+        : dash['สถานะ Publish']
+  );
+}
+
+function getDashboardExport(dash) {
+  dash = dash || {};
+
+  return toBool(
+    dash.allowExport !== undefined
+      ? dash.allowExport
+      : dash.export !== undefined
+        ? dash.export
+        : dash['อนุญาต Export']
+  );
+}
+
+function getDashboardHidden(dash) {
+  dash = dash || {};
+
+  return toBool(
+    dash.hide !== undefined
+      ? dash.hide
+      : dash.hidden !== undefined
+        ? dash.hidden
+        : dash['ซ่อน Dashboard']
+  );
+}
+
+function getDashboardVisibility(dash) {
+  dash = dash || {};
+
+  return String(
+    dash.visibility ||
+    dash.allowedRoles ||
+    dash['สิทธิ์ที่มองเห็น'] ||
+    ''
+  ).trim();
+}
+  function renderAllDashboardDropdowns(dashboards) {
+  dashboards = Array.isArray(dashboards) ? dashboards : [];
+
+  renderDashboardViewerOptions(dashboards);
+  renderDesignerDashboardOptions(dashboards);
+  renderManageDashboardOptions(dashboards);
+
+  if (typeof renderManageDashboardCards === 'function') {
+    renderManageDashboardCards(dashboards);
+  }
+
+  if (typeof renderManageDashboardCount === 'function') {
+    renderManageDashboardCount(dashboards.length, dashboards.length);
+  } else {
+    if (el.manageDashboardCount) {
+      el.manageDashboardCount.textContent = dashboards.length.toLocaleString() + ' รายการ';
     }
 
-    el.dashboardSelect.innerHTML = '<option value="">กำลังโหลด...</option>';
-    setDashboardViewMessage('กำลังโหลดรายการ Dashboard...');
-
-    try {
-      const data = await window.AnalyticsAPI.listDashboards();
-      const dashboards = data.dashboards || [];
-
-      if (!dashboards.length) {
-        el.dashboardSelect.innerHTML = '<option value="">ยังไม่มี Dashboard</option>';
-        setDashboardViewMessage('ยังไม่มี Dashboard ที่บันทึกไว้');
-        return;
-      }
-
-      el.dashboardSelect.innerHTML =
-        '<option value="">เลือก Dashboard</option>' +
-        dashboards.map(function (dash) {
-          const id = dash['รหัส Dashboard'] || '';
-          const name = dash['ชื่อ Dashboard'] || id;
-          const type = dash['ประเภท Dashboard'] || '';
-
-          return `<option value="${escapeAttr(id)}">${escapeHtml(name)} (${escapeHtml(type)})</option>`;
-        }).join('');
-
-      setDashboardViewMessage('โหลด Dashboard แล้ว ' + dashboards.length + ' รายการ');
-
-      writeLog({
-        step: 'dashboard_options',
-        response: data
-      });
-
-    } catch (error) {
-      el.dashboardSelect.innerHTML = '<option value="">โหลด Dashboard ไม่สำเร็จ</option>';
-      setDashboardViewMessage(error.message);
-
-      writeLog({
-        step: 'dashboard_options_error',
-        message: error.message,
-        payload: error.payload || null
-      });
+    if (el.manageDashboardCardCount) {
+      el.manageDashboardCardCount.textContent = dashboards.length.toLocaleString() + ' รายการ';
     }
   }
+
+  if (el.dashboardResult) {
+    el.dashboardResult.textContent = dashboards.length
+      ? 'โหลด Dashboard แล้ว ' + dashboards.length.toLocaleString() + ' รายการ'
+      : 'ไม่พบ Dashboard';
+  }
+}
+
+function renderDashboardViewerOptions(dashboards) {
+  if (!el.dashboardSelect) {
+    return;
+  }
+
+  const currentValue = el.dashboardSelect.value || '';
+
+  if (!dashboards || !dashboards.length) {
+    el.dashboardSelect.innerHTML = '<option value="">ยังไม่มีรายการ Dashboard</option>';
+    return;
+  }
+
+  el.dashboardSelect.innerHTML =
+    '<option value="">เลือก Dashboard</option>' +
+    dashboards.map(function (dash) {
+      const id = getDashboardId(dash);
+      const name = getDashboardName(dash);
+      const type = getDashboardType(dash);
+      const publish = getDashboardPublish(dash);
+
+      return (
+        '<option value="' + escapeAttr(id) + '">' +
+        escapeHtml(name) +
+        (type ? ' (' + escapeHtml(type) + ')' : '') +
+        (publish ? '' : ' - Draft') +
+        '</option>'
+      );
+    }).join('');
+
+  if (currentValue && dashboards.some(function (dash) {
+    return getDashboardId(dash) === currentValue;
+  })) {
+    el.dashboardSelect.value = currentValue;
+  }
+}
+
+function renderDesignerDashboardOptions(dashboards) {
+  if (!el.designerDashboardSelect) {
+    return;
+  }
+
+  const currentValue = el.designerDashboardSelect.value || '';
+
+  if (!dashboards || !dashboards.length) {
+    el.designerDashboardSelect.innerHTML = '<option value="">ยังไม่มี Dashboard ให้เลือก</option>';
+    return;
+  }
+
+  el.designerDashboardSelect.innerHTML =
+    '<option value="">เลือก Dashboard ที่ต้องการออกแบบ</option>' +
+    dashboards.map(function (dash) {
+      const id = getDashboardId(dash);
+      const name = getDashboardName(dash);
+      const type = getDashboardType(dash);
+      const publish = getDashboardPublish(dash);
+
+      return (
+        '<option value="' + escapeAttr(id) + '">' +
+        escapeHtml(name) +
+        (type ? ' (' + escapeHtml(type) + ')' : '') +
+        (publish ? '' : ' - Draft') +
+        '</option>'
+      );
+    }).join('');
+
+  if (currentValue && dashboards.some(function (dash) {
+    return getDashboardId(dash) === currentValue;
+  })) {
+    el.designerDashboardSelect.value = currentValue;
+  }
+}
+  
+
+  async function loadDashboardOptions() {
+  try {
+    if (!window.AnalyticsAPI || typeof window.AnalyticsAPI.listDashboards !== 'function') {
+      throw new Error('ไม่พบ window.AnalyticsAPI.listDashboards กรุณาตรวจสอบ api.js');
+    }
+
+    if (el.dashboardResult) {
+      el.dashboardResult.textContent = 'กำลังโหลด Dashboard...';
+    }
+
+    const data = await window.AnalyticsAPI.listDashboards({
+      includeDeleted: true
+    });
+
+    const dashboards = normalizeDashboardRows(data);
+
+    dashboardsCache = dashboards;
+    manageDashboardsCache = dashboards;
+
+    renderAllDashboardDropdowns(dashboards);
+
+    writeLog({
+      step: 'dashboard_options_loaded',
+      total: dashboards.length,
+      response: data
+    });
+
+    return dashboards;
+
+  } catch (error) {
+    dashboardsCache = [];
+    manageDashboardsCache = [];
+
+    renderAllDashboardDropdowns([]);
+
+    const message = getFriendlyErrorMessage
+      ? getFriendlyErrorMessage(error)
+      : (error.message || 'โหลด Dashboard ไม่สำเร็จ');
+
+    if (el.dashboardResult) {
+      el.dashboardResult.textContent = message;
+    }
+
+    setDashboardViewMessage(message);
+
+    writeLog({
+      step: 'dashboard_options_load_error',
+      message: message,
+      payload: error.payload || null
+    });
+
+    return [];
+  }
+}
 async function handleRefreshDashboard() {
   const dashboardId = el.dashboardSelect ? el.dashboardSelect.value : '';
 
@@ -3718,11 +3998,74 @@ if (el.manageDashboardSummary) {
     }
   }
  function renderFilteredManageDashboardOptions() {
-  const dashboards = getFilteredManageDashboards();
+  let dashboards = Array.isArray(manageDashboardsCache) ? manageDashboardsCache.slice() : [];
+
+  const searchText = el.manageDashboardSearch
+    ? String(el.manageDashboardSearch.value || '').trim().toLowerCase()
+    : '';
+
+  const typeFilter = el.manageDashboardTypeFilter
+    ? String(el.manageDashboardTypeFilter.value || '').trim()
+    : '';
+
+  const statusFilter = el.manageDashboardStatusFilter
+    ? String(el.manageDashboardStatusFilter.value || '').trim()
+    : '';
+
+  if (searchText) {
+    dashboards = dashboards.filter(function (dash) {
+      const text = [
+        getDashboardId(dash),
+        getDashboardName(dash),
+        getDashboardType(dash),
+        getDashboardDescription(dash),
+        getDashboardVisibility(dash)
+      ].join(' ').toLowerCase();
+
+      return text.indexOf(searchText) >= 0;
+    });
+  }
+
+  if (typeFilter) {
+    dashboards = dashboards.filter(function (dash) {
+      return getDashboardType(dash) === typeFilter;
+    });
+  }
+
+  if (statusFilter) {
+    dashboards = dashboards.filter(function (dash) {
+      const publish = getDashboardPublish(dash);
+      const hidden = getDashboardHidden(dash);
+
+      if (statusFilter === 'published') {
+        return publish && !hidden;
+      }
+
+      if (statusFilter === 'draft') {
+        return !publish && !hidden;
+      }
+
+      if (statusFilter === 'hidden') {
+        return hidden;
+      }
+
+      return true;
+    });
+  }
 
   renderManageDashboardOptions(dashboards);
-  renderManageDashboardCards(dashboards);
-  renderManageDashboardCount(dashboards.length, manageDashboardsCache.length);
+
+  if (typeof renderManageDashboardCards === 'function') {
+    renderManageDashboardCards(dashboards);
+  }
+
+  if (typeof renderManageDashboardCount === 'function') {
+    renderManageDashboardCount(dashboards.length, manageDashboardsCache.length);
+  } else if (el.manageDashboardCount) {
+    el.manageDashboardCount.textContent =
+      dashboards.length.toLocaleString() + ' / ' +
+      manageDashboardsCache.length.toLocaleString() + ' รายการ';
+  }
 }
 
 function getFilteredManageDashboards() {
@@ -5329,29 +5672,109 @@ function buildHeatmapOption(title, data, chart) {
    * =====================================================
    */
 
-  async function initDashboardDesigner() {
-    try {
-      setDesignerMessage('กำลังโหลดข้อมูล Dashboard Designer...', 'muted');
+ async function initDashboardDesigner() {
+  try {
+    setDesignerMessage('กำลังโหลดข้อมูล Dashboard Designer...', 'muted');
 
-      await Promise.all([
-        loadDesignerThemes(),
-        loadDesignerWidgetTemplates(),
-        loadDesignerSources(),
-        loadDesignerDashboards()
-      ]);
+    /**
+     * โหลดข้อมูลหลักของ Designer
+     * - Theme
+     * - Widget Templates
+     * - Sources
+     * - Dashboards
+     */
+    const results = await Promise.allSettled([
+      loadDesignerThemes(),
+      loadDesignerWidgetTemplates(),
+      loadDesignerSources(),
+      loadDesignerDashboards()
+    ]);
 
-      setDesignerMessage('โหลด Dashboard Designer สำเร็จ', 'success');
-    } catch (error) {
-      setDesignerMessage(error.message || 'โหลด Dashboard Designer ไม่สำเร็จ', 'error');
+    const failed = results.filter(function (item) {
+      return item.status === 'rejected';
+    });
 
-      writeLog({
-        step: 'designer_init_error',
-        message: error.message,
-        payload: error.payload || null
-      });
+    if (failed.length) {
+      const firstError = failed[0].reason;
+      throw firstError || new Error('โหลดข้อมูลบางส่วนของ Dashboard Designer ไม่สำเร็จ');
     }
-  }
 
+    /**
+     * สำคัญ:
+     * ป้องกันกรณี loadDesignerDashboards โหลดแล้ว
+     * แต่ dropdown designerDashboardSelect ยังไม่ถูกเติมข้อมูล
+     */
+    if (el.designerDashboardSelect) {
+      if (dashboardsCache && dashboardsCache.length) {
+        renderDesignerDashboardOptions(dashboardsCache);
+      } else if (manageDashboardsCache && manageDashboardsCache.length) {
+        dashboardsCache = manageDashboardsCache.slice();
+        renderDesignerDashboardOptions(dashboardsCache);
+      } else {
+        const loadedDashboards = await loadDashboardOptions();
+
+        if (loadedDashboards && loadedDashboards.length) {
+          renderDesignerDashboardOptions(loadedDashboards);
+        } else {
+          el.designerDashboardSelect.innerHTML =
+            '<option value="">ยังไม่มี Dashboard ให้เลือก</option>';
+        }
+      }
+    }
+
+    /**
+     * ถ้ามี Dashboard ถูกเลือกอยู่แล้ว ให้ sync state ของ Designer
+     */
+    if (el.designerDashboardSelect && el.designerDashboardSelect.value) {
+      designerSelectedDashboardId = el.designerDashboardSelect.value;
+    } else {
+      designerSelectedDashboardId = '';
+    }
+
+    /**
+     * ถ้ามี Source ถูกเลือกอยู่แล้ว ให้ sync state ของ Designer
+     */
+    if (el.designerSourceSelect && el.designerSourceSelect.value) {
+      designerSelectedSourceId = el.designerSourceSelect.value;
+    }
+
+    /**
+     * ถ้ามี Sheet ถูกเลือกอยู่แล้ว ให้ sync state ของ Designer
+     */
+    if (el.designerSheetSelect && el.designerSheetSelect.value) {
+      designerSelectedSheetName = el.designerSheetSelect.value;
+    }
+
+    setDesignerMessage('โหลด Dashboard Designer สำเร็จ', 'success');
+
+    writeLog({
+      step: 'designer_init_success',
+      dashboards: dashboardsCache ? dashboardsCache.length : 0,
+      sources: sourcesCache ? sourcesCache.length : 0,
+      themes: designerThemesCache ? designerThemesCache.length : 0,
+      templates: designerWidgetTemplatesCache ? designerWidgetTemplatesCache.length : 0
+    });
+
+  } catch (error) {
+    const message = getFriendlyErrorMessage
+      ? getFriendlyErrorMessage(error)
+      : (error.message || 'โหลด Dashboard Designer ไม่สำเร็จ');
+
+    setDesignerMessage(message, 'error');
+
+    if (el.designerDashboardSelect && (!dashboardsCache || !dashboardsCache.length)) {
+      el.designerDashboardSelect.innerHTML =
+        '<option value="">โหลดรายการ Dashboard ไม่สำเร็จ</option>';
+    }
+
+    writeLog({
+      step: 'designer_init_error',
+      message: message,
+      payload: error.payload || null
+    });
+  }
+}
+  
 
   function resetDashboardDesigner() {
     designerFieldsCache = [];
