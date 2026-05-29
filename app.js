@@ -190,6 +190,43 @@ systemCheckResult: document.getElementById('systemCheckResult'),
     designerSavedWidgetList: document.getElementById('designerSavedWidgetList')
   };
 
+
+  /**
+   * Boolean helper ใช้ร่วมทุกส่วนของระบบ
+   * แก้ปัญหา runtime: toBool is not defined
+   */
+  function toBool(value) {
+    if (typeof value === 'boolean') {
+      return value;
+    }
+
+    if (typeof value === 'number') {
+      return value === 1;
+    }
+
+    const text = String(value === null || value === undefined ? '' : value)
+      .trim()
+      .toLowerCase();
+
+    return [
+      'true',
+      '1',
+      'yes',
+      'y',
+      'on',
+      'active',
+      'published',
+      'publish',
+      'เปิด',
+      'ใช่',
+      'จริง',
+      'เผยแพร่'
+    ].indexOf(text) >= 0;
+  }
+
+  // ให้เรียกจากส่วนอื่น/console ได้ด้วย ในกรณีมีโค้ดเก่าหรือ inline handler อ้างถึง
+  window.toBool = toBool;
+
   let currentUser = null;
   let sourcesCache = [];
   let selectedSourceId = '';
@@ -3535,16 +3572,6 @@ function renderSystemCheckResult(checks) {
     if (el.debugLog) {
       el.debugLog.textContent = 'ยังไม่มีข้อมูล';
     }
-  }
-
-    function toBool(value) {
-    if (typeof value === 'boolean') {
-      return value;
-    }
-
-    const text = String(value || '').trim().toLowerCase();
-
-    return ['true', '1', 'yes', 'y', 'on', 'เปิด', 'ใช่'].indexOf(text) >= 0;
   }
 
   function renderDataTypeOptions(selected) {
