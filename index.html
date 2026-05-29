@@ -1288,13 +1288,93 @@
 
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
- <script src="./api.js?v=20260529-fix05"></script>
-<script src="./app.js?v=20260529-fix05"></script>
-  <script>
-    window.DASHBOARD_FRONTEND_VERSION = '20260528-builder-01';
-    console.log('Dashboard Frontend Version:', window.DASHBOARD_FRONTEND_VERSION);
-  </script>
+<script>
+  window.DASHBOARD_FRONTEND_VERSION = '20260529-fix06';
+
+  window.DASHBOARD_BOOT_ERRORS = [];
+
+  window.showDashboardBootError = function (message, detail) {
+    try {
+      var box = document.getElementById('dashboardBootErrorBox');
+
+      if (!box) {
+        box = document.createElement('div');
+        box.id = 'dashboardBootErrorBox';
+        box.className = 'dashboard-boot-error-box';
+        document.body.appendChild(box);
+      }
+
+      box.innerHTML =
+        '<strong>ระบบหน้าเว็บโหลดไม่สมบูรณ์</strong>' +
+        '<div>' + String(message || 'Unknown Error') + '</div>' +
+        (detail ? '<small>' + String(detail) + '</small>' : '') +
+        '<div class="boot-error-hint">กรุณาตรวจสอบ api.js / app.js และกด Ctrl + F5 หลัง Deploy</div>';
+
+      window.DASHBOARD_BOOT_ERRORS.push({
+        message: message,
+        detail: detail,
+        time: new Date().toISOString()
+      });
+
+      console.error('[Dashboard Boot Error]', message, detail || '');
+    } catch (err) {
+      console.error('showDashboardBootError failed:', err);
+    }
+  };
+
+  window.addEventListener('error', function (event) {
+    var file = event.filename || '';
+    var message = event.message || 'Script Error';
+
+    if (
+      file.indexOf('api.js') >= 0 ||
+      file.indexOf('app.js') >= 0 ||
+      message.indexOf('AnalyticsAPI') >= 0
+    ) {
+      window.showDashboardBootError(message, file + ':' + event.lineno + ':' + event.colno);
+    }
+  });
+
+  window.addEventListener('unhandledrejection', function (event) {
+    var reason = event.reason || {};
+    var message = reason.message || String(reason || 'Unhandled Promise Rejection');
+
+    window.showDashboardBootError(message, 'unhandledrejection');
+  });
+
+  console.log('Dashboard Frontend Version:', window.DASHBOARD_FRONTEND_VERSION);
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="./api.js?v=20260529-fix06"></script>
+<script src="./app.js?v=20260529-fix06"></script>
+
+<script>
+  setTimeout(function () {
+    if (!window.AnalyticsAPI) {
+      window.showDashboardBootError(
+        'ไม่พบ window.AnalyticsAPI',
+        'api.js อาจโหลดไม่สำเร็จ หรือมี Syntax Error'
+      );
+      return;
+    }
+
+    if (typeof window.AnalyticsAPI.health !== 'function') {
+      window.showDashboardBootError(
+        'ไม่พบ window.AnalyticsAPI.health',
+        'ตรวจสอบ export ใน api.js'
+      );
+      return;
+    }
+
+    if (!window.DASHBOARD_APP_READY) {
+      window.showDashboardBootError(
+        'app.js ยังไม่ได้เริ่มทำงาน',
+        'ตรวจสอบ Syntax Error หรือ init() ใน app.js'
+      );
+    }
+  }, 2500);
+</script>
 </body>
 </html>
