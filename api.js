@@ -769,21 +769,27 @@ enableUser,
 
 clearCache,
 auditLog,
+       themes,
+    widgetTemplates,
+    fieldAnalysis,
+    analyzeSheet,
+    suggestWidgets,
+    widgetPreview,
+    comparisonPreview,
+    saveWidget,
+    updateWidget,
+    deleteWidget,
+    dashboardDesignerLoad,
+
     /**
-     * Dashboard Builder / Designer
+     * Alias กันชื่อ API เก่า/ใหม่ไม่ตรงกัน
      */
-    themes,
-widgetTemplates,
-fieldAnalysis,
-analyzeSheet,
-suggestWidgets,
-widgetPreview,
-comparisonPreview,
-saveWidget,
-updateWidget,
-deleteWidget,
-dashboardDesignerLoad,
-    dashboards,
-dashboardBuilderView
+    dashboards: listDashboards,
+    sources: listSources,
+    sourceSheets: listSourceSheets,
+
+    dashboardBuilderView
+  };
+})();
   };
 })();
