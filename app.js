@@ -232,7 +232,9 @@ let currentBuilderPalette = [];
   
 const DASHBOARD_TABLE_PAGE_SIZE = 50;
 
-  document.addEventListener('DOMContentLoaded', init);
+ window.DASHBOARD_APP_READY = false;
+
+document.addEventListener('DOMContentLoaded', init);
 
 async function init() {
   window.DASHBOARD_APP_READY = true;
@@ -253,7 +255,6 @@ async function init() {
     showLogin();
   }
 }
-
   function bindEvents() {
     if (el.loginForm) {
       el.loginForm.addEventListener('submit', handleLogin);
