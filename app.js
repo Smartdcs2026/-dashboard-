@@ -7021,7 +7021,13 @@ function buildHeatmapOption(title, data, chart) {
  * ใช้แสดง Widget ที่สร้างจาก Dashboard Designer
  * =====================================================
  */
-
+let currentBuilderFilters = {
+  dateField: '',
+  dateFrom: '',
+  dateTo: '',
+  categoryFilters: [],
+  keyword: ''
+};
 async function handleOpenDashboardSmart() {
   const dashboardId = el.dashboardSelect ? String(el.dashboardSelect.value || '').trim() : '';
 
@@ -7088,9 +7094,10 @@ async function handleOpenDashboardBuilderView() {
     clearBuilderChartInstances();
 
     const result = await window.AnalyticsAPI.dashboardBuilderView({
-      dashboardId: dashboardId,
-      limit: limit
-    });
+  dashboardId: dashboardId,
+  limit: limit,
+  filters: currentBuilderFilters || {}
+});
 
     if (!result.ok) {
       throw new Error(result.message || 'โหลด Dashboard Builder ไม่สำเร็จ');
@@ -7128,6 +7135,7 @@ function renderDashboardBuilderView(result) {
   }
 
   applyDashboardBuilderTheme(theme);
+  renderBuilderFilterBox(result);
 
   const visibleWidgets = widgets
     .filter(function (widget) {
@@ -8011,5 +8019,265 @@ function downloadBlob(blob, fileName) {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
   }, 0);
+}
+  /**
+ * =====================================================
+ * Dashboard Builder Filters
+ * =====================================================
+ */
+
+function renderBuilderFilterBox(result) {
+  if (!el.dashboardFilterBox) {
+    return;
+  }
+
+  const fields = collectBuilderFilterFields(result);
+  const dateFields = fields.dateFields;
+  const categoryFields = fields.categoryFields;
+
+  el.dashboardFilterBox.classList.remove('empty');
+
+  el.dashboardFilterBox.innerHTML = [
+    '<div class="builder-filter-panel">',
+      '<div class="builder-filter-head">',
+        '<div>',
+          '<h4>ตัวกรอง Dashboard Builder</h4>',
+          '<p>เลือกช่วงวันที่ หมวดหมู่ หรือค้นหาข้อมูล เพื่อคำนวณ Widget ใหม่จากข้อมูลที่กรองแล้ว</p>',
+        '</div>',
+        '<button id="builderClearFiltersBtn" class="btn btn-ghost" type="button">ล้าง Filter</button>',
+      '</div>',
+
+      '<div class="builder-filter-grid">',
+        '<label class="field">',
+          '<span>Date Field</span>',
+          '<select id="builderFilterDateField">',
+            '<option value="">ไม่ใช้วันที่</option>',
+            dateFields.map(function (field) {
+              return '<option value="' + escapeHtml(field) + '">' + escapeHtml(field) + '</option>';
+            }).join(''),
+          '</select>',
+        '</label>',
+
+        '<label class="field">',
+          '<span>ตั้งแต่วันที่</span>',
+          '<input id="builderFilterDateFrom" type="date">',
+        '</label>',
+
+        '<label class="field">',
+          '<span>ถึงวันที่</span>',
+          '<input id="builderFilterDateTo" type="date">',
+        '</label>',
+
+        '<label class="field">',
+          '<span>ค้นหา Keyword</span>',
+          '<input id="builderFilterKeyword" type="text" placeholder="ค้นหาทุกคอลัมน์">',
+        '</label>',
+      '</div>',
+
+      '<div class="builder-category-filter-box">',
+        '<div class="builder-category-filter-title">Category Filters</div>',
+        categoryFields.length
+          ? categoryFields.map(renderBuilderCategoryFilterControl).join('')
+          : '<div class="builder-filter-empty">ไม่พบ Field ที่เหมาะกับ Category Filter</div>',
+      '</div>',
+
+      '<div class="actions-row builder-filter-actions">',
+        '<button id="builderApplyFiltersBtn" class="btn btn-primary" type="button">ใช้ Filter</button>',
+        '<span id="builderFilterSummary" class="mapping-message"></span>',
+      '</div>',
+    '</div>'
+  ].join('');
+
+  setBuilderFilterValuesToUi();
+  bindBuilderFilterEvents();
+}
+
+
+function collectBuilderFilterFields(result) {
+  const widgets = Array.isArray(result.widgets) ? result.widgets : [];
+  const dateMap = {};
+  const categoryMap = {};
+
+  widgets.forEach(function (widget) {
+    if (!widget || !widget.config) {
+      return;
+    }
+
+    const config = widget.config || {};
+
+    if (config.dateField) {
+      dateMap[config.dateField] = true;
+    }
+
+    if (config.xField && config.widgetType !== 'line') {
+      categoryMap[config.xField] = true;
+    }
+
+    if (config.categoryField) {
+      categoryMap[config.categoryField] = true;
+    }
+
+    if (config.stackField) {
+      categoryMap[config.stackField] = true;
+    }
+  });
+
+  return {
+    dateFields: Object.keys(dateMap),
+    categoryFields: Object.keys(categoryMap)
+  };
+}
+
+
+function renderBuilderCategoryFilterControl(field) {
+  return [
+    '<label class="builder-category-filter-item">',
+      '<span>', escapeHtml(field), '</span>',
+      '<input ',
+        'type="text" ',
+        'data-builder-category-filter="', escapeHtml(field), '" ',
+        'placeholder="เช่น 906,903 หรือ Open,Closed"',
+      '>',
+    '</label>'
+  ].join('');
+}
+
+
+function bindBuilderFilterEvents() {
+  const applyBtn = document.getElementById('builderApplyFiltersBtn');
+  const clearBtn = document.getElementById('builderClearFiltersBtn');
+
+  if (applyBtn) {
+    applyBtn.addEventListener('click', async function () {
+      currentBuilderFilters = collectBuilderFiltersFromUi();
+      setBuilderFilterSummary('กำลังใช้ Filter...');
+      await handleOpenDashboardBuilderView();
+    });
+  }
+
+  if (clearBtn) {
+    clearBtn.addEventListener('click', async function () {
+      currentBuilderFilters = {
+        dateField: '',
+        dateFrom: '',
+        dateTo: '',
+        categoryFilters: [],
+        keyword: ''
+      };
+
+      setBuilderFilterSummary('ล้าง Filter แล้ว');
+      await handleOpenDashboardBuilderView();
+    });
+  }
+}
+
+
+function collectBuilderFiltersFromUi() {
+  const dateFieldEl = document.getElementById('builderFilterDateField');
+  const dateFromEl = document.getElementById('builderFilterDateFrom');
+  const dateToEl = document.getElementById('builderFilterDateTo');
+  const keywordEl = document.getElementById('builderFilterKeyword');
+
+  const categoryFilters = [];
+
+  document.querySelectorAll('[data-builder-category-filter]').forEach(function (input) {
+    const field = input.getAttribute('data-builder-category-filter') || '';
+    const raw = String(input.value || '').trim();
+
+    if (!field || !raw) {
+      return;
+    }
+
+    const values = raw
+      .split(',')
+      .map(function (v) {
+        return String(v || '').trim();
+      })
+      .filter(function (v) {
+        return !!v;
+      });
+
+    if (values.length) {
+      categoryFilters.push({
+        field: field,
+        values: values
+      });
+    }
+  });
+
+  return {
+    dateField: dateFieldEl ? dateFieldEl.value : '',
+    dateFrom: dateFromEl ? dateFromEl.value : '',
+    dateTo: dateToEl ? dateToEl.value : '',
+    keyword: keywordEl ? keywordEl.value.trim() : '',
+    categoryFilters: categoryFilters
+  };
+}
+
+
+function setBuilderFilterValuesToUi() {
+  const filters = currentBuilderFilters || {};
+
+  const dateFieldEl = document.getElementById('builderFilterDateField');
+  const dateFromEl = document.getElementById('builderFilterDateFrom');
+  const dateToEl = document.getElementById('builderFilterDateTo');
+  const keywordEl = document.getElementById('builderFilterKeyword');
+
+  if (dateFieldEl) dateFieldEl.value = filters.dateField || '';
+  if (dateFromEl) dateFromEl.value = filters.dateFrom || '';
+  if (dateToEl) dateToEl.value = filters.dateTo || '';
+  if (keywordEl) keywordEl.value = filters.keyword || '';
+
+  const categoryFilters = Array.isArray(filters.categoryFilters)
+    ? filters.categoryFilters
+    : [];
+
+  categoryFilters.forEach(function (filter) {
+    const input = document.querySelector('[data-builder-category-filter="' + cssEscapeSafe(filter.field) + '"]');
+
+    if (input) {
+      input.value = (filter.values || []).join(',');
+    }
+  });
+
+  updateBuilderFilterSummary();
+}
+
+
+function setBuilderFilterSummary(text) {
+  const box = document.getElementById('builderFilterSummary');
+
+  if (box) {
+    box.textContent = text || '';
+  }
+}
+
+
+function updateBuilderFilterSummary() {
+  const filters = currentBuilderFilters || {};
+  const parts = [];
+
+  if (filters.dateField && (filters.dateFrom || filters.dateTo)) {
+    parts.push('วันที่: ' + filters.dateField);
+  }
+
+  if (filters.keyword) {
+    parts.push('ค้นหา: ' + filters.keyword);
+  }
+
+  if (Array.isArray(filters.categoryFilters) && filters.categoryFilters.length) {
+    parts.push('Category: ' + filters.categoryFilters.length + ' เงื่อนไข');
+  }
+
+  setBuilderFilterSummary(parts.length ? parts.join(' · ') : 'ยังไม่ได้ใช้ Filter');
+}
+
+
+function cssEscapeSafe(value) {
+  if (window.CSS && CSS.escape) {
+    return CSS.escape(String(value || ''));
+  }
+
+  return String(value || '').replace(/"/g, '\\"');
 }
 })();
