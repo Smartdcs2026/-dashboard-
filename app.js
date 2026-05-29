@@ -2182,34 +2182,9 @@ setPanelLoading(el.dashboardViewResult, 'กำลังโหลด Dashboard..
   }
 
   async function loadDashboards() {
-    if (el.dashboardResult) {
-      el.dashboardResult.textContent = 'กำลังโหลด...';
-    }
+  return loadDashboardOptions();
+}
 
-    try {
-      const data = await window.AnalyticsAPI.listDashboards();
-
-      if (el.dashboardResult) {
-        el.dashboardResult.textContent = `พบ Dashboard ${data.total || 0} รายการ`;
-      }
-
-      writeLog({
-        step: 'dashboards',
-        response: data
-      });
-
-    } catch (error) {
-      if (el.dashboardResult) {
-        el.dashboardResult.textContent = error.message;
-      }
-
-      writeLog({
-        step: 'dashboards_error',
-        message: error.message,
-        payload: error.payload || null
-      });
-    }
-  }
 
   function renderPreviewKpis(kpis) {
     if (!kpis.length) {
@@ -3954,49 +3929,79 @@ function escapeHtmlForExcel(value) {
     .replace(/"/g, '&quot;');
 }
   async function loadManageDashboards() {
-    if (!el.manageDashboardSelect) {
-      return;
+  try {
+    if (!window.AnalyticsAPI || typeof window.AnalyticsAPI.listDashboards !== 'function') {
+      throw new Error('ไม่พบ window.AnalyticsAPI.listDashboards กรุณาตรวจสอบ api.js');
     }
 
-    setManageDashboardMessage('');
-    selectedManageDashboard = null;
+    if (el.manageDashboardSelect) {
+      el.manageDashboardSelect.innerHTML = '<option value="">กำลังโหลด Dashboard...</option>';
+    }
 
-    el.manageDashboardSelect.innerHTML = '<option value="">กำลังโหลด Dashboard...</option>';
-    if (el.manageDashboardSummary) {
-  setPanelLoading(el.manageDashboardSummary, 'กำลังโหลดรายการ Dashboard...');
-}
+    setManageDashboardMessage('กำลังโหลดรายการ Dashboard...');
+    selectedManageDashboard = null;
     resetManageDashboardForm(false);
 
-    try {
-      const data = await window.AnalyticsAPI.listDashboards();
-manageDashboardsCache = data.dashboards || [];
+    if (el.manageDashboardSummary) {
+      setPanelLoading(el.manageDashboardSummary, 'กำลังโหลดรายการ Dashboard...');
+    }
 
-renderFilteredManageDashboardOptions();
+    const data = await window.AnalyticsAPI.listDashboards({
+      includeDeleted: true
+    });
 
-if (el.manageDashboardSummary) {
-  el.manageDashboardSummary.classList.add('empty');
-  el.manageDashboardSummary.textContent = manageDashboardsCache.length
-    ? 'เลือก Dashboard เพื่อดูรายละเอียดและแก้ไข'
-    : 'ยังไม่มี Dashboard ที่สร้างไว้';
+    const dashboards = normalizeDashboardRows(data);
+
+    dashboardsCache = dashboards;
+    manageDashboardsCache = dashboards;
+
+    renderAllDashboardDropdowns(dashboards);
+    setManageDashboardMessage('');
+
+    if (el.manageDashboardSummary) {
+      el.manageDashboardSummary.classList.add('empty');
+      el.manageDashboardSummary.textContent = dashboards.length
+        ? 'เลือก Dashboard เพื่อดูรายละเอียดและแก้ไข'
+        : 'ยังไม่มี Dashboard ที่สร้างไว้';
+    }
+
+    writeLog({
+      step: 'manage_dashboards_loaded',
+      total: dashboards.length,
+      response: data
+    });
+
+    return dashboards;
+
+  } catch (error) {
+    dashboardsCache = [];
+    manageDashboardsCache = [];
+
+    renderAllDashboardDropdowns([]);
+
+    const message = getFriendlyErrorMessage(error);
+
+    if (el.manageDashboardSelect) {
+      el.manageDashboardSelect.innerHTML = '<option value="">โหลด Dashboard ไม่สำเร็จ</option>';
+    }
+
+    if (el.manageDashboardSummary) {
+      el.manageDashboardSummary.classList.add('empty');
+      el.manageDashboardSummary.textContent = message;
+    }
+
+    setManageDashboardMessage(message);
+
+    writeLog({
+      step: 'manage_dashboards_load_error',
+      message: message,
+      payload: error.payload || null
+    });
+
+    return [];
+  }
 }
 
-      writeLog({
-        step: 'manage_dashboards_load',
-        response: data
-      });
-
-    } catch (error) {
-      manageDashboardsCache = [];
-      el.manageDashboardSelect.innerHTML = '<option value="">โหลด Dashboard ไม่สำเร็จ</option>';
-      setManageDashboardMessage(error.message);
-
-      writeLog({
-        step: 'manage_dashboards_load_error',
-        message: error.message,
-        payload: error.payload || null
-      });
-    }
-  }
  function renderFilteredManageDashboardOptions() {
   let dashboards = Array.isArray(manageDashboardsCache) ? manageDashboardsCache.slice() : [];
 
@@ -4337,9 +4342,10 @@ async function openDashboardFromManageCard(dashboardId) {
     return;
   }
 
+  dashboards = Array.isArray(dashboards) ? dashboards : [];
   const currentValue = el.manageDashboardSelect.value || '';
 
-  if (!dashboards || !dashboards.length) {
+  if (!dashboards.length) {
     el.manageDashboardSelect.innerHTML = '<option value="">ไม่พบ Dashboard ตามเงื่อนไข</option>';
     selectedManageDashboard = null;
 
@@ -4354,34 +4360,34 @@ async function openDashboardFromManageCard(dashboardId) {
   el.manageDashboardSelect.innerHTML =
     '<option value="">เลือก Dashboard ที่ต้องการจัดการ</option>' +
     dashboards.map(function (dash) {
-      const id = String(dash['รหัส Dashboard'] || '').trim();
-      const name = String(dash['ชื่อ Dashboard'] || id).trim();
-      const type = String(dash['ประเภท Dashboard'] || '').trim();
-      const publish = toBool(dash['สถานะ Publish']);
-      const allowExport = toBool(dash['อนุญาต Export']);
+      const id = getDashboardId(dash);
+      const name = getDashboardName(dash);
+      const type = getDashboardType(dash);
+      const publish = getDashboardPublish(dash);
+      const allowExport = getDashboardExport(dash);
+      const hidden = getDashboardHidden(dash);
 
       const statusText = [
-        publish ? 'Published' : 'Unpublished',
+        hidden ? 'Hidden' : (publish ? 'Published' : 'Draft'),
         allowExport ? 'Export On' : 'Export Off'
       ].join(' / ');
 
       return (
         '<option value="' + escapeAttr(id) + '">' +
-        escapeHtml(name) +
+        escapeHtml(name || id) +
         (type ? ' (' + escapeHtml(type) + ')' : '') +
         ' - ' + escapeHtml(statusText) +
         '</option>'
       );
     }).join('');
 
-  const stillExists = dashboards.some(function (dash) {
-    return String(dash['รหัส Dashboard'] || '').trim() === currentValue;
-  });
-
-  if (currentValue && stillExists) {
+  if (currentValue && dashboards.some(function (dash) {
+    return getDashboardId(dash) === currentValue;
+  })) {
     el.manageDashboardSelect.value = currentValue;
   }
 }
+
 
 
   function handleSelectManageDashboard() {
@@ -4408,46 +4414,48 @@ async function openDashboardFromManageCard(dashboardId) {
 
 
   function findManageDashboardById(dashboardId) {
-    dashboardId = String(dashboardId || '').trim();
+  dashboardId = String(dashboardId || '').trim();
 
-    return (manageDashboardsCache || []).find(function (dash) {
-      return String(dash['รหัส Dashboard'] || '').trim() === dashboardId;
-    }) || null;
-  }
+  return (manageDashboardsCache || []).find(function (dash) {
+    return getDashboardId(dash) === dashboardId;
+  }) || null;
+}
+
 
 
   function fillManageDashboardForm(dash) {
-    if (!dash) {
-      resetManageDashboardForm();
-      return;
-    }
-
-    if (el.manageDashboardName) {
-      el.manageDashboardName.value = String(dash['ชื่อ Dashboard'] || '');
-    }
-
-    if (el.manageDashboardType) {
-      el.manageDashboardType.value = String(dash['ประเภท Dashboard'] || 'Custom') || 'Custom';
-    }
-
-    if (el.manageDashboardDescription) {
-      el.manageDashboardDescription.value = String(dash['คำอธิบาย'] || '');
-    }
-
-    if (el.manageDashboardPublish) {
-      el.manageDashboardPublish.checked = toBool(dash['สถานะ Publish']);
-    }
-
-    if (el.manageDashboardExport) {
-      el.manageDashboardExport.checked = toBool(dash['อนุญาต Export']);
-    }
-
-    if (el.manageDashboardHidden) {
-      el.manageDashboardHidden.checked = !toBool(dash['สถานะ Publish']);
-    }
-
-    setManageDashboardRoles(String(dash['สิทธิ์ที่มองเห็น'] || ''));
+  if (!dash) {
+    resetManageDashboardForm();
+    return;
   }
+
+  if (el.manageDashboardName) {
+    el.manageDashboardName.value = getDashboardName(dash);
+  }
+
+  if (el.manageDashboardType) {
+    el.manageDashboardType.value = getDashboardType(dash) || 'Custom';
+  }
+
+  if (el.manageDashboardDescription) {
+    el.manageDashboardDescription.value = getDashboardDescription(dash);
+  }
+
+  if (el.manageDashboardPublish) {
+    el.manageDashboardPublish.checked = getDashboardPublish(dash);
+  }
+
+  if (el.manageDashboardExport) {
+    el.manageDashboardExport.checked = getDashboardExport(dash);
+  }
+
+  if (el.manageDashboardHidden) {
+    el.manageDashboardHidden.checked = getDashboardHidden(dash);
+  }
+
+  setManageDashboardRoles(getDashboardVisibility(dash));
+}
+
 
 
   function resetManageDashboardForm(clearSelect = true) {
@@ -4777,85 +4785,97 @@ if (el.manageDashboardCardCount) {
 
 
   function renderManageDashboardSummary(dash) {
-    if (!el.manageDashboardSummary || !dash) {
-      return;
-    }
-
-    const dashboardId = String(dash['รหัส Dashboard'] || '');
-    const name = String(dash['ชื่อ Dashboard'] || '');
-    const type = String(dash['ประเภท Dashboard'] || '');
-    const sourceId = String(dash['รหัสแหล่งข้อมูลหลัก'] || '');
-    const sheetName = String(dash['รหัสชีทย่อยหลัก'] || '');
-    const publish = toBool(dash['สถานะ Publish']);
-    const allowExport = toBool(dash['อนุญาต Export']);
-    const visibility = String(dash['สิทธิ์ที่มองเห็น'] || '-');
-    const updatedAt = String(dash['วันที่แก้ไขล่าสุด'] || '-');
-    const updatedBy = String(dash['แก้ไขโดย'] || '-');
-
-    el.manageDashboardSummary.classList.remove('empty');
-
-    el.manageDashboardSummary.innerHTML = `
-      <div class="dashboard-manage-summary-grid">
-        <div class="dashboard-manage-summary-item">
-          <span>Dashboard ID</span>
-          <strong>${escapeHtml(dashboardId || '-')}</strong>
-        </div>
-
-        <div class="dashboard-manage-summary-item">
-          <span>ชื่อ Dashboard</span>
-          <strong>${escapeHtml(name || '-')}</strong>
-        </div>
-
-        <div class="dashboard-manage-summary-item">
-          <span>ประเภท</span>
-          <strong>${escapeHtml(type || '-')}</strong>
-        </div>
-
-        <div class="dashboard-manage-summary-item">
-          <span>แหล่งข้อมูล</span>
-          <strong>${escapeHtml(sourceId || '-')}</strong>
-        </div>
-
-        <div class="dashboard-manage-summary-item">
-          <span>ชีทหลัก</span>
-          <strong>${escapeHtml(sheetName || '-')}</strong>
-        </div>
-
-        <div class="dashboard-manage-summary-item">
-          <span>Publish</span>
-          <strong>
-            <span class="dashboard-status-pill ${publish ? 'is-on' : 'is-off'}">
-              ${publish ? 'เปิด' : 'ปิด'}
-            </span>
-          </strong>
-        </div>
-
-        <div class="dashboard-manage-summary-item">
-          <span>Export</span>
-          <strong>
-            <span class="dashboard-status-pill ${allowExport ? 'is-on' : 'is-off'}">
-              ${allowExport ? 'อนุญาต' : 'ไม่อนุญาต'}
-            </span>
-          </strong>
-        </div>
-
-        <div class="dashboard-manage-summary-item">
-          <span>สิทธิ์ที่มองเห็น</span>
-          <strong>${escapeHtml(visibility)}</strong>
-        </div>
-
-        <div class="dashboard-manage-summary-item">
-          <span>แก้ไขล่าสุด</span>
-          <strong>${escapeHtml(updatedAt)}</strong>
-        </div>
-
-        <div class="dashboard-manage-summary-item">
-          <span>แก้ไขโดย</span>
-          <strong>${escapeHtml(updatedBy)}</strong>
-        </div>
-      </div>
-    `;
+  if (!el.manageDashboardSummary || !dash) {
+    return;
   }
+
+  const dashboardId = getDashboardId(dash);
+  const name = getDashboardName(dash);
+  const type = getDashboardType(dash);
+  const sourceId = String(
+    dash.sourceId ||
+    dash.mainSourceId ||
+    dash['รหัสแหล่งข้อมูลหลัก'] ||
+    ''
+  ).trim();
+  const sheetName = String(
+    dash.sheetName ||
+    dash.mainSheetName ||
+    dash['รหัสชีทย่อยหลัก'] ||
+    ''
+  ).trim();
+  const publish = getDashboardPublish(dash);
+  const allowExport = getDashboardExport(dash);
+  const hidden = getDashboardHidden(dash);
+  const visibility = getDashboardVisibility(dash) || '-';
+  const updatedAt = String(
+    dash.updatedAt ||
+    dash['วันที่แก้ไขล่าสุด'] ||
+    '-'
+  ).trim();
+  const updatedBy = String(
+    dash.updatedBy ||
+    dash['แก้ไขโดย'] ||
+    '-'
+  ).trim();
+
+  el.manageDashboardSummary.classList.remove('empty');
+
+  el.manageDashboardSummary.innerHTML = `
+    <div class="dashboard-manage-summary-grid">
+      <div class="dashboard-manage-summary-item">
+        <span>Dashboard ID</span>
+        <strong>${escapeHtml(dashboardId || '-')}</strong>
+      </div>
+
+      <div class="dashboard-manage-summary-item">
+        <span>ชื่อ Dashboard</span>
+        <strong>${escapeHtml(name || '-')}</strong>
+      </div>
+
+      <div class="dashboard-manage-summary-item">
+        <span>ประเภท</span>
+        <strong>${escapeHtml(type || '-')}</strong>
+      </div>
+
+      <div class="dashboard-manage-summary-item">
+        <span>แหล่งข้อมูล</span>
+        <strong>${escapeHtml(sourceId || '-')}</strong>
+      </div>
+
+      <div class="dashboard-manage-summary-item">
+        <span>ชีทหลัก</span>
+        <strong>${escapeHtml(sheetName || '-')}</strong>
+      </div>
+
+      <div class="dashboard-manage-summary-item">
+        <span>สถานะ</span>
+        <strong>${hidden ? 'Hidden' : (publish ? 'Published' : 'Draft')}</strong>
+      </div>
+
+      <div class="dashboard-manage-summary-item">
+        <span>Export</span>
+        <strong>${allowExport ? 'เปิดใช้งาน' : 'ปิดใช้งาน'}</strong>
+      </div>
+
+      <div class="dashboard-manage-summary-item">
+        <span>สิทธิ์ที่มองเห็น</span>
+        <strong>${escapeHtml(visibility)}</strong>
+      </div>
+
+      <div class="dashboard-manage-summary-item">
+        <span>แก้ไขล่าสุด</span>
+        <strong>${escapeHtml(updatedAt || '-')}</strong>
+      </div>
+
+      <div class="dashboard-manage-summary-item">
+        <span>แก้ไขโดย</span>
+        <strong>${escapeHtml(updatedBy || '-')}</strong>
+      </div>
+    </div>
+  `;
+}
+
 
 
   function setManageDashboardMessage(message) {
@@ -6024,89 +6044,54 @@ function buildHeatmapOption(title, data, chart) {
 
   async function loadDesignerDashboards() {
   if (!el.designerDashboardSelect) {
-    return;
+    return [];
   }
 
   try {
-    let result = null;
+    let dashboards = Array.isArray(dashboardsCache) ? dashboardsCache.slice() : [];
 
-    /**
-     * รองรับหลายชื่อฟังก์ชัน เผื่อ api.js เดิมใช้ชื่อไม่เหมือนกัน
-     */
-    if (window.AnalyticsAPI && typeof window.AnalyticsAPI.dashboards === 'function') {
-      result = await window.AnalyticsAPI.dashboards();
-    } else if (window.AnalyticsAPI && typeof window.AnalyticsAPI.listDashboards === 'function') {
-      result = await window.AnalyticsAPI.listDashboards();
-    } else {
-      el.designerDashboardSelect.innerHTML = '<option value="">ไม่พบ API สำหรับโหลด Dashboard</option>';
-      return;
+    if (!dashboards.length) {
+      if (!window.AnalyticsAPI || typeof window.AnalyticsAPI.listDashboards !== 'function') {
+        el.designerDashboardSelect.innerHTML = '<option value="">ไม่พบ API สำหรับโหลด Dashboard</option>';
+        return [];
+      }
+
+      const result = await window.AnalyticsAPI.listDashboards({
+        includeDeleted: true
+      });
+
+      dashboards = normalizeDashboardRows(result);
+      dashboardsCache = dashboards;
+      manageDashboardsCache = dashboards;
     }
 
-    const list =
-      result.dashboards ||
-      result.items ||
-      result.data ||
-      result.rows ||
-      [];
+    renderDesignerDashboardOptions(dashboards);
 
-    if (!Array.isArray(list) || !list.length) {
-      el.designerDashboardSelect.innerHTML = '<option value="">ยังไม่มี Dashboard</option>';
-      return;
-    }
+    writeLog({
+      step: 'designer_load_dashboards',
+      total: dashboards.length
+    });
 
-    el.designerDashboardSelect.innerHTML =
-      '<option value="">เลือก Dashboard</option>' +
-      list.map(function (dashboard) {
-        const id =
-          dashboard.dashboardId ||
-          dashboard.dashboardID ||
-          dashboard['Dashboard ID'] ||
-          dashboard.id ||
-          dashboard.ID ||
-          '';
-
-        const name =
-          dashboard.dashboardName ||
-          dashboard.name ||
-          dashboard.title ||
-          dashboard['Dashboard Name'] ||
-          dashboard['ชื่อ Dashboard'] ||
-          id;
-
-        const type =
-          dashboard.dashboardType ||
-          dashboard.type ||
-          dashboard['Dashboard Type'] ||
-          dashboard['ประเภท Dashboard'] ||
-          '';
-
-        if (!id) {
-          return '';
-        }
-
-        return (
-          '<option value="' + escapeHtml(id) + '">' +
-          escapeHtml(name) +
-          (type ? ' - ' + escapeHtml(type) : '') +
-          '</option>'
-        );
-      }).join('');
+    return dashboards;
 
   } catch (error) {
-    el.designerDashboardSelect.innerHTML = '<option value="">โหลด Dashboard ไม่สำเร็จ</option>';
+    const message = getFriendlyErrorMessage(error);
 
-    setDesignerMessage(
-      error.message || 'โหลดรายการ Dashboard ไม่สำเร็จ',
-      'error'
-    );
+    el.designerDashboardSelect.innerHTML =
+      '<option value="">โหลด Dashboard ไม่สำเร็จ</option>';
+
+    setDesignerMessage(message || 'โหลดรายการ Dashboard ไม่สำเร็จ', 'error');
 
     writeLog({
       step: 'designer_load_dashboards_error',
-      message: error.message,
+      message: message,
       payload: error.payload || null
     });
+
+    return [];
   }
 }
+
 
 
   async function handleDesignerSourceChange() {
