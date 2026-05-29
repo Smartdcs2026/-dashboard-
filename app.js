@@ -208,9 +208,9 @@ let selectedManageUserId = '';
 
   let currentDashboardTable = null;
 let currentDashboardTablePage = 1;
-  let currentBuilderDashboard = null;
-let builderChartInstances = [];
-  let currentBuilderFilterOptions = [];
+ 
+
+ 
   /**
    * Dashboard Designer State
    */
@@ -7148,6 +7148,10 @@ function buildHeatmapOption(title, data, chart) {
  * ใช้แสดง Widget ที่สร้างจาก Dashboard Designer
  * =====================================================
  */
+let currentBuilderDashboard = null;
+let builderChartInstances = [];
+let currentBuilderFilterOptions = [];
+
 let currentBuilderFilters = {
   dateField: '',
   dateFrom: '',
