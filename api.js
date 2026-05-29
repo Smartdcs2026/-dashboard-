@@ -783,6 +783,7 @@ saveWidget,
 updateWidget,
 deleteWidget,
 dashboardDesignerLoad,
+    dashboards,
 dashboardBuilderView
   };
 })();
