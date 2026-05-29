@@ -5504,105 +5504,214 @@ function buildHeatmapOption(title, data, chart) {
   }
 
 
-  async function loadDesignerSources() {
-    if (!el.designerSourceSelect) {
-      return;
-    }
+ async function loadDesignerSources() {
+  if (!el.designerSourceSelect) {
+    return;
+  }
 
+  try {
     let list = sourcesCache || [];
 
-    if (!list.length && window.AnalyticsAPI && window.AnalyticsAPI.listSources) {
-      const result = await window.AnalyticsAPI.listSources();
-      list = result.sources || result.data || [];
+    if (!list.length) {
+      let result = null;
+
+      if (window.AnalyticsAPI && typeof window.AnalyticsAPI.sources === 'function') {
+        result = await window.AnalyticsAPI.sources();
+      } else if (window.AnalyticsAPI && typeof window.AnalyticsAPI.listSources === 'function') {
+        result = await window.AnalyticsAPI.listSources();
+      }
+
+      if (result) {
+        list =
+          result.sources ||
+          result.items ||
+          result.data ||
+          result.rows ||
+          [];
+      }
+
       sourcesCache = list;
     }
 
-    if (!list.length) {
+    if (!Array.isArray(list) || !list.length) {
       el.designerSourceSelect.innerHTML = '<option value="">ยังไม่มี Source</option>';
       return;
     }
 
-    el.designerSourceSelect.innerHTML = '<option value="">เลือก Source</option>' + list.map(function (source) {
-      const id = source.sourceId ||
-        source['รหัสแหล่งข้อมูล'] ||
-        source.id ||
-        '';
+    el.designerSourceSelect.innerHTML =
+      '<option value="">เลือก Source</option>' +
+      list.map(function (source) {
+        const id =
+          source.sourceId ||
+          source.sourceID ||
+          source['Source ID'] ||
+          source['รหัสแหล่งข้อมูล'] ||
+          source.id ||
+          '';
 
-      const name = source.sourceName ||
-        source['ชื่อแหล่งข้อมูล'] ||
-        source.name ||
-        id;
+        const name =
+          source.sourceName ||
+          source.name ||
+          source['Source Name'] ||
+          source['ชื่อแหล่งข้อมูล'] ||
+          id;
 
-      return '<option value="' + escapeHtml(id) + '">' +
-        escapeHtml(name) +
-        '</option>';
-    }).join('');
+        if (!id) {
+          return '';
+        }
+
+        return (
+          '<option value="' + escapeHtml(id) + '">' +
+          escapeHtml(name) +
+          '</option>'
+        );
+      }).join('');
+
+  } catch (error) {
+    el.designerSourceSelect.innerHTML = '<option value="">โหลด Source ไม่สำเร็จ</option>';
+
+    setDesignerMessage(
+      error.message || 'โหลด Source ไม่สำเร็จ',
+      'error'
+    );
   }
+}
 
 
   async function loadDesignerDashboards() {
-    if (!el.designerDashboardSelect) {
+  if (!el.designerDashboardSelect) {
+    return;
+  }
+
+  try {
+    let result = null;
+
+    /**
+     * รองรับหลายชื่อฟังก์ชัน เผื่อ api.js เดิมใช้ชื่อไม่เหมือนกัน
+     */
+    if (window.AnalyticsAPI && typeof window.AnalyticsAPI.dashboards === 'function') {
+      result = await window.AnalyticsAPI.dashboards();
+    } else if (window.AnalyticsAPI && typeof window.AnalyticsAPI.listDashboards === 'function') {
+      result = await window.AnalyticsAPI.listDashboards();
+    } else {
+      el.designerDashboardSelect.innerHTML = '<option value="">ไม่พบ API สำหรับโหลด Dashboard</option>';
       return;
     }
 
-    if (!window.AnalyticsAPI || !window.AnalyticsAPI.listDashboards) {
-      return;
-    }
+    const list =
+      result.dashboards ||
+      result.items ||
+      result.data ||
+      result.rows ||
+      [];
 
-    const result = await window.AnalyticsAPI.listDashboards();
-    const list = result.dashboards || result.data || [];
-
-    if (!list.length) {
+    if (!Array.isArray(list) || !list.length) {
       el.designerDashboardSelect.innerHTML = '<option value="">ยังไม่มี Dashboard</option>';
       return;
     }
 
-    el.designerDashboardSelect.innerHTML = '<option value="">เลือก Dashboard</option>' + list.map(function (dashboard) {
-      const id = dashboard.dashboardId ||
-        dashboard['Dashboard ID'] ||
-        dashboard.id ||
-        '';
+    el.designerDashboardSelect.innerHTML =
+      '<option value="">เลือก Dashboard</option>' +
+      list.map(function (dashboard) {
+        const id =
+          dashboard.dashboardId ||
+          dashboard.dashboardID ||
+          dashboard['Dashboard ID'] ||
+          dashboard.id ||
+          dashboard.ID ||
+          '';
 
-      const name = dashboard.dashboardName ||
-        dashboard['Dashboard Name'] ||
-        dashboard.name ||
-        id;
+        const name =
+          dashboard.dashboardName ||
+          dashboard.name ||
+          dashboard.title ||
+          dashboard['Dashboard Name'] ||
+          dashboard['ชื่อ Dashboard'] ||
+          id;
 
-      return '<option value="' + escapeHtml(id) + '">' +
-        escapeHtml(name) +
-        '</option>';
-    }).join('');
+        const type =
+          dashboard.dashboardType ||
+          dashboard.type ||
+          dashboard['Dashboard Type'] ||
+          dashboard['ประเภท Dashboard'] ||
+          '';
+
+        if (!id) {
+          return '';
+        }
+
+        return (
+          '<option value="' + escapeHtml(id) + '">' +
+          escapeHtml(name) +
+          (type ? ' - ' + escapeHtml(type) : '') +
+          '</option>'
+        );
+      }).join('');
+
+  } catch (error) {
+    el.designerDashboardSelect.innerHTML = '<option value="">โหลด Dashboard ไม่สำเร็จ</option>';
+
+    setDesignerMessage(
+      error.message || 'โหลดรายการ Dashboard ไม่สำเร็จ',
+      'error'
+    );
+
+    writeLog({
+      step: 'designer_load_dashboards_error',
+      message: error.message,
+      payload: error.payload || null
+    });
   }
+}
 
 
   async function handleDesignerSourceChange() {
-    designerSelectedSourceId = el.designerSourceSelect ? el.designerSourceSelect.value : '';
-    designerSelectedSheetName = '';
+  designerSelectedSourceId = el.designerSourceSelect ? el.designerSourceSelect.value : '';
+  designerSelectedSheetName = '';
 
-    if (!designerSelectedSourceId) {
-      if (el.designerSheetSelect) {
-        el.designerSheetSelect.innerHTML = '<option value="">เลือก Sheet</option>';
-      }
-      return;
+  if (!designerSelectedSourceId) {
+    if (el.designerSheetSelect) {
+      el.designerSheetSelect.innerHTML = '<option value="">เลือก Sheet</option>';
     }
+    return;
+  }
 
-    try {
-      setDesignerMessage('กำลังโหลดรายชื่อ Sheet...', 'muted');
+  try {
+    setDesignerMessage('กำลังโหลดรายชื่อ Sheet...', 'muted');
 
-      const result = await window.AnalyticsAPI.listSourceSheets({
+    let result = null;
+
+    if (window.AnalyticsAPI && typeof window.AnalyticsAPI.sourceSheets === 'function') {
+      result = await window.AnalyticsAPI.sourceSheets({
         sourceId: designerSelectedSourceId
       });
+    } else if (window.AnalyticsAPI && typeof window.AnalyticsAPI.listSourceSheets === 'function') {
+      result = await window.AnalyticsAPI.listSourceSheets({
+        sourceId: designerSelectedSourceId
+      });
+    } else {
+      throw new Error('ไม่พบ API สำหรับโหลดรายชื่อ Sheet');
+    }
 
-      const sheets = result.sheets || result.data || [];
+    const sheets =
+      result.sheets ||
+      result.items ||
+      result.data ||
+      result.rows ||
+      [];
 
-      renderDesignerSheetOptions(sheets);
+    renderDesignerSheetOptions(sheets);
 
-      setDesignerMessage('โหลดรายชื่อ Sheet สำเร็จ', 'success');
+    setDesignerMessage('โหลดรายชื่อ Sheet สำเร็จ', 'success');
 
-    } catch (error) {
-      setDesignerMessage(error.message || 'โหลดรายชื่อ Sheet ไม่สำเร็จ', 'error');
+  } catch (error) {
+    setDesignerMessage(error.message || 'โหลดรายชื่อ Sheet ไม่สำเร็จ', 'error');
+
+    if (el.designerSheetSelect) {
+      el.designerSheetSelect.innerHTML = '<option value="">โหลด Sheet ไม่สำเร็จ</option>';
     }
   }
+}
 
 
   function renderDesignerSheetOptions(sheets) {
