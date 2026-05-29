@@ -4938,3 +4938,43 @@ body.is-loading input {
     border-bottom: 0;
   }
 }
+.builder-header-stats {
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.builder-stat-chip {
+  min-width: 110px;
+  padding: 10px 12px;
+  border: 1px solid var(--builder-border);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--builder-primary) 6%, white);
+}
+
+.builder-stat-chip strong {
+  display: block;
+  color: var(--builder-primary);
+  font-size: 20px;
+  line-height: 1.1;
+  font-weight: 900;
+}
+
+.builder-stat-chip span {
+  display: block;
+  margin-top: 3px;
+  color: var(--builder-muted);
+  font-size: 12px;
+}
+
+@media (max-width: 720px) {
+  .builder-header-stats {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .builder-stat-chip {
+    width: 100%;
+  }
+}
