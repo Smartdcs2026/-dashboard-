@@ -1668,71 +1668,6 @@ function getDashboardVisibility(dash) {
     ''
   ).trim();
 }
-
-function getDashboardSourceId(dash) {
-  dash = dash || {};
-
-  return String(
-    dash.sourceId ||
-    dash.primarySourceId ||
-    dash.mainSourceId ||
-    dash['รหัสแหล่งข้อมูลหลัก'] ||
-    dash['รหัสแหล่งข้อมูล'] ||
-    ''
-  ).trim();
-}
-
-function getDashboardSheetName(dash) {
-  dash = dash || {};
-
-  return String(
-    dash.sheetName ||
-    dash.primarySheetName ||
-    dash.mainSheetName ||
-    dash['ชื่อชีท'] ||
-    dash['รหัสชีทย่อยหลัก'] ||
-    dash['รหัสชีทย่อย'] ||
-    ''
-  ).trim();
-}
-
-function getDashboardThemeId(dash) {
-  dash = dash || {};
-
-  return String(
-    dash.theme ||
-    dash.themeId ||
-    dash['Theme'] ||
-    ''
-  ).trim();
-}
-
-function findDashboardInCache(dashboardId) {
-  dashboardId = String(dashboardId || '').trim();
-
-  if (!dashboardId) {
-    return null;
-  }
-
-  const merged = [];
-
-  (dashboardsCache || []).forEach(function (dash) {
-    merged.push(dash);
-  });
-
-  (manageDashboardsCache || []).forEach(function (dash) {
-    if (!merged.some(function (item) {
-      return getDashboardId(item) === getDashboardId(dash);
-    })) {
-      merged.push(dash);
-    }
-  });
-
-  return merged.find(function (dash) {
-    return getDashboardId(dash) === dashboardId;
-  }) || null;
-}
-
   function renderAllDashboardDropdowns(dashboards) {
   dashboards = Array.isArray(dashboards) ? dashboards : [];
 
@@ -5677,59 +5612,60 @@ function buildHeatmapOption(title, data, chart) {
   };
 }
     function bindDashboardDesignerEvents() {
-    if (el.openDesignerBtn) {
-      el.openDesignerBtn.addEventListener('click', function () {
-        scrollToDesignerSection();
-      });
-    }
+  if (el.openDesignerBtn) {
+    el.openDesignerBtn.addEventListener('click', function () {
+      scrollToDesignerSection();
+    });
+  }
 
-    if (el.designerReloadBtn) {
-      el.designerReloadBtn.addEventListener('click', initDashboardDesigner);
-    }
+  if (el.designerReloadBtn) {
+    el.designerReloadBtn.addEventListener('click', initDashboardDesigner);
+  }
 
-    if (el.designerResetBtn) {
-      el.designerResetBtn.addEventListener('click', resetDashboardDesigner);
-    }
+  if (el.designerResetBtn) {
+    el.designerResetBtn.addEventListener('click', resetDashboardDesigner);
+  }
 
-    if (el.designerSourceSelect) {
-      el.designerSourceSelect.addEventListener('change', handleDesignerSourceChange);
-    }
+  if (el.designerSourceSelect) {
+    el.designerSourceSelect.addEventListener('change', function () {
+      handleDesignerSourceChange();
+    });
+  }
 
-    if (el.designerSheetSelect) {
-      el.designerSheetSelect.addEventListener('change', function () {
-        designerSelectedSheetName = el.designerSheetSelect.value || '';
-      });
-    }
+  if (el.designerSheetSelect) {
+    el.designerSheetSelect.addEventListener('change', handleDesignerSheetChange);
+  }
 
-    if (el.designerDashboardSelect) {
-      el.designerDashboardSelect.addEventListener('change', handleDesignerDashboardChange);
-    }
+  if (el.designerDashboardSelect) {
+    el.designerDashboardSelect.addEventListener('change', handleDesignerDashboardChange);
+  }
 
-    if (el.designerAnalyzeBtn) {
-      el.designerAnalyzeBtn.addEventListener('click', handleDesignerAnalyzeSheet);
-    }
+  if (el.designerAnalyzeBtn) {
+    el.designerAnalyzeBtn.addEventListener('click', handleDesignerAnalyzeSheet);
+  }
 
-    if (el.designerSuggestBtn) {
-      el.designerSuggestBtn.addEventListener('click', handleDesignerSuggestWidgets);
-    }
+  if (el.designerSuggestBtn) {
+    el.designerSuggestBtn.addEventListener('click', handleDesignerSuggestWidgets);
+  }
 
-    if (el.designerWidgetType) {
-      el.designerWidgetType.addEventListener('change', function () {
-        designerSelectedWidgetType = el.designerWidgetType.value || '';
-        renderDesignerMiniPreviewByType(designerSelectedWidgetType);
-      });
-    }
+  if (el.designerWidgetType) {
+    el.designerWidgetType.addEventListener('change', function () {
+      designerSelectedWidgetType = el.designerWidgetType.value || '';
+      renderDesignerMiniPreviewByType(designerSelectedWidgetType);
+    });
+  }
 
-    if (el.designerSaveFieldAnalysisBtn) {
-      el.designerSaveFieldAnalysisBtn.addEventListener('click', handleDesignerSaveFieldAnalysis);
-    }
+  if (el.designerSaveFieldAnalysisBtn) {
+    el.designerSaveFieldAnalysisBtn.addEventListener('click', handleDesignerSaveFieldAnalysis);
+  }
 
-    if (el.designerMiniPreviewBtn) {
-      el.designerMiniPreviewBtn.addEventListener('click', function () {
-        renderDesignerMiniPreviewByType(el.designerWidgetType ? el.designerWidgetType.value : '');
-      });
-    }
-        if (el.designerRealPreviewBtn) {
+  if (el.designerMiniPreviewBtn) {
+    el.designerMiniPreviewBtn.addEventListener('click', function () {
+      renderDesignerMiniPreviewByType(el.designerWidgetType ? el.designerWidgetType.value : '');
+    });
+  }
+
+  if (el.designerRealPreviewBtn) {
     el.designerRealPreviewBtn.addEventListener('click', handleDesignerRealPreview);
   }
 
@@ -5748,7 +5684,7 @@ function buildHeatmapOption(title, data, chart) {
   if (el.designerLoadSavedWidgetsBtn) {
     el.designerLoadSavedWidgetsBtn.addEventListener('click', handleDesignerLoadSavedWidgets);
   }
-  }
+}
     /**
    * =====================================================
    * Dashboard Designer / Builder
@@ -5759,77 +5695,24 @@ function buildHeatmapOption(title, data, chart) {
   try {
     setDesignerMessage('กำลังโหลดข้อมูล Dashboard Designer...', 'muted');
 
-    /**
-     * โหลดข้อมูลหลักของ Designer
-     * - Theme
-     * - Widget Templates
-     * - Sources
-     * - Dashboards
-     */
-    const results = await Promise.allSettled([
+    await Promise.allSettled([
       loadDesignerThemes(),
-      loadDesignerWidgetTemplates(),
-      loadDesignerSources(),
-      loadDesignerDashboards()
+      loadDesignerWidgetTemplates()
     ]);
 
-    const failed = results.filter(function (item) {
-      return item.status === 'rejected';
-    });
+    await loadDesignerSources();
+    await loadDesignerDashboards();
 
-    if (failed.length) {
-      const firstError = failed[0].reason;
-      throw firstError || new Error('โหลดข้อมูลบางส่วนของ Dashboard Designer ไม่สำเร็จ');
-    }
+    const selectedDashboardId = getDesignerDashboardId();
 
-    /**
-     * สำคัญ:
-     * ป้องกันกรณี loadDesignerDashboards โหลดแล้ว
-     * แต่ dropdown designerDashboardSelect ยังไม่ถูกเติมข้อมูล
-     */
-    if (el.designerDashboardSelect) {
-      if (dashboardsCache && dashboardsCache.length) {
-        renderDesignerDashboardOptions(dashboardsCache);
-      } else if (manageDashboardsCache && manageDashboardsCache.length) {
-        dashboardsCache = manageDashboardsCache.slice();
-        renderDesignerDashboardOptions(dashboardsCache);
-      } else {
-        const loadedDashboards = await loadDashboardOptions();
-
-        if (loadedDashboards && loadedDashboards.length) {
-          renderDesignerDashboardOptions(loadedDashboards);
-        } else {
-          el.designerDashboardSelect.innerHTML =
-            '<option value="">ยังไม่มี Dashboard ให้เลือก</option>';
-        }
-      }
-    }
-
-    /**
-     * ถ้ามี Dashboard ถูกเลือกอยู่แล้ว ให้ sync state ของ Designer
-     */
-    if (el.designerDashboardSelect && el.designerDashboardSelect.value) {
-      designerSelectedDashboardId = el.designerDashboardSelect.value;
+    if (selectedDashboardId) {
+      await handleDesignerDashboardChange({ silent: true });
     } else {
-      designerSelectedDashboardId = '';
-    }
+      if (el.designerSheetSelect) {
+        el.designerSheetSelect.innerHTML = '<option value="">เลือก Source ก่อน</option>';
+      }
 
-    /**
-     * ถ้ามี Source ถูกเลือกอยู่แล้ว ให้ sync state ของ Designer
-     */
-    if (el.designerSourceSelect && el.designerSourceSelect.value) {
-      designerSelectedSourceId = el.designerSourceSelect.value;
-    }
-
-    /**
-     * ถ้ามี Sheet ถูกเลือกอยู่แล้ว ให้ sync state ของ Designer
-     */
-    if (el.designerSheetSelect && el.designerSheetSelect.value) {
-      designerSelectedSheetName = el.designerSheetSelect.value;
-    }
-
-    if (designerSelectedDashboardId) {
-      await handleDesignerDashboardChange();
+      renderDesignerSavedWidgets([]);
     }
 
     setDesignerMessage('โหลด Dashboard Designer สำเร็จ', 'success');
@@ -5838,8 +5721,9 @@ function buildHeatmapOption(title, data, chart) {
       step: 'designer_init_success',
       dashboards: dashboardsCache ? dashboardsCache.length : 0,
       sources: sourcesCache ? sourcesCache.length : 0,
-      themes: designerThemesCache ? designerThemesCache.length : 0,
-      templates: designerWidgetTemplatesCache ? designerWidgetTemplatesCache.length : 0
+      selectedDashboardId: selectedDashboardId || '',
+      selectedSourceId: designerSelectedSourceId || '',
+      selectedSheetName: designerSelectedSheetName || ''
     });
 
   } catch (error) {
@@ -5848,11 +5732,6 @@ function buildHeatmapOption(title, data, chart) {
       : (error.message || 'โหลด Dashboard Designer ไม่สำเร็จ');
 
     setDesignerMessage(message, 'error');
-
-    if (el.designerDashboardSelect && (!dashboardsCache || !dashboardsCache.length)) {
-      el.designerDashboardSelect.innerHTML =
-        '<option value="">โหลดรายการ Dashboard ไม่สำเร็จ</option>';
-    }
 
     writeLog({
       step: 'designer_init_error',
@@ -6037,66 +5916,32 @@ function buildHeatmapOption(title, data, chart) {
 
  async function loadDesignerSources() {
   if (!el.designerSourceSelect) {
-    return;
+    return [];
   }
 
+  const currentValue = el.designerSourceSelect.value || designerSelectedSourceId || '';
+
   try {
-    let list = sourcesCache || [];
+    let list = Array.isArray(sourcesCache) ? sourcesCache.slice() : [];
 
     if (!list.length) {
       let result = null;
 
-      if (window.AnalyticsAPI && typeof window.AnalyticsAPI.sources === 'function') {
-        result = await window.AnalyticsAPI.sources();
-      } else if (window.AnalyticsAPI && typeof window.AnalyticsAPI.listSources === 'function') {
+      if (window.AnalyticsAPI && typeof window.AnalyticsAPI.listSources === 'function') {
         result = await window.AnalyticsAPI.listSources();
+      } else if (window.AnalyticsAPI && typeof window.AnalyticsAPI.sources === 'function') {
+        result = await window.AnalyticsAPI.sources();
       }
 
       if (result) {
-        list =
-          result.sources ||
-          result.items ||
-          result.data ||
-          result.rows ||
-          [];
+        list = normalizeDesignerSources(result);
       }
 
       sourcesCache = list;
     }
 
-    if (!Array.isArray(list) || !list.length) {
-      el.designerSourceSelect.innerHTML = '<option value="">ยังไม่มี Source</option>';
-      return;
-    }
-
-    el.designerSourceSelect.innerHTML =
-      '<option value="">เลือก Source</option>' +
-      list.map(function (source) {
-        const id =
-          source.sourceId ||
-          source.sourceID ||
-          source['Source ID'] ||
-          source['รหัสแหล่งข้อมูล'] ||
-          source.id ||
-          '';
-
-        const name =
-          source.sourceName ||
-          source.name ||
-          source['Source Name'] ||
-          source['ชื่อแหล่งข้อมูล'] ||
-          id;
-
-        if (!id) {
-          return '';
-        }
-
-        return (
-          '<option value="' + escapeHtml(id) + '">' +
-          escapeHtml(name) +
-          '</option>'
-        );
-      }).join('');
+    renderDesignerSourceOptions(list, currentValue);
+    return list;
 
   } catch (error) {
     el.designerSourceSelect.innerHTML = '<option value="">โหลด Source ไม่สำเร็จ</option>';
@@ -6105,6 +5950,14 @@ function buildHeatmapOption(title, data, chart) {
       error.message || 'โหลด Source ไม่สำเร็จ',
       'error'
     );
+
+    writeLog({
+      step: 'designer_load_sources_error',
+      message: error.message,
+      payload: error.payload || null
+    });
+
+    return [];
   }
 }
 
@@ -6142,12 +5995,12 @@ function buildHeatmapOption(title, data, chart) {
     return dashboards;
 
   } catch (error) {
-    const message = getFriendlyErrorMessage(error);
+    const message = getFriendlyErrorMessage ? getFriendlyErrorMessage(error) : (error.message || 'โหลดรายการ Dashboard ไม่สำเร็จ');
 
     el.designerDashboardSelect.innerHTML =
       '<option value="">โหลด Dashboard ไม่สำเร็จ</option>';
 
-    setDesignerMessage(message || 'โหลดรายการ Dashboard ไม่สำเร็จ', 'error');
+    setDesignerMessage(message, 'error');
 
     writeLog({
       step: 'designer_load_dashboards_error',
@@ -6159,140 +6012,472 @@ function buildHeatmapOption(title, data, chart) {
   }
 }
 
-async function handleDesignerDashboardChange() {
-  const dashboardId = el.designerDashboardSelect
-    ? String(el.designerDashboardSelect.value || '').trim()
-    : '';
+function normalizeDesignerSources(result) {
+  if (!result) {
+    return [];
+  }
 
+  if (Array.isArray(result)) {
+    return result;
+  }
+
+  if (Array.isArray(result.sources)) {
+    return result.sources;
+  }
+
+  if (Array.isArray(result.items)) {
+    return result.items;
+  }
+
+  if (Array.isArray(result.data)) {
+    return result.data;
+  }
+
+  if (Array.isArray(result.rows)) {
+    return result.rows;
+  }
+
+  if (result.data && Array.isArray(result.data.sources)) {
+    return result.data.sources;
+  }
+
+  return [];
+}
+
+function getSourceId(source) {
+  source = source || {};
+
+  return String(
+    source.sourceId ||
+    source.sourceID ||
+    source.id ||
+    source['Source ID'] ||
+    source['รหัสแหล่งข้อมูล'] ||
+    ''
+  ).trim();
+}
+
+function getSourceName(source) {
+  source = source || {};
+  const id = getSourceId(source);
+
+  return String(
+    source.sourceName ||
+    source.name ||
+    source.title ||
+    source['Source Name'] ||
+    source['ชื่อแหล่งข้อมูล'] ||
+    id ||
+    ''
+  ).trim();
+}
+
+function renderDesignerSourceOptions(sources, selectedSourceId) {
+  if (!el.designerSourceSelect) {
+    return;
+  }
+
+  sources = Array.isArray(sources) ? sources : [];
+  selectedSourceId = String(selectedSourceId || '').trim();
+
+  if (!sources.length) {
+    el.designerSourceSelect.innerHTML = '<option value="">ยังไม่มี Source</option>';
+    designerSelectedSourceId = '';
+    return;
+  }
+
+  el.designerSourceSelect.innerHTML =
+    '<option value="">เลือก Source</option>' +
+    sources.map(function (source) {
+      const id = getSourceId(source);
+      const name = getSourceName(source);
+
+      if (!id) {
+        return '';
+      }
+
+      return (
+        '<option value="' + escapeAttr(id) + '">' +
+        escapeHtml(name || id) +
+        '</option>'
+      );
+    }).join('');
+
+  if (selectedSourceId && sources.some(function (source) {
+    return getSourceId(source) === selectedSourceId;
+  })) {
+    el.designerSourceSelect.value = selectedSourceId;
+    designerSelectedSourceId = selectedSourceId;
+  } else {
+    designerSelectedSourceId = el.designerSourceSelect.value || '';
+  }
+}
+
+
+function setSelectValueFlexible(selectEl, value) {
+  if (!selectEl) {
+    return '';
+  }
+
+  value = String(value || '').trim();
+
+  if (!value) {
+    return selectEl.value || '';
+  }
+
+  const options = Array.prototype.slice.call(selectEl.options || []);
+  const lower = value.toLowerCase();
+
+  let match = options.find(function (opt) {
+    return String(opt.value || '').trim() === value;
+  });
+
+  if (!match) {
+    match = options.find(function (opt) {
+      return String(opt.value || '').trim().toLowerCase() === lower;
+    });
+  }
+
+  if (!match) {
+    match = options.find(function (opt) {
+      return String(opt.textContent || '').trim().toLowerCase() === lower;
+    });
+  }
+
+  if (!match) {
+    match = options.find(function (opt) {
+      return String(opt.textContent || '').trim().toLowerCase().indexOf(lower) >= 0 ||
+        lower.indexOf(String(opt.textContent || '').trim().toLowerCase()) >= 0;
+    });
+  }
+
+  if (match) {
+    selectEl.value = match.value;
+  }
+
+  return selectEl.value || '';
+}
+
+function normalizeDesignerSheets(result) {
+  if (!result) {
+    return [];
+  }
+
+  if (Array.isArray(result)) {
+    return result;
+  }
+
+  if (Array.isArray(result.sheets)) {
+    return result.sheets;
+  }
+
+  if (Array.isArray(result.items)) {
+    return result.items;
+  }
+
+  if (Array.isArray(result.data)) {
+    return result.data;
+  }
+
+  if (Array.isArray(result.rows)) {
+    return result.rows;
+  }
+
+  if (result.data && Array.isArray(result.data.sheets)) {
+    return result.data.sheets;
+  }
+
+  return [];
+}
+
+async function loadDesignerSheetsForSource(sourceId, selectedSheetName) {
+  sourceId = String(sourceId || '').trim();
+  selectedSheetName = String(selectedSheetName || '').trim();
+
+  if (!sourceId) {
+    renderDesignerSheetOptions([], '');
+    return [];
+  }
+
+  let result = null;
+
+  if (window.AnalyticsAPI && typeof window.AnalyticsAPI.listSourceSheets === 'function') {
+    result = await window.AnalyticsAPI.listSourceSheets({
+      sourceId: sourceId,
+      includeMeta: false
+    });
+  } else if (window.AnalyticsAPI && typeof window.AnalyticsAPI.sourceSheets === 'function') {
+    result = await window.AnalyticsAPI.sourceSheets({
+      sourceId: sourceId,
+      includeMeta: false
+    });
+  } else {
+    throw new Error('ไม่พบ API สำหรับโหลดรายชื่อ Sheet');
+  }
+
+  const sheets = normalizeDesignerSheets(result);
+  renderDesignerSheetOptions(sheets, selectedSheetName);
+
+  return sheets;
+}
+
+function handleDesignerSheetChange() {
+  designerSelectedSheetName = el.designerSheetSelect ? String(el.designerSheetSelect.value || '').trim() : '';
+
+  if (designerSelectedSheetName) {
+    setDesignerMessage('เลือก Sheet แล้ว: ' + designerSelectedSheetName, 'success');
+  }
+}
+
+function findDashboardInCache(dashboardId) {
+  dashboardId = String(dashboardId || '').trim();
+
+  if (!dashboardId) {
+    return null;
+  }
+
+  const list = [];
+
+  if (Array.isArray(dashboardsCache)) {
+    list.push.apply(list, dashboardsCache);
+  }
+
+  if (Array.isArray(manageDashboardsCache)) {
+    list.push.apply(list, manageDashboardsCache);
+  }
+
+  return list.find(function (dash) {
+    return getDashboardId(dash) === dashboardId;
+  }) || null;
+}
+
+function getDashboardSourceId(dash) {
+  dash = dash || {};
+
+  return String(
+    dash.sourceId ||
+    dash.mainSourceId ||
+    dash.primarySourceId ||
+    dash['รหัสแหล่งข้อมูลหลัก'] ||
+    dash['Source ID'] ||
+    ''
+  ).trim();
+}
+
+function getDashboardSourceName(dash) {
+  dash = dash || {};
+
+  return String(
+    dash.sourceName ||
+    dash.mainSourceName ||
+    dash.primarySourceName ||
+    dash['ชื่อแหล่งข้อมูลหลัก'] ||
+    dash['ชื่อแหล่งข้อมูล'] ||
+    ''
+  ).trim();
+}
+
+function getDashboardSheetName(dash) {
+  dash = dash || {};
+
+  return String(
+    dash.sheetName ||
+    dash.mainSheetName ||
+    dash.primarySheetName ||
+    dash['รหัสชีทย่อยหลัก'] ||
+    dash['ชื่อชีท'] ||
+    dash['Sheet Name'] ||
+    ''
+  ).trim();
+}
+
+function mergeDesignerDashboardData(cachedDashboard, apiResult) {
+  cachedDashboard = cachedDashboard || {};
+  apiResult = apiResult || {};
+
+  const apiDashboard = apiResult.dashboard || {};
+  const firstWidget = Array.isArray(apiResult.widgets) && apiResult.widgets.length
+    ? apiResult.widgets[0]
+    : {};
+
+  return {
+    dashboardId: String(
+      apiResult.dashboardId ||
+      apiDashboard.dashboardId ||
+      getDashboardId(cachedDashboard) ||
+      firstWidget.dashboardId ||
+      ''
+    ).trim(),
+    dashboardName: String(
+      apiResult.dashboardName ||
+      apiDashboard.dashboardName ||
+      getDashboardName(cachedDashboard) ||
+      ''
+    ).trim(),
+    dashboardType: String(
+      apiResult.dashboardType ||
+      apiDashboard.dashboardType ||
+      getDashboardType(cachedDashboard) ||
+      ''
+    ).trim(),
+    description: String(
+      apiResult.description ||
+      apiDashboard.description ||
+      getDashboardDescription(cachedDashboard) ||
+      ''
+    ).trim(),
+    sourceId: String(
+      apiResult.sourceId ||
+      apiDashboard.sourceId ||
+      getDashboardSourceId(cachedDashboard) ||
+      firstWidget.sourceId ||
+      ''
+    ).trim(),
+    sourceName: String(
+      apiResult.sourceName ||
+      apiDashboard.sourceName ||
+      getDashboardSourceName(cachedDashboard) ||
+      firstWidget.sourceName ||
+      ''
+    ).trim(),
+    sheetName: String(
+      apiResult.sheetName ||
+      apiDashboard.sheetName ||
+      getDashboardSheetName(cachedDashboard) ||
+      firstWidget.sheetName ||
+      ''
+    ).trim(),
+    theme: String(
+      apiResult.theme ||
+      apiDashboard.theme ||
+      cachedDashboard.theme ||
+      cachedDashboard['Theme'] ||
+      firstWidget.theme ||
+      ''
+    ).trim(),
+    publish: apiResult.publish !== undefined ? apiResult.publish : getDashboardPublish(cachedDashboard),
+    allowExport: apiResult.allowExport !== undefined ? apiResult.allowExport : getDashboardExport(cachedDashboard)
+  };
+}
+
+function applyDesignerDashboardLoadResult(result, options) {
+  options = options || {};
+  result = result || {};
+
+  const dashboardId = String(result.dashboardId || getDesignerDashboardId() || '').trim();
+  const cachedDashboard = findDashboardInCache(dashboardId);
+  const dashboard = mergeDesignerDashboardData(cachedDashboard, result);
+
+  designerSavedWidgetsCache = Array.isArray(result.widgets) ? result.widgets : [];
+  designerSavedComparisonsCache = Array.isArray(result.comparisons) ? result.comparisons : [];
+  designerSavedLayoutsCache = Array.isArray(result.layouts) ? result.layouts : [];
+
+  if (!options.skipDashboardSelect && el.designerDashboardSelect && dashboard.dashboardId) {
+    el.designerDashboardSelect.value = dashboard.dashboardId;
+  }
+
+  designerSelectedDashboardId = dashboard.dashboardId || dashboardId;
+
+  if (el.designerDashboardType && dashboard.dashboardType) {
+    setSelectValueFlexible(el.designerDashboardType, dashboard.dashboardType);
+  }
+
+  if (el.designerTheme && dashboard.theme) {
+    setSelectValueFlexible(el.designerTheme, dashboard.theme);
+  }
+
+  if (dashboard.sourceId && el.designerSourceSelect) {
+    renderDesignerSourceOptions(sourcesCache || [], dashboard.sourceId);
+  }
+
+  if (dashboard.sourceId) {
+    designerSelectedSourceId = dashboard.sourceId;
+  }
+
+  if (dashboard.sheetName) {
+    designerSelectedSheetName = dashboard.sheetName;
+  }
+
+  renderDesignerSavedWidgets(designerSavedWidgetsCache);
+
+  return dashboard;
+}
+
+async function handleDesignerDashboardChange(options) {
+  options = options || {};
+
+  const dashboardId = getDesignerDashboardId();
   designerSelectedDashboardId = dashboardId;
   designerEditingWidgetId = '';
 
   if (!dashboardId) {
-    designerSavedWidgetsCache = [];
-    designerSavedComparisonsCache = [];
-    designerSavedLayoutsCache = [];
-
-    if (el.designerSavedWidgetList) {
-      el.designerSavedWidgetList.classList.add('empty');
-      el.designerSavedWidgetList.textContent = 'เลือก Dashboard ก่อนโหลด Widget เดิม';
-    }
+    designerSelectedSourceId = '';
+    designerSelectedSheetName = '';
 
     if (el.designerSourceSelect) {
       el.designerSourceSelect.value = '';
     }
 
     if (el.designerSheetSelect) {
-      el.designerSheetSelect.innerHTML = '<option value="">เลือก Sheet</option>';
+      el.designerSheetSelect.innerHTML = '<option value="">เลือก Source ก่อน</option>';
     }
 
+    renderDesignerSavedWidgets([]);
     resetDesignerWidgetForm();
     setDesignerMessage('กรุณาเลือก Dashboard ที่ต้องการออกแบบ', 'muted');
-    return;
+    return null;
   }
 
   try {
-    setDesignerBusy(true);
-    setDesignerMessage('กำลังโหลดข้อมูล Dashboard ที่เลือก...', 'muted');
-
-    let localDashboard = findDashboardInCache(dashboardId);
-    let designerData = null;
-
-    if (window.AnalyticsAPI && typeof window.AnalyticsAPI.dashboardDesignerLoad === 'function') {
-      designerData = await window.AnalyticsAPI.dashboardDesignerLoad(dashboardId);
+    if (!options.silent) {
+      setDesignerMessage('กำลังโหลดข้อมูล Dashboard ที่เลือก...', 'muted');
     }
 
-    const dashboard = (designerData && designerData.dashboard) || localDashboard || {};
-    const widgets = designerData && Array.isArray(designerData.widgets) ? designerData.widgets : [];
-    const firstWidget = widgets.length ? widgets[0] : {};
-
-    const dashboardType = String(
-      (designerData && designerData.dashboardType) ||
-      getDashboardType(dashboard) ||
-      ''
-    ).trim();
-
-    const sourceId = String(
-      (designerData && designerData.sourceId) ||
-      getDashboardSourceId(dashboard) ||
-      firstWidget.sourceId ||
-      ''
-    ).trim();
-
-    const sheetName = String(
-      (designerData && designerData.sheetName) ||
-      getDashboardSheetName(dashboard) ||
-      firstWidget.sheetName ||
-      ''
-    ).trim();
-
-    if (el.designerDashboardType && dashboardType) {
-      el.designerDashboardType.value = dashboardType;
+    if (!sourcesCache || !sourcesCache.length) {
+      await loadDesignerSources();
     }
 
-    if (el.designerSourceSelect) {
-      const hasSourceOption = Array.from(el.designerSourceSelect.options || []).some(function (opt) {
-        return opt.value === sourceId;
-      });
+    if (!window.AnalyticsAPI || typeof window.AnalyticsAPI.dashboardDesignerLoad !== 'function') {
+      throw new Error('ไม่พบ API dashboardDesignerLoad กรุณาตรวจสอบ api.js');
+    }
 
-      if (sourceId && !hasSourceOption) {
-        await loadDesignerSources();
+    const result = await window.AnalyticsAPI.dashboardDesignerLoad(dashboardId);
+    const dashboard = applyDesignerDashboardLoadResult(result);
+
+    if (dashboard.sourceId) {
+      if (el.designerSourceSelect) {
+        el.designerSourceSelect.value = dashboard.sourceId;
       }
 
-      const hasSourceAfterReload = Array.from(el.designerSourceSelect.options || []).some(function (opt) {
-        return opt.value === sourceId;
-      });
-
-      if (sourceId && !hasSourceAfterReload) {
-        const opt = document.createElement('option');
-        opt.value = sourceId;
-        opt.textContent = (designerData && designerData.sourceName) || sourceId;
-        el.designerSourceSelect.appendChild(opt);
-      }
-
-      el.designerSourceSelect.value = sourceId || '';
-      designerSelectedSourceId = el.designerSourceSelect.value || '';
-    }
-
-    if (sourceId) {
-      await loadDesignerSheetsForSource(sourceId, sheetName);
+      await loadDesignerSheetsForSource(dashboard.sourceId, dashboard.sheetName || '');
     } else if (el.designerSheetSelect) {
-      el.designerSheetSelect.innerHTML = '<option value="">ไม่พบ Source ของ Dashboard นี้</option>';
+      el.designerSheetSelect.innerHTML = '<option value="">Dashboard นี้ยังไม่ผูก Source</option>';
     }
 
-    designerSelectedSheetName = el.designerSheetSelect ? String(el.designerSheetSelect.value || '').trim() : '';
+    populateDesignerFieldSelectsFromCurrentSelection();
 
-    designerSavedWidgetsCache = widgets;
-    designerSavedComparisonsCache = designerData && Array.isArray(designerData.comparisons)
-      ? designerData.comparisons
-      : [];
-    designerSavedLayoutsCache = designerData && Array.isArray(designerData.layouts)
-      ? designerData.layouts
-      : [];
-
-    renderDesignerSavedWidgets(designerSavedWidgetsCache);
-
-    resetDesignerWidgetForm();
+    if (!options.silent) {
+      setDesignerMessage(
+        'โหลด Dashboard ที่เลือกสำเร็จ' +
+        (dashboard.sourceId ? ' | Source: ' + dashboard.sourceId : '') +
+        (dashboard.sheetName ? ' | Sheet: ' + dashboard.sheetName : ''),
+        'success'
+      );
+    }
 
     writeLog({
-      step: 'designer_dashboard_change',
+      step: 'designer_dashboard_change_success',
       dashboardId: dashboardId,
-      dashboardType: dashboardType,
-      sourceId: sourceId,
-      sheetName: designerSelectedSheetName,
-      widgets: designerSavedWidgetsCache.length
+      sourceId: dashboard.sourceId || '',
+      sheetName: dashboard.sheetName || '',
+      widgets: designerSavedWidgetsCache.length,
+      result: result
     });
 
-    setDesignerMessage(
-      'โหลดข้อมูล Dashboard สำเร็จ' +
-        (sourceId ? ' | Source: ' + sourceId : '') +
-        (designerSelectedSheetName ? ' | Sheet: ' + designerSelectedSheetName : ''),
-      'success'
-    );
+    return result;
 
   } catch (error) {
-    const message = getFriendlyErrorMessage
-      ? getFriendlyErrorMessage(error)
-      : (error.message || 'โหลดข้อมูล Dashboard ที่เลือกไม่สำเร็จ');
+    const message = getFriendlyErrorMessage ? getFriendlyErrorMessage(error) : (error.message || 'โหลด Dashboard ที่เลือกไม่สำเร็จ');
 
     setDesignerMessage(message, 'error');
 
@@ -6303,98 +6488,76 @@ async function handleDesignerDashboardChange() {
       payload: error.payload || null
     });
 
-  } finally {
-    setDesignerBusy(false);
+    return null;
   }
 }
 
+async function populateDesignerFieldSelectsFromCurrentSelection() {
+  const sourceId = getDesignerSourceId();
+  const sheetName = getDesignerSheetName();
 
-
-  async function normalizeDesignerSheets(result) {
-  if (!result) {
-    return [];
+  if (!sourceId || !sheetName) {
+    return null;
   }
 
-  if (Array.isArray(result)) {
-    return result;
-  }
+  try {
+    if (window.AnalyticsAPI && typeof window.AnalyticsAPI.fieldAnalysis === 'function') {
+      const result = await window.AnalyticsAPI.fieldAnalysis({
+        mode: 'list',
+        sourceId: sourceId,
+        sheetName: sheetName
+      });
 
-  return result.sheets ||
-    result.items ||
-    result.data ||
-    result.rows ||
-    [];
-}
+      const fields = result.fields || result.rows || result.items || [];
 
-async function loadDesignerSheetsForSource(sourceId, selectedSheetName) {
-  sourceId = String(sourceId || '').trim();
-  selectedSheetName = String(selectedSheetName || '').trim();
-
-  if (!el.designerSheetSelect) {
-    return [];
-  }
-
-  if (!sourceId) {
-    el.designerSheetSelect.innerHTML = '<option value="">เลือก Sheet</option>';
-    return [];
-  }
-
-  let result = null;
-
-  if (window.AnalyticsAPI && typeof window.AnalyticsAPI.sourceSheets === 'function') {
-    result = await window.AnalyticsAPI.sourceSheets({
-      sourceId: sourceId
+      if (Array.isArray(fields) && fields.length) {
+        designerFieldsCache = fields;
+        populateDesignerFieldSelects(fields);
+        renderDesignerFieldList(fields);
+        return fields;
+      }
+    }
+  } catch (err) {
+    writeLog({
+      step: 'designer_field_analysis_list_skip',
+      message: err.message,
+      payload: err.payload || null
     });
-  } else if (window.AnalyticsAPI && typeof window.AnalyticsAPI.listSourceSheets === 'function') {
-    result = await window.AnalyticsAPI.listSourceSheets({
-      sourceId: sourceId
-    });
-  } else {
-    throw new Error('ไม่พบ API สำหรับโหลดรายชื่อ Sheet');
   }
 
-  const sheets = normalizeDesignerSheets(result);
-  renderDesignerSheetOptions(sheets, selectedSheetName);
-
-  if (selectedSheetName) {
-    el.designerSheetSelect.value = selectedSheetName;
-  }
-
-  designerSelectedSheetName = el.designerSheetSelect.value || '';
-
-  return sheets;
+  return null;
 }
 
-async function handleDesignerSourceChange() {
+
+
+  async function handleDesignerSourceChange(options) {
+  options = options || {};
+
   designerSelectedSourceId = el.designerSourceSelect ? el.designerSourceSelect.value : '';
-  designerSelectedSheetName = '';
+  designerSelectedSheetName = String(options.selectedSheetName || '').trim();
 
   if (!designerSelectedSourceId) {
     if (el.designerSheetSelect) {
-      el.designerSheetSelect.innerHTML = '<option value="">เลือก Sheet</option>';
+      el.designerSheetSelect.innerHTML = '<option value="">เลือก Source ก่อน</option>';
     }
     return [];
   }
 
   try {
-    setDesignerMessage('กำลังโหลดรายชื่อ Sheet...', 'muted');
+    if (!options.silent) {
+      setDesignerMessage('กำลังโหลดรายชื่อ Sheet...', 'muted');
+    }
 
-    const sheets = await loadDesignerSheetsForSource(designerSelectedSourceId, '');
+    const sheets = await loadDesignerSheetsForSource(designerSelectedSourceId, designerSelectedSheetName);
 
-    setDesignerMessage('โหลดรายชื่อ Sheet สำเร็จ', 'success');
-
-    writeLog({
-      step: 'designer_source_change',
-      sourceId: designerSelectedSourceId,
-      sheetCount: sheets.length
-    });
+    if (!options.silent) {
+      setDesignerMessage('โหลดรายชื่อ Sheet สำเร็จ', 'success');
+    }
 
     return sheets;
 
   } catch (error) {
-    const message = getFriendlyErrorMessage
-      ? getFriendlyErrorMessage(error)
-      : (error.message || 'โหลดรายชื่อ Sheet ไม่สำเร็จ');
+    const message = getFriendlyErrorMessage ? getFriendlyErrorMessage(error) : (error.message || 'โหลดรายชื่อ Sheet ไม่สำเร็จ');
 
     setDesignerMessage(message, 'error');
 
@@ -6419,11 +6582,12 @@ async function handleDesignerSourceChange() {
     return;
   }
 
-  const list = Array.isArray(sheets) ? sheets : [];
-  const selected = String(selectedSheetName || '').trim();
+  const list = normalizeDesignerSheets(sheets);
+  const selected = String(selectedSheetName || designerSelectedSheetName || '').trim();
 
   if (!list.length) {
     el.designerSheetSelect.innerHTML = '<option value="">ไม่พบ Sheet</option>';
+    designerSelectedSheetName = '';
     return;
   }
 
@@ -6436,19 +6600,21 @@ async function handleDesignerSourceChange() {
       return '';
     }
 
-    return '<option value="' + escapeHtml(name) + '"' +
-      (String(name) === selected ? ' selected' : '') +
-      '>' + escapeHtml(name) + '</option>';
+    return '<option value="' + escapeAttr(name) + '">' +
+      escapeHtml(name) +
+      '</option>';
   }).join('');
 
-  if (selected && !Array.from(el.designerSheetSelect.options).some(function (opt) {
-    return opt.value === selected;
+  if (selected && list.some(function (sheet) {
+    const name = typeof sheet === 'string'
+      ? sheet
+      : (sheet.sheetName || sheet.name || sheet['ชื่อชีท'] || '');
+    return String(name || '') === selected;
   })) {
-    const opt = document.createElement('option');
-    opt.value = selected;
-    opt.textContent = selected;
-    opt.selected = true;
-    el.designerSheetSelect.appendChild(opt);
+    el.designerSheetSelect.value = selected;
+    designerSelectedSheetName = selected;
+  } else {
+    designerSelectedSheetName = el.designerSheetSelect.value || '';
   }
 }
 
@@ -7593,42 +7759,59 @@ async function handleDesignerSourceChange() {
   }
 
 
-  async function handleDesignerLoadSavedWidgets() {
-    const dashboardId = getDesignerDashboardId();
+  async function handleDesignerLoadSavedWidgets(options) {
+  options = options || {};
+  const dashboardId = String(options.dashboardId || getDesignerDashboardId() || '').trim();
 
-    if (!dashboardId) {
-      setDesignerMessage('กรุณาเลือก Dashboard ก่อนโหลด Widget เดิม', 'error');
-      return;
-    }
-
-    try {
-      setDesignerMessage('กำลังโหลด Widget เดิม...', 'muted');
-
-      const result = await window.AnalyticsAPI.dashboardDesignerLoad(dashboardId);
-
-      designerSavedWidgetsCache = result.widgets || [];
-      designerSavedComparisonsCache = result.comparisons || [];
-      designerSavedLayoutsCache = result.layouts || [];
-
-      renderDesignerSavedWidgets(designerSavedWidgetsCache);
-
-      setDesignerMessage('โหลด Widget เดิมสำเร็จ', 'success');
-
-      writeLog({
-        step: 'designer_load_saved_widgets',
-        result: result
-      });
-
-    } catch (error) {
-      setDesignerMessage(error.message || 'โหลด Widget เดิมไม่สำเร็จ', 'error');
-
-      writeLog({
-        step: 'designer_load_saved_widgets_error',
-        message: error.message,
-        payload: error.payload || null
-      });
-    }
+  if (!dashboardId) {
+    setDesignerMessage('กรุณาเลือก Dashboard ก่อนโหลด Widget เดิม', 'error');
+    return null;
   }
+
+  try {
+    if (!options.silent) {
+      setDesignerMessage('กำลังโหลด Widget เดิม...', 'muted');
+    }
+
+    if (!window.AnalyticsAPI || typeof window.AnalyticsAPI.dashboardDesignerLoad !== 'function') {
+      throw new Error('ไม่พบ API สำหรับโหลด Dashboard Designer');
+    }
+
+    const result = await window.AnalyticsAPI.dashboardDesignerLoad(dashboardId);
+
+    applyDesignerDashboardLoadResult(result, {
+      skipDashboardSelect: true,
+      skipSourceSheetSync: !!options.skipSourceSheetSync
+    });
+
+    if (!options.silent) {
+      setDesignerMessage('โหลด Widget เดิมสำเร็จ', 'success');
+    }
+
+    writeLog({
+      step: 'designer_load_saved_widgets',
+      dashboardId: dashboardId,
+      widgets: designerSavedWidgetsCache.length,
+      result: result
+    });
+
+    return result;
+
+  } catch (error) {
+    const message = getFriendlyErrorMessage ? getFriendlyErrorMessage(error) : (error.message || 'โหลด Widget เดิมไม่สำเร็จ');
+
+    setDesignerMessage(message, 'error');
+
+    writeLog({
+      step: 'designer_load_saved_widgets_error',
+      dashboardId: dashboardId,
+      message: message,
+      payload: error.payload || null
+    });
+
+    return null;
+  }
+}
 
 
   function renderDesignerSavedWidgets(widgets) {
