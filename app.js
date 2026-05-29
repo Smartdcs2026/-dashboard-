@@ -226,6 +226,8 @@ let builderChartInstances = [];
   let designerSelectedDashboardId = '';
   let designerSelectedWidgetType = '';
   let designerEditingWidgetId = '';
+  let currentBuilderTheme = null;
+let currentBuilderPalette = [];
   
 const DASHBOARD_TABLE_PAGE_SIZE = 50;
 
@@ -339,14 +341,14 @@ if (el.clearUserFormBtn) {
     if (el.resetDashboardFilterBtn) {
       el.resetDashboardFilterBtn.addEventListener('click', handleResetDashboardFilter);
     }
-     if (el.exportDashboardBtn) {
-  el.exportDashboardBtn.addEventListener('click', handleExportDashboard);
+ if (el.exportDashboardBtn) {
+  el.exportDashboardBtn.addEventListener('click', handleExportDashboardSmart);
 }
     if (el.exportDashboardExcelBtn) {
   el.exportDashboardExcelBtn.addEventListener('click', handleExportDashboardExcel);
 }
-    if (el.refreshDashboardBtn) {
-  el.refreshDashboardBtn.addEventListener('click', handleRefreshDashboard);
+ if (el.refreshDashboardBtn) {
+  el.refreshDashboardBtn.addEventListener('click', handleRefreshDashboardSmart);
 }
         if (el.reloadManageDashboardsBtn) {
       el.reloadManageDashboardsBtn.addEventListener('click', loadManageDashboards);
@@ -7376,26 +7378,65 @@ function renderBuilderEChart(elementId, widget, data) {
 
   const chart = echarts.init(chartEl);
   const type = widget.widgetType || '';
+  const colors = getBuilderChartColors();
+
   let option = {};
 
   if (type === 'line') {
     option = {
-      tooltip: { trigger: 'axis' },
-      legend: { show: widget.config ? widget.config.showLegend !== false : true },
-      grid: { left: 42, right: 18, top: 42, bottom: 42 },
+      color: colors,
+      tooltip: {
+        trigger: 'axis'
+      },
+      legend: {
+        show: widget.config ? widget.config.showLegend !== false : true,
+        top: 0
+      },
+      grid: {
+        left: 42,
+        right: 18,
+        top: 48,
+        bottom: 42
+      },
       xAxis: {
         type: 'category',
-        data: data.labels || []
+        data: data.labels || [],
+        axisLabel: {
+          color: '#64748b'
+        }
       },
-      yAxis: { type: 'value' },
-      series: data.series || [
+      yAxis: {
+        type: 'value',
+        axisLabel: {
+          color: '#64748b'
+        },
+        splitLine: {
+          lineStyle: {
+            type: 'dashed',
+            color: '#e2e8f0'
+          }
+        }
+      },
+      series: (data.series || [
         {
           name: widget.title || 'Value',
           type: 'line',
           smooth: true,
           data: data.data || []
         }
-      ]
+      ]).map(function (series) {
+        return {
+          ...series,
+          smooth: true,
+          symbolSize: 7,
+          lineStyle: {
+            width: 3
+          },
+          areaStyle: {
+            opacity: 0.08
+          }
+        };
+      })
     };
   }
 
@@ -7403,22 +7444,46 @@ function renderBuilderEChart(elementId, widget, data) {
     const rows = Array.isArray(data.data) ? data.data : [];
 
     option = {
-      tooltip: { trigger: 'axis' },
-      grid: { left: 42, right: 18, top: 32, bottom: 54 },
+      color: colors,
+      tooltip: {
+        trigger: 'axis'
+      },
+      grid: {
+        left: 42,
+        right: 18,
+        top: 32,
+        bottom: 54
+      },
       xAxis: {
         type: 'category',
         data: rows.map(function (item) {
           return item.name;
         }),
         axisLabel: {
-          rotate: rows.length > 5 ? 35 : 0
+          rotate: rows.length > 5 ? 35 : 0,
+          color: '#64748b'
         }
       },
-      yAxis: { type: 'value' },
+      yAxis: {
+        type: 'value',
+        axisLabel: {
+          color: '#64748b'
+        },
+        splitLine: {
+          lineStyle: {
+            type: 'dashed',
+            color: '#e2e8f0'
+          }
+        }
+      },
       series: [
         {
           name: widget.title || 'Value',
           type: 'bar',
+          barMaxWidth: 44,
+          itemStyle: {
+            borderRadius: [8, 8, 0, 0]
+          },
           data: rows.map(function (item) {
             return item.value;
           })
@@ -7429,14 +7494,29 @@ function renderBuilderEChart(elementId, widget, data) {
 
   if (type === 'donut') {
     option = {
-      tooltip: { trigger: 'item' },
-      legend: { bottom: 0 },
+      color: colors,
+      tooltip: {
+        trigger: 'item'
+      },
+      legend: {
+        bottom: 0,
+        type: 'scroll'
+      },
       series: [
         {
           name: widget.title || 'Share',
           type: 'pie',
-          radius: ['44%', '70%'],
+          radius: ['46%', '70%'],
           center: ['50%', '43%'],
+          avoidLabelOverlap: true,
+          itemStyle: {
+            borderRadius: 8,
+            borderColor: '#ffffff',
+            borderWidth: 2
+          },
+          label: {
+            formatter: '{b}\n{d}%'
+          },
           data: data.data || []
         }
       ]
@@ -7445,14 +7525,39 @@ function renderBuilderEChart(elementId, widget, data) {
 
   if (type === 'stacked_bar') {
     option = {
-      tooltip: { trigger: 'axis' },
-      legend: { top: 0 },
-      grid: { left: 42, right: 18, top: 48, bottom: 54 },
+      color: colors,
+      tooltip: {
+        trigger: 'axis'
+      },
+      legend: {
+        top: 0,
+        type: 'scroll'
+      },
+      grid: {
+        left: 42,
+        right: 18,
+        top: 56,
+        bottom: 54
+      },
       xAxis: {
         type: 'category',
-        data: data.categories || []
+        data: data.categories || [],
+        axisLabel: {
+          color: '#64748b'
+        }
       },
-      yAxis: { type: 'value' },
+      yAxis: {
+        type: 'value',
+        axisLabel: {
+          color: '#64748b'
+        },
+        splitLine: {
+          lineStyle: {
+            type: 'dashed',
+            color: '#e2e8f0'
+          }
+        }
+      },
       series: data.series || []
     };
   }
@@ -7470,8 +7575,10 @@ function renderBuilderGaugeChart(elementId, widget, data) {
   }
 
   const chart = echarts.init(chartEl);
+  const colors = getBuilderChartColors();
 
   chart.setOption({
+    color: colors,
     tooltip: {
       formatter: '{a}<br/>{b}: {c}%'
     },
@@ -7479,10 +7586,41 @@ function renderBuilderGaugeChart(elementId, widget, data) {
       {
         name: widget.title || 'Gauge',
         type: 'gauge',
-        progress: { show: true },
+        min: 0,
+        max: 100,
+        progress: {
+          show: true,
+          width: 14
+        },
+        axisLine: {
+          lineStyle: {
+            width: 14,
+            color: [
+              [0.6, colors[4] || '#dc2626'],
+              [0.85, colors[3] || '#f59e0b'],
+              [1, colors[2] || '#16a34a']
+            ]
+          }
+        },
+        axisTick: {
+          show: false
+        },
+        splitLine: {
+          length: 10,
+          lineStyle: {
+            width: 2,
+            color: '#94a3b8'
+          }
+        },
+        axisLabel: {
+          color: '#64748b'
+        },
         detail: {
           valueAnimation: true,
-          formatter: '{value}%'
+          formatter: '{value}%',
+          fontSize: 28,
+          fontWeight: 800,
+          color: colors[0] || '#2563eb'
         },
         data: [
           {
@@ -7605,5 +7743,273 @@ function formatBuilderCell(value) {
   }
 
   return String(value);
+}
+  /**
+ * =====================================================
+ * Dashboard Builder Viewer - Round 2
+ * Theme Palette / Refresh / Export
+ * =====================================================
+ */
+
+async function handleRefreshDashboardSmart() {
+  if (currentBuilderDashboard && currentBuilderDashboard.dashboardId) {
+    try {
+      await handleOpenDashboardBuilderView();
+      return;
+    } catch (error) {
+      setDashboardViewMessage(error.message || 'Refresh Dashboard Builder ไม่สำเร็จ', 'error');
+      return;
+    }
+  }
+
+  await handleRefreshDashboard();
+}
+
+
+async function handleExportDashboardSmart() {
+  if (currentBuilderDashboard && currentBuilderDashboard.widgets) {
+    exportBuilderDashboardCsv(currentBuilderDashboard);
+    return;
+  }
+
+  await handleExportDashboard();
+}
+
+
+function applyDashboardBuilderTheme(theme) {
+  if (!el.dashboardViewResult || !theme) {
+    return;
+  }
+
+  currentBuilderTheme = theme;
+  currentBuilderPalette = Array.isArray(theme.chartPalette) && theme.chartPalette.length
+    ? theme.chartPalette
+    : [
+        theme.primaryColor || '#2563eb',
+        theme.secondaryColor || '#38bdf8',
+        theme.successColor || '#16a34a',
+        theme.warningColor || '#f59e0b',
+        theme.dangerColor || '#dc2626'
+      ];
+
+  const target = el.dashboardViewResult;
+
+  target.style.setProperty('--builder-bg', theme.backgroundColor || '#f8fafc');
+  target.style.setProperty('--builder-card', theme.cardColor || '#ffffff');
+  target.style.setProperty('--builder-primary', theme.primaryColor || '#2563eb');
+  target.style.setProperty('--builder-secondary', theme.secondaryColor || '#38bdf8');
+  target.style.setProperty('--builder-success', theme.successColor || '#16a34a');
+  target.style.setProperty('--builder-warning', theme.warningColor || '#f59e0b');
+  target.style.setProperty('--builder-danger', theme.dangerColor || '#dc2626');
+  target.style.setProperty('--builder-text', theme.textColor || '#0f172a');
+  target.style.setProperty('--builder-muted', theme.mutedTextColor || '#64748b');
+  target.style.setProperty('--builder-border', theme.borderColor || '#e2e8f0');
+}
+
+
+function getBuilderChartColors() {
+  if (currentBuilderPalette && currentBuilderPalette.length) {
+    return currentBuilderPalette;
+  }
+
+  return ['#2563eb', '#38bdf8', '#16a34a', '#f59e0b', '#dc2626'];
+}
+
+
+function renderBuilderDashboardHeader(result) {
+  const theme = result.theme || {};
+  const widgets = Array.isArray(result.widgets) ? result.widgets : [];
+
+  const okCount = widgets.filter(function (widget) {
+    return widget && widget.ok !== false;
+  }).length;
+
+  const errorCount = widgets.filter(function (widget) {
+    return widget && widget.ok === false;
+  }).length;
+
+  const totalRowsRead = widgets.reduce(function (sum, widget) {
+    return sum + Number(widget.rowsRead || 0);
+  }, 0);
+
+  return [
+    '<div class="builder-dashboard-header">',
+      '<div>',
+        '<h3>Dashboard Builder View</h3>',
+        '<p>',
+          'Dashboard ID: ', escapeHtml(result.dashboardId || '-'),
+          ' · Widgets: ', escapeHtml(widgets.length),
+          ' · Theme: ', escapeHtml(theme.themeName || theme.themeId || '-'),
+        '</p>',
+      '</div>',
+
+      '<div class="builder-header-stats">',
+        '<div class="builder-stat-chip">',
+          '<strong>', escapeHtml(okCount), '</strong>',
+          '<span>Widget ใช้งานได้</span>',
+        '</div>',
+        '<div class="builder-stat-chip">',
+          '<strong>', escapeHtml(errorCount), '</strong>',
+          '<span>Widget Error</span>',
+        '</div>',
+        '<div class="builder-stat-chip">',
+          '<strong>', escapeHtml(formatBuilderNumber(totalRowsRead)), '</strong>',
+          '<span>Rows Read</span>',
+        '</div>',
+      '</div>',
+    '</div>'
+  ].join('');
+}
+  function exportBuilderDashboardCsv(result) {
+  const widgets = Array.isArray(result.widgets) ? result.widgets : [];
+
+  if (!widgets.length) {
+    setDashboardViewMessage('ไม่มี Widget สำหรับ Export', 'error');
+    return;
+  }
+
+  const lines = [];
+
+  lines.push([
+    'Dashboard ID',
+    'Widget ID',
+    'Widget Type',
+    'Widget Title',
+    'Name',
+    'Value'
+  ].join(','));
+
+  widgets.forEach(function (widget) {
+    if (!widget || widget.ok === false) {
+      return;
+    }
+
+    const data = widget.data || {};
+    const type = widget.widgetType || '';
+
+    if (type === 'kpi' || type === 'gauge') {
+      lines.push(csvJoin([
+        result.dashboardId,
+        widget.widgetId,
+        type,
+        widget.title,
+        data.title || widget.title,
+        data.displayValue || data.value || data.percent || ''
+      ]));
+      return;
+    }
+
+    if (type === 'bar' || type === 'donut' || type === 'ranking') {
+      const rows = Array.isArray(data.data) ? data.data : [];
+
+      rows.forEach(function (item) {
+        lines.push(csvJoin([
+          result.dashboardId,
+          widget.widgetId,
+          type,
+          widget.title,
+          item.name || '',
+          item.value || ''
+        ]));
+      });
+
+      return;
+    }
+
+    if (type === 'line') {
+      const labels = data.labels || [];
+      const values = data.data || [];
+
+      labels.forEach(function (label, index) {
+        lines.push(csvJoin([
+          result.dashboardId,
+          widget.widgetId,
+          type,
+          widget.title,
+          label,
+          values[index] || 0
+        ]));
+      });
+
+      return;
+    }
+
+    if (type === 'stacked_bar') {
+      const categories = data.categories || [];
+      const series = data.series || [];
+
+      series.forEach(function (s) {
+        categories.forEach(function (category, index) {
+          lines.push(csvJoin([
+            result.dashboardId,
+            widget.widgetId,
+            type,
+            widget.title + ' - ' + s.name,
+            category,
+            s.data ? s.data[index] || 0 : 0
+          ]));
+        });
+      });
+
+      return;
+    }
+
+    if (type === 'table') {
+      const columns = data.columns || [];
+      const rows = data.rows || [];
+
+      lines.push('');
+      lines.push('Table Widget: ' + csvEscape(widget.title || widget.widgetId));
+      lines.push(columns.map(csvEscape).join(','));
+
+      rows.forEach(function (row) {
+        lines.push(columns.map(function (col) {
+          return csvEscape(row[col]);
+        }).join(','));
+      });
+    }
+  });
+
+  const csv = '\ufeff' + lines.join('\n');
+  const blob = new Blob([csv], {
+    type: 'text/csv;charset=utf-8;'
+  });
+
+  const fileName = 'dashboard-builder-' + (result.dashboardId || 'export') + '-' + Date.now() + '.csv';
+
+  downloadBlob(blob, fileName);
+  setDashboardViewMessage('Export CSV สำเร็จ', 'success');
+}
+
+
+function csvJoin(values) {
+  return values.map(csvEscape).join(',');
+}
+
+
+function csvEscape(value) {
+  const text = String(value === undefined || value === null ? '' : value);
+
+  if (/[",\n\r]/.test(text)) {
+    return '"' + text.replace(/"/g, '""') + '"';
+  }
+
+  return text;
+}
+
+
+function downloadBlob(blob, fileName) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+
+  a.href = url;
+  a.download = fileName;
+  document.body.appendChild(a);
+  a.click();
+
+  setTimeout(function () {
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, 0);
 }
 })();
