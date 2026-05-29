@@ -713,7 +713,7 @@ function clearCache(payload = {}) {
     retryDelay: 1000
   });
 }
-  window.AnalyticsAPI = {
+    window.AnalyticsAPI = {
     API_BASE,
     TOKEN_KEY,
     API_TIMEOUT,
@@ -722,12 +722,12 @@ function clearCache(payload = {}) {
     setToken,
     clearToken,
 
-   request,
-requestWithRetry,
-normalizeApiErrorMessage,
-    
-  health,
-  setupStatus,
+    request,
+    requestWithRetry,
+    normalizeApiErrorMessage,
+
+    health,
+    setupStatus,
 
     login,
     me,
@@ -757,19 +757,20 @@ normalizeApiErrorMessage,
     setDashboardHidden,
     setDashboardVisibility,
     regenerateDashboard,
-deleteDashboard,
+    deleteDashboard,
 
-listUsers,
-createUser,
-updateUser,
-resetUserPassword,
-setUserStatus,
-disableUser,
-enableUser,
+    listUsers,
+    createUser,
+    updateUser,
+    resetUserPassword,
+    setUserStatus,
+    disableUser,
+    enableUser,
 
-clearCache,
-auditLog,
-       themes,
+    clearCache,
+    auditLog,
+
+    themes,
     widgetTemplates,
     fieldAnalysis,
     analyzeSheet,
@@ -789,6 +790,5 @@ auditLog,
     sourceSheets: listSourceSheets,
 
     dashboardBuilderView
-
   };
 })();
