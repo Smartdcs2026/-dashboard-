@@ -789,7 +789,6 @@ auditLog,
     sourceSheets: listSourceSheets,
 
     dashboardBuilderView
-  };
-})();
+
   };
 })();
