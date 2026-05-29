@@ -210,6 +210,7 @@ let selectedManageUserId = '';
 let currentDashboardTablePage = 1;
   let currentBuilderDashboard = null;
 let builderChartInstances = [];
+  let currentBuilderFilterOptions = [];
   /**
    * Dashboard Designer State
    */
@@ -8153,6 +8154,10 @@ function downloadBlob(blob, fileName) {
  */
 
 function renderBuilderFilterBox(result) {
+  currentBuilderFilterOptions = Array.isArray(result.filterOptions)
+  ? result.filterOptions
+  : [];
+  
   if (!el.dashboardFilterBox) {
     return;
   }
@@ -8203,8 +8208,8 @@ function renderBuilderFilterBox(result) {
       '<div class="builder-category-filter-box">',
         '<div class="builder-category-filter-title">Category Filters</div>',
         categoryFields.length
-          ? categoryFields.map(renderBuilderCategoryFilterControl).join('')
-          : '<div class="builder-filter-empty">ไม่พบ Field ที่เหมาะกับ Category Filter</div>',
+  ? categoryFields.map(renderBuilderCategoryFilterControlV2).join('')
+  : '<div class="builder-filter-empty">ไม่พบ Field ที่เหมาะกับ Category Filter</div>'
       '</div>',
 
       '<div class="actions-row builder-filter-actions">',
@@ -8297,14 +8302,32 @@ function bindBuilderFilterEvents() {
   }
 }
 
-
 function collectBuilderFiltersFromUi() {
   const dateFieldEl = document.getElementById('builderFilterDateField');
   const dateFromEl = document.getElementById('builderFilterDateFrom');
   const dateToEl = document.getElementById('builderFilterDateTo');
   const keywordEl = document.getElementById('builderFilterKeyword');
 
-  const categoryFilters = [];
+  const categoryFilterMap = {};
+
+  document.querySelectorAll('[data-builder-filter-checkbox]').forEach(function (input) {
+    if (!input.checked) {
+      return;
+    }
+
+    const field = input.getAttribute('data-builder-filter-checkbox') || '';
+    const value = String(input.value || '').trim();
+
+    if (!field || !value) {
+      return;
+    }
+
+    if (!categoryFilterMap[field]) {
+      categoryFilterMap[field] = [];
+    }
+
+    categoryFilterMap[field].push(value);
+  });
 
   document.querySelectorAll('[data-builder-category-filter]').forEach(function (input) {
     const field = input.getAttribute('data-builder-category-filter') || '';
@@ -8323,12 +8346,26 @@ function collectBuilderFiltersFromUi() {
         return !!v;
       });
 
-    if (values.length) {
-      categoryFilters.push({
-        field: field,
-        values: values
-      });
+    if (!values.length) {
+      return;
     }
+
+    if (!categoryFilterMap[field]) {
+      categoryFilterMap[field] = [];
+    }
+
+    values.forEach(function (value) {
+      if (categoryFilterMap[field].indexOf(value) < 0) {
+        categoryFilterMap[field].push(value);
+      }
+    });
+  });
+
+  const categoryFilters = Object.keys(categoryFilterMap).map(function (field) {
+    return {
+      field: field,
+      values: categoryFilterMap[field]
+    };
   });
 
   return {
@@ -8339,7 +8376,6 @@ function collectBuilderFiltersFromUi() {
     categoryFilters: categoryFilters
   };
 }
-
 
 function setBuilderFilterValuesToUi() {
   const filters = currentBuilderFilters || {};
@@ -8359,16 +8395,33 @@ function setBuilderFilterValuesToUi() {
     : [];
 
   categoryFilters.forEach(function (filter) {
+    const values = Array.isArray(filter.values)
+      ? filter.values.map(String)
+      : [];
+
+    document.querySelectorAll('[data-builder-filter-checkbox="' + cssEscapeSafe(filter.field) + '"]').forEach(function (checkbox) {
+      checkbox.checked = values.indexOf(String(checkbox.value)) >= 0;
+    });
+
     const input = document.querySelector('[data-builder-category-filter="' + cssEscapeSafe(filter.field) + '"]');
 
     if (input) {
-      input.value = (filter.values || []).join(',');
+      const uncheckedValues = values.filter(function (value) {
+        const found = Array.from(
+          document.querySelectorAll('[data-builder-filter-checkbox="' + cssEscapeSafe(filter.field) + '"]')
+        ).some(function (checkbox) {
+          return String(checkbox.value) === String(value);
+        });
+
+        return !found;
+      });
+
+      input.value = uncheckedValues.join(',');
     }
   });
 
   updateBuilderFilterSummary();
 }
-
 
 function setBuilderFilterSummary(text) {
   const box = document.getElementById('builderFilterSummary');
@@ -8405,5 +8458,67 @@ function cssEscapeSafe(value) {
   }
 
   return String(value || '').replace(/"/g, '\\"');
+}
+  function renderBuilderCategoryFilterControlV2(field) {
+  const optionGroup = currentBuilderFilterOptions.find(function (item) {
+    return item.field === field;
+  });
+
+  const options = optionGroup && Array.isArray(optionGroup.options)
+    ? optionGroup.options
+    : [];
+
+  const topOptions = options.slice(0, 20);
+
+  return [
+    '<div class="builder-category-filter-group" data-builder-filter-group="' + escapeHtml(field) + '">',
+      '<div class="builder-category-filter-group-head">',
+        '<strong>' + escapeHtml(field) + '</strong>',
+        '<span>' + escapeHtml(options.length) + ' ค่า</span>',
+      '</div>',
+
+      topOptions.length
+        ? '<div class="builder-filter-option-list">' +
+            topOptions.map(function (item) {
+              return renderBuilderFilterOptionCheckbox(field, item);
+            }).join('') +
+          '</div>'
+        : '<div class="builder-filter-empty">ไม่มีค่าตัวอย่าง</div>',
+
+      '<label class="builder-category-filter-item manual">',
+        '<span>ระบุเอง</span>',
+        '<input ',
+          'type="text" ',
+          'data-builder-category-filter="' + escapeHtml(field) + '" ',
+          'placeholder="เช่น 906,903 หรือ Open,Closed"',
+        '>',
+      '</label>',
+    '</div>'
+  ].join('');
+}
+
+
+function renderBuilderFilterOptionCheckbox(field, item) {
+  const id = 'bf_' + safeId(field) + '_' + safeId(item.value);
+
+  return [
+    '<label class="builder-filter-option" for="' + escapeHtml(id) + '">',
+      '<input ',
+        'id="' + escapeHtml(id) + '" ',
+        'type="checkbox" ',
+        'data-builder-filter-checkbox="' + escapeHtml(field) + '" ',
+        'value="' + escapeAttr(item.value) + '"',
+      '>',
+      '<span class="builder-filter-option-text">' + escapeHtml(item.value) + '</span>',
+      '<span class="builder-filter-option-count">' + escapeHtml(formatBuilderNumber(item.count || 0)) + '</span>',
+    '</label>'
+  ].join('');
+}
+
+
+function safeId(value) {
+  return String(value || '')
+    .replace(/[^a-zA-Z0-9ก-๙_-]/g, '_')
+    .substring(0, 60);
 }
 })();
