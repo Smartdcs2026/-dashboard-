@@ -1668,6 +1668,71 @@ function getDashboardVisibility(dash) {
     ''
   ).trim();
 }
+
+function getDashboardSourceId(dash) {
+  dash = dash || {};
+
+  return String(
+    dash.sourceId ||
+    dash.primarySourceId ||
+    dash.mainSourceId ||
+    dash['รหัสแหล่งข้อมูลหลัก'] ||
+    dash['รหัสแหล่งข้อมูล'] ||
+    ''
+  ).trim();
+}
+
+function getDashboardSheetName(dash) {
+  dash = dash || {};
+
+  return String(
+    dash.sheetName ||
+    dash.primarySheetName ||
+    dash.mainSheetName ||
+    dash['ชื่อชีท'] ||
+    dash['รหัสชีทย่อยหลัก'] ||
+    dash['รหัสชีทย่อย'] ||
+    ''
+  ).trim();
+}
+
+function getDashboardThemeId(dash) {
+  dash = dash || {};
+
+  return String(
+    dash.theme ||
+    dash.themeId ||
+    dash['Theme'] ||
+    ''
+  ).trim();
+}
+
+function findDashboardInCache(dashboardId) {
+  dashboardId = String(dashboardId || '').trim();
+
+  if (!dashboardId) {
+    return null;
+  }
+
+  const merged = [];
+
+  (dashboardsCache || []).forEach(function (dash) {
+    merged.push(dash);
+  });
+
+  (manageDashboardsCache || []).forEach(function (dash) {
+    if (!merged.some(function (item) {
+      return getDashboardId(item) === getDashboardId(dash);
+    })) {
+      merged.push(dash);
+    }
+  });
+
+  return merged.find(function (dash) {
+    return getDashboardId(dash) === dashboardId;
+  }) || null;
+}
+
   function renderAllDashboardDropdowns(dashboards) {
   dashboards = Array.isArray(dashboards) ? dashboards : [];
 
@@ -5637,9 +5702,7 @@ function buildHeatmapOption(title, data, chart) {
     }
 
     if (el.designerDashboardSelect) {
-      el.designerDashboardSelect.addEventListener('change', function () {
-        designerSelectedDashboardId = el.designerDashboardSelect.value || '';
-      });
+      el.designerDashboardSelect.addEventListener('change', handleDesignerDashboardChange);
     }
 
     if (el.designerAnalyzeBtn) {
@@ -5763,6 +5826,10 @@ function buildHeatmapOption(title, data, chart) {
      */
     if (el.designerSheetSelect && el.designerSheetSelect.value) {
       designerSelectedSheetName = el.designerSheetSelect.value;
+    }
+
+    if (designerSelectedDashboardId) {
+      await handleDesignerDashboardChange();
     }
 
     setDesignerMessage('โหลด Dashboard Designer สำเร็จ', 'success');
@@ -6092,9 +6159,213 @@ function buildHeatmapOption(title, data, chart) {
   }
 }
 
+async function handleDesignerDashboardChange() {
+  const dashboardId = el.designerDashboardSelect
+    ? String(el.designerDashboardSelect.value || '').trim()
+    : '';
+
+  designerSelectedDashboardId = dashboardId;
+  designerEditingWidgetId = '';
+
+  if (!dashboardId) {
+    designerSavedWidgetsCache = [];
+    designerSavedComparisonsCache = [];
+    designerSavedLayoutsCache = [];
+
+    if (el.designerSavedWidgetList) {
+      el.designerSavedWidgetList.classList.add('empty');
+      el.designerSavedWidgetList.textContent = 'เลือก Dashboard ก่อนโหลด Widget เดิม';
+    }
+
+    if (el.designerSourceSelect) {
+      el.designerSourceSelect.value = '';
+    }
+
+    if (el.designerSheetSelect) {
+      el.designerSheetSelect.innerHTML = '<option value="">เลือก Sheet</option>';
+    }
+
+    resetDesignerWidgetForm();
+    setDesignerMessage('กรุณาเลือก Dashboard ที่ต้องการออกแบบ', 'muted');
+    return;
+  }
+
+  try {
+    setDesignerBusy(true);
+    setDesignerMessage('กำลังโหลดข้อมูล Dashboard ที่เลือก...', 'muted');
+
+    let localDashboard = findDashboardInCache(dashboardId);
+    let designerData = null;
+
+    if (window.AnalyticsAPI && typeof window.AnalyticsAPI.dashboardDesignerLoad === 'function') {
+      designerData = await window.AnalyticsAPI.dashboardDesignerLoad(dashboardId);
+    }
+
+    const dashboard = (designerData && designerData.dashboard) || localDashboard || {};
+    const widgets = designerData && Array.isArray(designerData.widgets) ? designerData.widgets : [];
+    const firstWidget = widgets.length ? widgets[0] : {};
+
+    const dashboardType = String(
+      (designerData && designerData.dashboardType) ||
+      getDashboardType(dashboard) ||
+      ''
+    ).trim();
+
+    const sourceId = String(
+      (designerData && designerData.sourceId) ||
+      getDashboardSourceId(dashboard) ||
+      firstWidget.sourceId ||
+      ''
+    ).trim();
+
+    const sheetName = String(
+      (designerData && designerData.sheetName) ||
+      getDashboardSheetName(dashboard) ||
+      firstWidget.sheetName ||
+      ''
+    ).trim();
+
+    if (el.designerDashboardType && dashboardType) {
+      el.designerDashboardType.value = dashboardType;
+    }
+
+    if (el.designerSourceSelect) {
+      const hasSourceOption = Array.from(el.designerSourceSelect.options || []).some(function (opt) {
+        return opt.value === sourceId;
+      });
+
+      if (sourceId && !hasSourceOption) {
+        await loadDesignerSources();
+      }
+
+      const hasSourceAfterReload = Array.from(el.designerSourceSelect.options || []).some(function (opt) {
+        return opt.value === sourceId;
+      });
+
+      if (sourceId && !hasSourceAfterReload) {
+        const opt = document.createElement('option');
+        opt.value = sourceId;
+        opt.textContent = (designerData && designerData.sourceName) || sourceId;
+        el.designerSourceSelect.appendChild(opt);
+      }
+
+      el.designerSourceSelect.value = sourceId || '';
+      designerSelectedSourceId = el.designerSourceSelect.value || '';
+    }
+
+    if (sourceId) {
+      await loadDesignerSheetsForSource(sourceId, sheetName);
+    } else if (el.designerSheetSelect) {
+      el.designerSheetSelect.innerHTML = '<option value="">ไม่พบ Source ของ Dashboard นี้</option>';
+    }
+
+    designerSelectedSheetName = el.designerSheetSelect ? String(el.designerSheetSelect.value || '').trim() : '';
+
+    designerSavedWidgetsCache = widgets;
+    designerSavedComparisonsCache = designerData && Array.isArray(designerData.comparisons)
+      ? designerData.comparisons
+      : [];
+    designerSavedLayoutsCache = designerData && Array.isArray(designerData.layouts)
+      ? designerData.layouts
+      : [];
+
+    renderDesignerSavedWidgets(designerSavedWidgetsCache);
+
+    resetDesignerWidgetForm();
+
+    writeLog({
+      step: 'designer_dashboard_change',
+      dashboardId: dashboardId,
+      dashboardType: dashboardType,
+      sourceId: sourceId,
+      sheetName: designerSelectedSheetName,
+      widgets: designerSavedWidgetsCache.length
+    });
+
+    setDesignerMessage(
+      'โหลดข้อมูล Dashboard สำเร็จ' +
+        (sourceId ? ' | Source: ' + sourceId : '') +
+        (designerSelectedSheetName ? ' | Sheet: ' + designerSelectedSheetName : ''),
+      'success'
+    );
+
+  } catch (error) {
+    const message = getFriendlyErrorMessage
+      ? getFriendlyErrorMessage(error)
+      : (error.message || 'โหลดข้อมูล Dashboard ที่เลือกไม่สำเร็จ');
+
+    setDesignerMessage(message, 'error');
+
+    writeLog({
+      step: 'designer_dashboard_change_error',
+      dashboardId: dashboardId,
+      message: message,
+      payload: error.payload || null
+    });
+
+  } finally {
+    setDesignerBusy(false);
+  }
+}
 
 
-  async function handleDesignerSourceChange() {
+
+  async function normalizeDesignerSheets(result) {
+  if (!result) {
+    return [];
+  }
+
+  if (Array.isArray(result)) {
+    return result;
+  }
+
+  return result.sheets ||
+    result.items ||
+    result.data ||
+    result.rows ||
+    [];
+}
+
+async function loadDesignerSheetsForSource(sourceId, selectedSheetName) {
+  sourceId = String(sourceId || '').trim();
+  selectedSheetName = String(selectedSheetName || '').trim();
+
+  if (!el.designerSheetSelect) {
+    return [];
+  }
+
+  if (!sourceId) {
+    el.designerSheetSelect.innerHTML = '<option value="">เลือก Sheet</option>';
+    return [];
+  }
+
+  let result = null;
+
+  if (window.AnalyticsAPI && typeof window.AnalyticsAPI.sourceSheets === 'function') {
+    result = await window.AnalyticsAPI.sourceSheets({
+      sourceId: sourceId
+    });
+  } else if (window.AnalyticsAPI && typeof window.AnalyticsAPI.listSourceSheets === 'function') {
+    result = await window.AnalyticsAPI.listSourceSheets({
+      sourceId: sourceId
+    });
+  } else {
+    throw new Error('ไม่พบ API สำหรับโหลดรายชื่อ Sheet');
+  }
+
+  const sheets = normalizeDesignerSheets(result);
+  renderDesignerSheetOptions(sheets, selectedSheetName);
+
+  if (selectedSheetName) {
+    el.designerSheetSelect.value = selectedSheetName;
+  }
+
+  designerSelectedSheetName = el.designerSheetSelect.value || '';
+
+  return sheets;
+}
+
+async function handleDesignerSourceChange() {
   designerSelectedSourceId = el.designerSourceSelect ? el.designerSourceSelect.value : '';
   designerSelectedSheetName = '';
 
@@ -6102,69 +6373,84 @@ function buildHeatmapOption(title, data, chart) {
     if (el.designerSheetSelect) {
       el.designerSheetSelect.innerHTML = '<option value="">เลือก Sheet</option>';
     }
-    return;
+    return [];
   }
 
   try {
     setDesignerMessage('กำลังโหลดรายชื่อ Sheet...', 'muted');
 
-    let result = null;
-
-    if (window.AnalyticsAPI && typeof window.AnalyticsAPI.sourceSheets === 'function') {
-      result = await window.AnalyticsAPI.sourceSheets({
-        sourceId: designerSelectedSourceId
-      });
-    } else if (window.AnalyticsAPI && typeof window.AnalyticsAPI.listSourceSheets === 'function') {
-      result = await window.AnalyticsAPI.listSourceSheets({
-        sourceId: designerSelectedSourceId
-      });
-    } else {
-      throw new Error('ไม่พบ API สำหรับโหลดรายชื่อ Sheet');
-    }
-
-    const sheets =
-      result.sheets ||
-      result.items ||
-      result.data ||
-      result.rows ||
-      [];
-
-    renderDesignerSheetOptions(sheets);
+    const sheets = await loadDesignerSheetsForSource(designerSelectedSourceId, '');
 
     setDesignerMessage('โหลดรายชื่อ Sheet สำเร็จ', 'success');
 
+    writeLog({
+      step: 'designer_source_change',
+      sourceId: designerSelectedSourceId,
+      sheetCount: sheets.length
+    });
+
+    return sheets;
+
   } catch (error) {
-    setDesignerMessage(error.message || 'โหลดรายชื่อ Sheet ไม่สำเร็จ', 'error');
+    const message = getFriendlyErrorMessage
+      ? getFriendlyErrorMessage(error)
+      : (error.message || 'โหลดรายชื่อ Sheet ไม่สำเร็จ');
+
+    setDesignerMessage(message, 'error');
 
     if (el.designerSheetSelect) {
       el.designerSheetSelect.innerHTML = '<option value="">โหลด Sheet ไม่สำเร็จ</option>';
     }
+
+    writeLog({
+      step: 'designer_source_change_error',
+      sourceId: designerSelectedSourceId,
+      message: message,
+      payload: error.payload || null
+    });
+
+    return [];
   }
 }
 
 
-  function renderDesignerSheetOptions(sheets) {
-    if (!el.designerSheetSelect) {
-      return;
-    }
-
-    const list = Array.isArray(sheets) ? sheets : [];
-
-    if (!list.length) {
-      el.designerSheetSelect.innerHTML = '<option value="">ไม่พบ Sheet</option>';
-      return;
-    }
-
-    el.designerSheetSelect.innerHTML = '<option value="">เลือก Sheet</option>' + list.map(function (sheet) {
-      const name = typeof sheet === 'string'
-        ? sheet
-        : (sheet.sheetName || sheet.name || sheet['ชื่อชีท'] || '');
-
-      return '<option value="' + escapeHtml(name) + '">' +
-        escapeHtml(name) +
-        '</option>';
-    }).join('');
+  function renderDesignerSheetOptions(sheets, selectedSheetName) {
+  if (!el.designerSheetSelect) {
+    return;
   }
+
+  const list = Array.isArray(sheets) ? sheets : [];
+  const selected = String(selectedSheetName || '').trim();
+
+  if (!list.length) {
+    el.designerSheetSelect.innerHTML = '<option value="">ไม่พบ Sheet</option>';
+    return;
+  }
+
+  el.designerSheetSelect.innerHTML = '<option value="">เลือก Sheet</option>' + list.map(function (sheet) {
+    const name = typeof sheet === 'string'
+      ? sheet
+      : (sheet.sheetName || sheet.name || sheet['ชื่อชีท'] || '');
+
+    if (!name) {
+      return '';
+    }
+
+    return '<option value="' + escapeHtml(name) + '"' +
+      (String(name) === selected ? ' selected' : '') +
+      '>' + escapeHtml(name) + '</option>';
+  }).join('');
+
+  if (selected && !Array.from(el.designerSheetSelect.options).some(function (opt) {
+    return opt.value === selected;
+  })) {
+    const opt = document.createElement('option');
+    opt.value = selected;
+    opt.textContent = selected;
+    opt.selected = true;
+    el.designerSheetSelect.appendChild(opt);
+  }
+}
 
 
   async function handleDesignerAnalyzeSheet() {
