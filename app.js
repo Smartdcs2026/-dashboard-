@@ -8205,12 +8205,12 @@ function renderBuilderFilterBox(result) {
         '</label>',
       '</div>',
 
-      '<div class="builder-category-filter-box">',
-        '<div class="builder-category-filter-title">Category Filters</div>',
-        categoryFields.length
-  ? categoryFields.map(renderBuilderCategoryFilterControlV2).join('')
-  : '<div class="builder-filter-empty">ไม่พบ Field ที่เหมาะกับ Category Filter</div>'
-      '</div>',
+     '<div class="builder-category-filter-box">',
+  '<div class="builder-category-filter-title">Category Filters</div>',
+  categoryFields.length
+    ? categoryFields.map(renderBuilderCategoryFilterControlV2).join('')
+    : '<div class="builder-filter-empty">ไม่พบ Field ที่เหมาะกับ Category Filter</div>'
+'</div>',
 
       '<div class="actions-row builder-filter-actions">',
         '<button id="builderApplyFiltersBtn" class="btn btn-primary" type="button">ใช้ Filter</button>',
