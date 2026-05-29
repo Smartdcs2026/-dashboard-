@@ -700,12 +700,13 @@ function clearCache(payload = {}) {
       timeoutMs: API_TIMEOUT.DASHBOARD
     });
   }
-  function dashboardBuilderView(payload = {}) {
+ function dashboardBuilderView(payload = {}) {
   return requestWithRetry('/api/dashboard-builder-view', {
     method: 'POST',
     body: {
       dashboardId: payload.dashboardId || '',
-      limit: payload.limit || 5000
+      limit: payload.limit || 5000,
+      filters: payload.filters || {}
     },
     timeoutMs: API_TIMEOUT.DASHBOARD,
     retry: 1,
