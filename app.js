@@ -196,36 +196,47 @@ systemCheckResult: document.getElementById('systemCheckResult'),
    * แก้ปัญหา runtime: toBool is not defined
    */
   function toBool(value) {
-    if (typeof value === 'boolean') {
-      return value;
-    }
-
-    if (typeof value === 'number') {
-      return value === 1;
-    }
-
-    const text = String(value === null || value === undefined ? '' : value)
-      .trim()
-      .toLowerCase();
-
-    return [
-      'true',
-      '1',
-      'yes',
-      'y',
-      'on',
-      'active',
-      'published',
-      'publish',
-      'เปิด',
-      'ใช่',
-      'จริง',
-      'เผยแพร่'
-    ].indexOf(text) >= 0;
+  if (typeof value === 'boolean') {
+    return value;
   }
 
-  // ให้เรียกจากส่วนอื่น/console ได้ด้วย ในกรณีมีโค้ดเก่าหรือ inline handler อ้างถึง
-  window.toBool = toBool;
+  if (typeof value === 'number') {
+    return value === 1;
+  }
+
+  const text = String(value === null || value === undefined ? '' : value)
+    .trim()
+    .toLowerCase();
+
+  return [
+    'true',
+    '1',
+    'yes',
+    'y',
+    'on',
+    'active',
+    'published',
+    'publish',
+    'enabled',
+    'enable',
+    'เปิด',
+    'ใช่',
+    'จริง',
+    'เผยแพร่',
+    'ใช้งาน'
+  ].indexOf(text) >= 0;
+}
+
+/**
+ * Alias สำหรับโค้ดที่ยังเรียกแบบ Apps Script เดิม
+ * ป้องกัน error: toBool_ is not defined
+ */
+function toBool_(value) {
+  return toBool(value);
+}
+
+window.toBool = toBool;
+window.toBool_ = toBool_;
 
   let currentUser = null;
   let sourcesCache = [];
@@ -9434,4 +9445,801 @@ function safeId(value) {
     .replace(/[^a-zA-Z0-9ก-๙_-]/g, '_')
     .substring(0, 60);
 }
+
+
+/* =====================================================
+ * FINAL STABILITY PATCH - Dashboard Designer
+ * Added by ChatGPT after full review
+ * Purpose:
+ * - Normalize dashboard/source/sheet/widget data from both English and Thai headers
+ * - Fix Designer source/sheet sync after selecting a dashboard
+ * - Fix real preview / comparison / saved widget edit using normalized config
+ * - Keep backward compatibility with old API response shapes
+ * ===================================================== */
+
+function designerText_(value) {
+  return String(value === null || value === undefined ? '' : value).trim();
+}
+
+function designerNumber_(value, fallback) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : (fallback || 0);
+}
+
+function designerPick_(obj, keys, fallback) {
+  obj = obj || {};
+  for (let i = 0; i < keys.length; i++) {
+    const key = keys[i];
+    if (Object.prototype.hasOwnProperty.call(obj, key)) {
+      const value = obj[key];
+      if (value !== undefined && value !== null && String(value).trim() !== '') {
+        return value;
+      }
+    }
+  }
+  return fallback === undefined ? '' : fallback;
+}
+
+function normalizeDesignerWidgetType_(type) {
+  type = designerText_(type).toLowerCase();
+  const map = {
+    card: 'kpi',
+    metric: 'kpi',
+    kpi_card: 'kpi',
+    barchart: 'bar',
+    bar_chart: 'bar',
+    linechart: 'line',
+    line_chart: 'line',
+    pie: 'donut',
+    pie_chart: 'donut',
+    donut_chart: 'donut',
+    stackedbar: 'stacked_bar',
+    stacked_bar_chart: 'stacked_bar',
+    rank: 'ranking',
+    ranking_chart: 'ranking',
+    data_table: 'table',
+    gauge_chart: 'gauge'
+  };
+  return map[type] || type || 'kpi';
+}
+
+function normalizeDesignerField_(field) {
+  field = field || {};
+
+  const columnName = designerText_(designerPick_(field, [
+    'columnName', 'fieldName', 'name', 'key', 'id',
+    'ชื่อคอลัมน์จริง', 'ชื่อคอลัมน์', 'Field', 'Column', 'Column Name'
+  ]));
+
+  const displayName = designerText_(designerPick_(field, [
+    'displayName', 'label', 'title', 'name',
+    'ชื่อแสดงผล', 'Display Name'
+  ], columnName));
+
+  const dataType = designerText_(designerPick_(field, [
+    'dataType', 'type', 'detectedType', 'manualType',
+    'ประเภทข้อมูล', 'Data Type'
+  ], '')).toLowerCase();
+
+  const semanticType = designerText_(designerPick_(field, [
+    'semanticType', 'meaningType', 'meaning',
+    'ประเภทความหมาย', 'Semantic Type'
+  ], '')).toLowerCase();
+
+  const isDateField = toBool(field.isDateField) || toBool(field.isPrimaryDate) ||
+    toBool(field['ใช้เป็นวันที่หลัก']) || dataType.indexOf('date') >= 0 || semanticType.indexOf('date') >= 0;
+
+  const isNumberField = toBool(field.isNumberField) || toBool(field.isMeasure) ||
+    toBool(field['ใช้เป็นตัวเลข']) || dataType.indexOf('number') >= 0 || dataType.indexOf('numeric') >= 0 || semanticType.indexOf('measure') >= 0;
+
+  const isCategoryField = toBool(field.isCategoryField) || toBool(field.isCategory) ||
+    toBool(field['ใช้เป็นหมวดหมู่']) || semanticType.indexOf('category') >= 0 || semanticType.indexOf('location') >= 0;
+
+  return {
+    ...field,
+    columnName: columnName,
+    displayName: displayName || columnName,
+    dataType: dataType || field.dataType || '',
+    semanticType: semanticType || field.semanticType || '',
+    detectedType: field.detectedType || dataType || 'text',
+    manualType: field.manualType || field.detectedType || dataType || 'text',
+    isDateField: isDateField,
+    isNumberField: isNumberField,
+    isCategoryField: isCategoryField,
+    isStatusField: toBool(field.isStatusField) || toBool(field.isStatus) || toBool(field['ใช้เป็นสถานะ']),
+    isFilterField: toBool(field.isFilterField) || toBool(field.useFilter) || toBool(field['ใช้เป็นตัวกรอง']),
+    sampleValues: Array.isArray(field.sampleValues) ? field.sampleValues : (field.sampleValue ? [field.sampleValue] : [])
+  };
+}
+
+function normalizeDesignerFields_(fields) {
+  return (Array.isArray(fields) ? fields : [])
+    .map(normalizeDesignerField_)
+    .filter(function (field) {
+      return !!field.columnName;
+    });
+}
+
+function normalizeDesignerWidget_(item) {
+  item = item || {};
+
+  const widgetId = designerText_(designerPick_(item, [
+    'widgetId', 'id', 'Widget ID', 'รหัส Widget'
+  ]));
+
+  const dashboardId = designerText_(designerPick_(item, [
+    'dashboardId', 'Dashboard ID', 'รหัส Dashboard'
+  ], getDesignerDashboardId()));
+
+  const widgetType = normalizeDesignerWidgetType_(designerPick_(item, [
+    'widgetType', 'type', 'Widget Type', 'ประเภท Widget'
+  ], 'kpi'));
+
+  const title = designerText_(designerPick_(item, [
+    'title', 'widgetTitle', 'name', 'Widget Title', 'ชื่อ Widget'
+  ], getDefaultWidgetTitle(widgetType)));
+
+  const xField = designerText_(designerPick_(item, [
+    'xField', 'categoryField', 'dimensionField', 'XAxis', 'X Field', 'Category Field',
+    'แกน X', 'คอลัมน์หมวดหมู่'
+  ]));
+
+  const valueField = designerText_(designerPick_(item, [
+    'valueField', 'measureField', 'yField', 'Value Field', 'Measure Field', 'คอลัมน์ตัวเลข'
+  ]));
+
+  const compare = item.compare || item.comparison || {};
+  const layout = item.layout || item.deviceLayout || {};
+
+  return {
+    ...item,
+    widgetId: widgetId,
+    dashboardId: dashboardId,
+    widgetType: widgetType,
+    title: title,
+    description: designerText_(designerPick_(item, ['description', 'คำอธิบาย'], '')),
+    sourceId: designerText_(designerPick_(item, ['sourceId', 'Source ID', 'รหัสแหล่งข้อมูล'], getDesignerSourceId())),
+    sourceName: designerText_(designerPick_(item, ['sourceName', 'Source Name', 'ชื่อแหล่งข้อมูล'], getDesignerSourceName())),
+    sheetName: designerText_(designerPick_(item, ['sheetName', 'Sheet Name', 'ชื่อชีท'], getDesignerSheetName())),
+    dateField: designerText_(designerPick_(item, ['dateField', 'Date Field', 'คอลัมน์วันที่'], '')),
+    xField: xField,
+    categoryField: designerText_(designerPick_(item, ['categoryField', 'Category Field'], xField)),
+    valueField: valueField,
+    yField: designerText_(designerPick_(item, ['yField', 'Y Field'], valueField)),
+    stackField: designerText_(designerPick_(item, ['stackField', 'groupField', 'Stack Field', 'Group Field'], '')),
+    aggregate: designerText_(designerPick_(item, ['aggregate', 'calculation', 'วิธีคำนวณ'], 'count')),
+    unit: designerText_(designerPick_(item, ['unit', 'หน่วย'], '')),
+    sortMethod: designerText_(designerPick_(item, ['sortMethod', 'sort', 'Sort Method'], 'desc')),
+    limit: designerNumber_(designerPick_(item, ['limit', 'Limit', 'จำนวนรายการ'], 0), 0),
+    theme: designerText_(designerPick_(item, ['theme', 'Theme'], el.designerTheme ? el.designerTheme.value : 'executive_blue')),
+    targetValue: designerText_(designerPick_(item, ['targetValue', 'target', 'Target Value', 'ค่าเป้าหมาย'], '')),
+    showLegend: toBool(designerPick_(item, ['showLegend', 'Show Legend'], true)),
+    showLabel: toBool(designerPick_(item, ['showLabel', 'Show Label'], false)),
+    showPercent: toBool(designerPick_(item, ['showPercent', 'Show Percent'], false)),
+    enableExport: designerPick_(item, ['enableExport', 'Allow Export', 'Export ได้'], true) !== false,
+    compare: compare,
+    layout: layout
+  };
+}
+
+function normalizeDesignerComparison_(item) {
+  item = item || {};
+  return {
+    ...item,
+    widgetId: designerText_(designerPick_(item, ['widgetId', 'Widget ID', 'รหัส Widget'], '')),
+    dashboardId: designerText_(designerPick_(item, ['dashboardId', 'Dashboard ID', 'รหัส Dashboard'], getDesignerDashboardId())),
+    enabled: toBool(designerPick_(item, ['enabled', 'Enable', 'เปิดใช้งาน'], false)),
+    type: designerText_(designerPick_(item, ['type', 'compareType', 'Compare Type'], 'none')),
+    categoryField: designerText_(designerPick_(item, ['categoryField', 'Category Field'], '')),
+    categoryA: designerText_(designerPick_(item, ['categoryA', 'Category A'], '')),
+    categoryB: designerText_(designerPick_(item, ['categoryB', 'Category B'], '')),
+    targetValue: designerText_(designerPick_(item, ['targetValue', 'Target Value'], '')),
+    averageWindow: designerText_(designerPick_(item, ['averageWindow', 'Average Window'], ''))
+  };
+}
+
+function normalizeDesignerLayout_(item) {
+  item = item || {};
+  return {
+    ...item,
+    widgetId: designerText_(designerPick_(item, ['widgetId', 'Widget ID', 'รหัส Widget'], '')),
+    dashboardId: designerText_(designerPick_(item, ['dashboardId', 'Dashboard ID', 'รหัส Dashboard'], getDesignerDashboardId())),
+    desktopW: designerNumber_(designerPick_(item, ['desktopW', 'w', 'Desktop W', 'ความกว้าง'], 4), 4),
+    desktopH: designerNumber_(designerPick_(item, ['desktopH', 'h', 'Desktop H', 'ความสูง'], 3), 3),
+    tabletOrder: designerNumber_(designerPick_(item, ['tabletOrder', 'Tablet Order', 'ลำดับ Tablet'], 1), 1),
+    mobileOrder: designerNumber_(designerPick_(item, ['mobileOrder', 'Mobile Order', 'ลำดับ Mobile'], 1), 1),
+    mobileHidden: toBool(designerPick_(item, ['mobileHidden', 'Mobile Hidden', 'ซ่อนบนมือถือ'], false))
+  };
+}
+
+function populateDesignerFieldSelects(fields) {
+  const list = normalizeDesignerFields_(fields);
+  designerFieldsCache = list;
+
+  const allOptions = '<option value="">ไม่ใช้</option>' + list.map(function (field) {
+    return '<option value="' + escapeAttr(field.columnName) + '">' +
+      escapeHtml(field.displayName || field.columnName) +
+      '</option>';
+  }).join('');
+
+  const valueOptions = '<option value="">นับจำนวนรายการ</option>' + list
+    .filter(function (field) {
+      return field.isNumberField || field.semanticType === 'measure';
+    })
+    .map(function (field) {
+      return '<option value="' + escapeAttr(field.columnName) + '">' +
+        escapeHtml(field.displayName || field.columnName) +
+        '</option>';
+    }).join('');
+
+  if (el.designerDateField) el.designerDateField.innerHTML = allOptions;
+  if (el.designerXField) el.designerXField.innerHTML = allOptions;
+  if (el.designerStackField) el.designerStackField.innerHTML = allOptions;
+  if (el.designerCompareCategoryField) el.designerCompareCategoryField.innerHTML = allOptions;
+  if (el.designerValueField) el.designerValueField.innerHTML = valueOptions;
+
+  const firstDate = list.find(function (field) { return field.isDateField; });
+  const firstNumber = list.find(function (field) { return field.isNumberField; });
+  const firstCategory = list.find(function (field) {
+    return field.isCategoryField || field.semanticType === 'location' || field.semanticType === 'category';
+  });
+
+  if (firstDate && el.designerDateField && !el.designerDateField.value) el.designerDateField.value = firstDate.columnName;
+  if (firstNumber && el.designerValueField && !el.designerValueField.value) el.designerValueField.value = firstNumber.columnName;
+  if (firstCategory && el.designerXField && !el.designerXField.value) el.designerXField.value = firstCategory.columnName;
+  if (firstCategory && el.designerCompareCategoryField && !el.designerCompareCategoryField.value) el.designerCompareCategoryField.value = firstCategory.columnName;
+}
+
+function renderDesignerFieldList(fields) {
+  if (!el.designerFieldList) {
+    return;
+  }
+
+  const list = normalizeDesignerFields_(fields);
+
+  if (!list.length) {
+    el.designerFieldList.classList.add('empty');
+    el.designerFieldList.textContent = 'ไม่พบ Field ที่วิเคราะห์ได้';
+    return;
+  }
+
+  el.designerFieldList.classList.remove('empty');
+
+  el.designerFieldList.innerHTML = list.map(function (field, index) {
+    const type = field.manualType || field.detectedType || 'text';
+
+    return [
+      '<div class="detected-field-card" data-field-index="' + index + '">',
+        '<div class="detected-field-head">',
+          '<div class="detected-field-name">',
+            '<strong>' + escapeHtml(field.columnName || '') + '</strong>',
+            '<small>ตัวอย่าง: ' + escapeHtml((field.sampleValues || []).join(' | ') || '-') + '</small>',
+          '</div>',
+          '<span class="field-badge ' + escapeAttr(type) + '">' + escapeHtml(type) + '</span>',
+        '</div>',
+        '<div class="field-badge-row">',
+          field.isDateField ? '<span class="field-badge">Date</span>' : '',
+          field.isNumberField ? '<span class="field-badge number">Number</span>' : '',
+          field.isCategoryField ? '<span class="field-badge category">Category</span>' : '',
+          field.isStatusField ? '<span class="field-badge status">Status</span>' : '',
+          field.isFilterField ? '<span class="field-badge text">Filter</span>' : '',
+        '</div>',
+        '<div class="detected-field-edit">',
+          '<select data-field-manual-type="' + index + '">',
+            renderTypeOptions(type),
+          '</select>',
+          '<input data-field-display-name="' + index + '" type="text" value="' + escapeAttr(field.displayName || field.columnName || '') + '" placeholder="ชื่อแสดงผล">',
+        '</div>',
+      '</div>'
+    ].join('');
+  }).join('');
+}
+
+function renderDesignerSavedWidgets(widgets) {
+  if (!el.designerSavedWidgetList) {
+    return;
+  }
+
+  const list = (Array.isArray(widgets) ? widgets : []).map(normalizeDesignerWidget_);
+  designerSavedWidgetsCache = list;
+
+  if (!list.length) {
+    el.designerSavedWidgetList.classList.add('empty');
+    el.designerSavedWidgetList.textContent = 'ยังไม่มี Widget ที่บันทึกไว้';
+    return;
+  }
+
+  el.designerSavedWidgetList.classList.remove('empty');
+
+  el.designerSavedWidgetList.innerHTML = list.map(function (item, index) {
+    return [
+      '<div class="saved-widget-card" data-saved-widget-index="' + index + '">',
+        '<div class="saved-widget-top">',
+          '<div>',
+            '<strong>' + escapeHtml(item.title || item.widgetType || '') + '</strong>',
+            '<small>' + escapeHtml(item.widgetId || '') + '</small>',
+          '</div>',
+          '<span class="widget-type-pill">' + escapeHtml(item.widgetType || '') + '</span>',
+        '</div>',
+        '<div class="saved-widget-meta">',
+          '<span class="field-badge">Source: ' + escapeHtml(item.sourceName || item.sourceId || '-') + '</span>',
+          '<span class="field-badge">Sheet: ' + escapeHtml(item.sheetName || '-') + '</span>',
+          '<span class="field-badge">Aggregate: ' + escapeHtml(item.aggregate || '-') + '</span>',
+        '</div>',
+        '<div class="saved-widget-actions">',
+          '<button class="btn btn-primary" type="button" data-edit-saved-widget="' + index + '">แก้ไข</button>',
+          '<button class="btn btn-secondary" type="button" data-preview-saved-widget="' + index + '">Preview</button>',
+          '<button class="btn btn-danger" type="button" data-delete-saved-widget="' + index + '">ลบ</button>',
+        '</div>',
+      '</div>'
+    ].join('');
+  }).join('');
+
+  el.designerSavedWidgetList.querySelectorAll('[data-edit-saved-widget]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      applySavedWidgetToDesignerForm(Number(btn.getAttribute('data-edit-saved-widget')));
+    });
+  });
+
+  el.designerSavedWidgetList.querySelectorAll('[data-preview-saved-widget]').forEach(function (btn) {
+    btn.addEventListener('click', async function () {
+      await previewSavedWidget(Number(btn.getAttribute('data-preview-saved-widget')));
+    });
+  });
+
+  el.designerSavedWidgetList.querySelectorAll('[data-delete-saved-widget]').forEach(function (btn) {
+    btn.addEventListener('click', async function () {
+      await deleteSavedWidget(Number(btn.getAttribute('data-delete-saved-widget')));
+    });
+  });
+}
+
+function applyDesignerDashboardLoadResult(result, options) {
+  options = options || {};
+  result = result || {};
+
+  const dashboardId = designerText_(result.dashboardId || getDesignerDashboardId());
+  const cachedDashboard = findDashboardInCache(dashboardId);
+  const dashboard = mergeDesignerDashboardData(cachedDashboard, result);
+
+  designerSavedWidgetsCache = (Array.isArray(result.widgets) ? result.widgets : []).map(normalizeDesignerWidget_);
+  designerSavedComparisonsCache = (Array.isArray(result.comparisons) ? result.comparisons : []).map(normalizeDesignerComparison_);
+  designerSavedLayoutsCache = (Array.isArray(result.layouts) ? result.layouts : []).map(normalizeDesignerLayout_);
+
+  if (!options.skipDashboardSelect && el.designerDashboardSelect && dashboard.dashboardId) {
+    setSelectValueFlexible(el.designerDashboardSelect, dashboard.dashboardId);
+  }
+
+  designerSelectedDashboardId = dashboard.dashboardId || dashboardId;
+
+  if (el.designerDashboardType && dashboard.dashboardType) {
+    setSelectValueFlexible(el.designerDashboardType, dashboard.dashboardType);
+  }
+
+  if (el.designerTheme && dashboard.theme) {
+    setSelectValueFlexible(el.designerTheme, dashboard.theme);
+  }
+
+  if (dashboard.sourceId && el.designerSourceSelect) {
+    renderDesignerSourceOptions(sourcesCache || [], dashboard.sourceId);
+  }
+
+  designerSelectedSourceId = dashboard.sourceId || '';
+  designerSelectedSheetName = dashboard.sheetName || '';
+
+  renderDesignerSavedWidgets(designerSavedWidgetsCache);
+
+  return dashboard;
+}
+
+async function handleDesignerDashboardChange(options) {
+  options = options || {};
+
+  const dashboardId = getDesignerDashboardId();
+  designerSelectedDashboardId = dashboardId;
+  designerEditingWidgetId = '';
+
+  if (!dashboardId) {
+    designerSelectedSourceId = '';
+    designerSelectedSheetName = '';
+    if (el.designerSourceSelect) el.designerSourceSelect.value = '';
+    if (el.designerSheetSelect) el.designerSheetSelect.innerHTML = '<option value="">เลือก Source ก่อน</option>';
+    renderDesignerSavedWidgets([]);
+    resetDesignerWidgetForm();
+    setDesignerMessage('กรุณาเลือก Dashboard ที่ต้องการออกแบบ', 'muted');
+    return null;
+  }
+
+  try {
+    if (!options.silent) {
+      setDesignerMessage('กำลังโหลดข้อมูล Dashboard ที่เลือก...', 'muted');
+    }
+
+    if (!sourcesCache || !sourcesCache.length) {
+      await loadDesignerSources();
+    }
+
+    if (!window.AnalyticsAPI || typeof window.AnalyticsAPI.dashboardDesignerLoad !== 'function') {
+      throw new Error('ไม่พบ API dashboardDesignerLoad กรุณาตรวจสอบ api.js');
+    }
+
+    const result = await window.AnalyticsAPI.dashboardDesignerLoad(dashboardId);
+    const dashboard = applyDesignerDashboardLoadResult(result);
+
+    if (dashboard.sourceId) {
+      setSelectValueFlexible(el.designerSourceSelect, dashboard.sourceId);
+      designerSelectedSourceId = getDesignerSourceId();
+      await loadDesignerSheetsForSource(dashboard.sourceId, dashboard.sheetName || '');
+    } else if (el.designerSheetSelect) {
+      el.designerSheetSelect.innerHTML = '<option value="">Dashboard นี้ยังไม่ผูก Source</option>';
+    }
+
+    if (dashboard.sheetName) {
+      setSelectValueFlexible(el.designerSheetSelect, dashboard.sheetName);
+      designerSelectedSheetName = getDesignerSheetName();
+    }
+
+    await populateDesignerFieldSelectsFromCurrentSelection();
+
+    if (!options.silent) {
+      setDesignerMessage(
+        'โหลด Dashboard สำเร็จ' +
+        (dashboard.sourceId ? ' | Source: ' + dashboard.sourceId : '') +
+        (dashboard.sheetName ? ' | Sheet: ' + dashboard.sheetName : ''),
+        'success'
+      );
+    }
+
+    writeLog({
+      step: 'designer_dashboard_change_success',
+      dashboardId: dashboardId,
+      sourceId: dashboard.sourceId || '',
+      sheetName: dashboard.sheetName || '',
+      widgets: designerSavedWidgetsCache.length,
+      result: result
+    });
+
+    return result;
+
+  } catch (error) {
+    const message = getFriendlyErrorMessage ? getFriendlyErrorMessage(error) : (error.message || 'โหลด Dashboard ที่เลือกไม่สำเร็จ');
+    setDesignerMessage(message, 'error');
+    writeLog({
+      step: 'designer_dashboard_change_error',
+      dashboardId: dashboardId,
+      message: message,
+      payload: error.payload || null
+    });
+    return null;
+  }
+}
+
+async function handleDesignerSourceChange(options) {
+  options = options || {};
+  designerSelectedSourceId = getDesignerSourceId();
+  designerSelectedSheetName = designerText_(options.selectedSheetName || '');
+
+  designerFieldsCache = [];
+  populateDesignerFieldSelects([]);
+
+  if (!designerSelectedSourceId) {
+    if (el.designerSheetSelect) el.designerSheetSelect.innerHTML = '<option value="">เลือก Source ก่อน</option>';
+    return [];
+  }
+
+  try {
+    if (!options.silent) setDesignerMessage('กำลังโหลดรายชื่อ Sheet...', 'muted');
+    const sheets = await loadDesignerSheetsForSource(designerSelectedSourceId, designerSelectedSheetName);
+    if (!options.silent) setDesignerMessage('โหลดรายชื่อ Sheet สำเร็จ', 'success');
+    return sheets;
+  } catch (error) {
+    const message = getFriendlyErrorMessage ? getFriendlyErrorMessage(error) : (error.message || 'โหลดรายชื่อ Sheet ไม่สำเร็จ');
+    setDesignerMessage(message, 'error');
+    if (el.designerSheetSelect) el.designerSheetSelect.innerHTML = '<option value="">โหลด Sheet ไม่สำเร็จ</option>';
+    writeLog({ step: 'designer_source_change_error', sourceId: designerSelectedSourceId, message: message, payload: error.payload || null });
+    return [];
+  }
+}
+
+function handleDesignerSheetChange() {
+  designerSelectedSheetName = getDesignerSheetName();
+  designerFieldsCache = [];
+  populateDesignerFieldSelects([]);
+
+  if (designerSelectedSheetName) {
+    setDesignerMessage('เลือก Sheet แล้ว: ' + designerSelectedSheetName + ' | กด วิเคราะห์ข้อมูล หรือ Preview จากข้อมูลจริงได้', 'success');
+  }
+}
+
+async function populateDesignerFieldSelectsFromCurrentSelection() {
+  const sourceId = getDesignerSourceId();
+  const sheetName = getDesignerSheetName();
+
+  if (!sourceId || !sheetName) {
+    return null;
+  }
+
+  try {
+    if (window.AnalyticsAPI && typeof window.AnalyticsAPI.fieldAnalysis === 'function') {
+      const result = await window.AnalyticsAPI.fieldAnalysis({
+        mode: 'list',
+        sourceId: sourceId,
+        sheetName: sheetName
+      });
+
+      const fields = normalizeDesignerFields_(result.fields || result.rows || result.items || []);
+
+      if (fields.length) {
+        designerFieldsCache = fields;
+        populateDesignerFieldSelects(fields);
+        renderDesignerFieldList(fields);
+        return fields;
+      }
+    }
+  } catch (err) {
+    writeLog({
+      step: 'designer_field_analysis_list_skip',
+      message: err.message,
+      payload: err.payload || null
+    });
+  }
+
+  return null;
+}
+
+function collectDesignerWidgetConfig() {
+  const widgetType = normalizeDesignerWidgetType_(el.designerWidgetType ? el.designerWidgetType.value : '');
+  const title = el.designerWidgetTitle ? el.designerWidgetTitle.value.trim() : '';
+  const xField = el.designerXField ? el.designerXField.value : '';
+  const valueField = el.designerValueField ? el.designerValueField.value : '';
+  const stackField = el.designerStackField ? el.designerStackField.value : '';
+
+  return {
+    widgetId: designerEditingWidgetId || '',
+    dashboardId: getDesignerDashboardId(),
+    dashboardType: el.designerDashboardType ? el.designerDashboardType.value : '',
+    widgetType: widgetType,
+    type: widgetType,
+    title: title || getDefaultWidgetTitle(widgetType),
+    description: '',
+    sourceId: getDesignerSourceId(),
+    sourceName: getDesignerSourceName(),
+    sheetName: getDesignerSheetName(),
+    dateField: el.designerDateField ? el.designerDateField.value : '',
+    xField: xField,
+    yField: valueField,
+    valueField: valueField,
+    categoryField: xField,
+    groupField: stackField,
+    stackField: stackField,
+    aggregate: el.designerAggregate ? el.designerAggregate.value : 'count',
+    unit: el.designerUnit ? el.designerUnit.value.trim() : '',
+    sortMethod: el.designerSortMethod ? el.designerSortMethod.value : 'desc',
+    limit: el.designerLimit ? Number(el.designerLimit.value || 0) : 0,
+    theme: el.designerTheme ? el.designerTheme.value : 'executive_blue',
+    colorMode: 'auto',
+    customColors: '',
+    showLegend: el.designerShowLegend ? el.designerShowLegend.checked : true,
+    showLabel: el.designerShowLabel ? el.designerShowLabel.checked : false,
+    showPercent: el.designerShowPercent ? el.designerShowPercent.checked : false,
+    showTotal: true,
+    enableExport: el.designerEnableExport ? el.designerEnableExport.checked : true,
+    refreshMode: 'manual',
+    groupBy: 'day',
+    targetValue: el.designerTargetValue ? el.designerTargetValue.value : '',
+    compare: collectDesignerCompareConfig(),
+    layout: collectDesignerLayoutConfig()
+  };
+}
+
+function validateDesignerWidgetConfig(config, mode) {
+  if (!config.dashboardId) return 'กรุณาเลือก Dashboard ที่ต้องการออกแบบ';
+  if (!config.sourceId || !config.sheetName) return 'กรุณาเลือก Source และ Sheet';
+  if (!config.widgetType) return 'กรุณาเลือก Widget Type';
+
+  if (config.widgetType === 'line' && !(config.dateField || config.xField)) return 'กราฟเส้นต้องเลือก Date Field หรือ X Field';
+  if (config.widgetType === 'bar' && !(config.xField || config.categoryField)) return 'กราฟแท่งต้องเลือก X / Category Field';
+  if (config.widgetType === 'donut' && !(config.categoryField || config.xField)) return 'Donut Chart ต้องเลือก Category Field';
+  if (config.widgetType === 'stacked_bar' && (!(config.xField || config.categoryField) || !config.stackField)) return 'Stacked Bar ต้องเลือก X Field และ Stack Field';
+  if (config.widgetType === 'ranking' && !(config.categoryField || config.xField)) return 'Ranking ต้องเลือก Field สำหรับจัดอันดับ';
+  if (config.widgetType === 'gauge' && !config.targetValue && !(config.compare && config.compare.targetValue)) return 'Gauge ต้องกำหนด Target Value';
+  if (mode === 'save' && !config.dashboardId) return 'ต้องเลือก Dashboard ก่อนบันทึก Widget';
+  return '';
+}
+
+async function handleDesignerRealPreview() {
+  const config = collectDesignerWidgetConfig();
+  const error = validateDesignerWidgetConfig(config, 'preview');
+
+  if (error) {
+    setDesignerMessage(error, 'error');
+    return;
+  }
+
+  if (!window.AnalyticsAPI || typeof window.AnalyticsAPI.widgetPreview !== 'function') {
+    setDesignerMessage('ไม่พบ API widgetPreview กรุณาตรวจสอบ api.js / Worker / Api.gs', 'error');
+    return;
+  }
+
+  try {
+    setDesignerMessage('กำลังสร้าง Preview จากข้อมูลจริง...', 'muted');
+    setDesignerBusy(true);
+
+    const result = await window.AnalyticsAPI.widgetPreview(config);
+    designerCurrentPreviewData = result;
+    renderDesignerRealPreview(result);
+    setDesignerMessage('สร้าง Preview สำเร็จ', 'success');
+
+    writeLog({ step: 'designer_widget_preview', config: config, result: result });
+  } catch (error) {
+    const message = getFriendlyErrorMessage ? getFriendlyErrorMessage(error) : (error.message || 'สร้าง Preview ไม่สำเร็จ');
+    setDesignerMessage(message, 'error');
+    writeLog({ step: 'designer_widget_preview_error', message: message, payload: error.payload || null, config: config });
+  } finally {
+    setDesignerBusy(false);
+  }
+}
+
+async function handleDesignerComparisonPreview() {
+  const config = collectDesignerWidgetConfig();
+  const compare = collectDesignerCompareConfig();
+
+  if (!compare.enabled || compare.type === 'none') {
+    renderDesignerComparisonResult({ enabled: false, message: 'ยังไม่ได้เปิดการเปรียบเทียบ' });
+    return;
+  }
+
+  if (!window.AnalyticsAPI || typeof window.AnalyticsAPI.comparisonPreview !== 'function') {
+    setDesignerMessage('ไม่พบ API comparisonPreview กรุณาตรวจสอบ api.js / Worker / Api.gs', 'error');
+    return;
+  }
+
+  try {
+    setDesignerMessage('กำลังคำนวณ Comparison...', 'muted');
+    const result = await window.AnalyticsAPI.comparisonPreview({ widget: config, compare: compare });
+    renderDesignerComparisonResult(result);
+    setDesignerMessage('คำนวณ Comparison สำเร็จ', 'success');
+  } catch (error) {
+    const message = getFriendlyErrorMessage ? getFriendlyErrorMessage(error) : (error.message || 'คำนวณ Comparison ไม่สำเร็จ');
+    setDesignerMessage(message, 'error');
+    if (el.designerComparisonResult) {
+      el.designerComparisonResult.className = 'comparison-result danger';
+      el.designerComparisonResult.textContent = message;
+    }
+  }
+}
+
+function applySavedWidgetToDesignerForm(index) {
+  const raw = designerSavedWidgetsCache[index];
+  const item = normalizeDesignerWidget_(raw);
+
+  if (!item || !item.widgetId) {
+    return;
+  }
+
+  designerEditingWidgetId = item.widgetId || '';
+
+  if (el.designerWidgetType) setSelectValueFlexible(el.designerWidgetType, item.widgetType || '');
+  if (el.designerWidgetTitle) el.designerWidgetTitle.value = item.title || '';
+  if (el.designerDateField) setSelectValueFlexible(el.designerDateField, item.dateField || '');
+  if (el.designerXField) setSelectValueFlexible(el.designerXField, item.xField || item.categoryField || '');
+  if (el.designerValueField) setSelectValueFlexible(el.designerValueField, item.valueField || item.yField || '');
+  if (el.designerStackField) setSelectValueFlexible(el.designerStackField, item.stackField || item.groupField || '');
+  if (el.designerAggregate) setSelectValueFlexible(el.designerAggregate, item.aggregate || 'count');
+  if (el.designerUnit) el.designerUnit.value = item.unit || '';
+  if (el.designerSortMethod) setSelectValueFlexible(el.designerSortMethod, item.sortMethod || 'desc');
+  if (el.designerLimit) el.designerLimit.value = item.limit || '';
+  if (el.designerTheme) setSelectValueFlexible(el.designerTheme, item.theme || 'executive_blue');
+  if (el.designerTargetValue) el.designerTargetValue.value = item.targetValue || '';
+
+  if (el.designerShowLegend) el.designerShowLegend.checked = item.showLegend !== false;
+  if (el.designerShowLabel) el.designerShowLabel.checked = !!item.showLabel;
+  if (el.designerShowPercent) el.designerShowPercent.checked = !!item.showPercent;
+  if (el.designerEnableExport) el.designerEnableExport.checked = item.enableExport !== false;
+
+  applySavedComparisonToForm(item.widgetId);
+  applySavedLayoutToForm(item.widgetId);
+
+  if (el.designerUpdateWidgetBtn) {
+    el.designerUpdateWidgetBtn.disabled = false;
+  }
+
+  renderDesignerMiniPreviewByType(item.widgetType || '');
+  setDesignerMessage('โหลด Widget มาแก้ไขแล้ว', 'success');
+  scrollToDesignerSection();
+}
+
+async function previewSavedWidget(index) {
+  const item = normalizeDesignerWidget_(designerSavedWidgetsCache[index]);
+
+  if (!item || !item.widgetId) {
+    return;
+  }
+
+  try {
+    setDesignerMessage('กำลัง Preview Widget เดิม...', 'muted');
+    const result = await window.AnalyticsAPI.widgetPreview(item);
+    renderDesignerRealPreview(result);
+    setDesignerMessage('Preview Widget เดิมสำเร็จ', 'success');
+  } catch (error) {
+    const message = getFriendlyErrorMessage ? getFriendlyErrorMessage(error) : (error.message || 'Preview Widget เดิมไม่สำเร็จ');
+    setDesignerMessage(message, 'error');
+  }
+}
+
+async function handleDesignerSaveWidget() {
+  const config = collectDesignerWidgetConfig();
+  const error = validateDesignerWidgetConfig(config, 'save');
+
+  if (error) {
+    setDesignerMessage(error, 'error');
+    return;
+  }
+
+  try {
+    setDesignerMessage('กำลังบันทึก Widget...', 'muted');
+    setDesignerBusy(true);
+
+    const payload = {
+      ...config,
+      compare: config.compare,
+      layout: config.layout
+    };
+
+    const result = designerEditingWidgetId
+      ? await window.AnalyticsAPI.updateWidget(payload)
+      : await window.AnalyticsAPI.saveWidget(payload);
+
+    designerEditingWidgetId = result.widgetId || designerEditingWidgetId || '';
+    setDesignerMessage(result.message || 'บันทึก Widget สำเร็จ', 'success');
+    await handleDesignerLoadSavedWidgets({ silent: true });
+
+    writeLog({ step: 'designer_save_widget', payload: payload, result: result });
+  } catch (error) {
+    const message = getFriendlyErrorMessage ? getFriendlyErrorMessage(error) : (error.message || 'บันทึก Widget ไม่สำเร็จ');
+    setDesignerMessage(message, 'error');
+    writeLog({ step: 'designer_save_widget_error', message: message, payload: error.payload || null });
+  } finally {
+    setDesignerBusy(false);
+  }
+}
+
+async function initDashboardDesigner() {
+  try {
+    setDesignerMessage('กำลังโหลดข้อมูล Dashboard Designer...', 'muted');
+
+    await Promise.allSettled([
+      loadDesignerThemes(),
+      loadDesignerWidgetTemplates()
+    ]);
+
+    await loadDesignerSources();
+    await loadDesignerDashboards();
+
+    const selectedDashboardId = getDesignerDashboardId();
+    if (selectedDashboardId) {
+      await handleDesignerDashboardChange({ silent: true });
+    } else {
+      if (el.designerSheetSelect) {
+        el.designerSheetSelect.innerHTML = '<option value="">เลือก Source ก่อน</option>';
+      }
+      renderDesignerSavedWidgets([]);
+    }
+
+    setDesignerMessage('โหลด Dashboard Designer สำเร็จ', 'success');
+
+    writeLog({
+      step: 'designer_init_success',
+      dashboards: dashboardsCache ? dashboardsCache.length : 0,
+      sources: sourcesCache ? sourcesCache.length : 0,
+      themes: designerThemesCache ? designerThemesCache.length : 0,
+      templates: designerWidgetTemplatesCache ? designerWidgetTemplatesCache.length : 0
+    });
+  } catch (error) {
+    const message = getFriendlyErrorMessage ? getFriendlyErrorMessage(error) : (error.message || 'โหลด Dashboard Designer ไม่สำเร็จ');
+    setDesignerMessage(message, 'error');
+    writeLog({ step: 'designer_init_error', message: message, payload: error.payload || null });
+  }
+}
+
 })();
