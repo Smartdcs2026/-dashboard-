@@ -56,71 +56,69 @@
       clearTimeout(timer);
     });
   }
+function normalizeApiErrorMessage(message, status) {
+  const text = String(message || '').trim();
 
-  function normalizeApiErrorMessage(message, status) {
-    const text = String(message || '').trim();
+  if (!text) {
+    return 'เกิดข้อผิดพลาดจาก API';
+  }
 
-    if (!text) {
-      return 'เกิดข้อผิดพลาดจาก API';
-    }
+  if (
+    text.includes('Token หมดอายุ') ||
+    text.includes('กรุณาเข้าสู่ระบบก่อนใช้งาน') ||
+    text.includes('Token ไม่ถูกต้อง')
+  ) {
+    return 'เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่';
+  }
 
-    if (
-      text.includes('Token หมดอายุ') ||
-      text.includes('กรุณาเข้าสู่ระบบก่อนใช้งาน') ||
-      text.includes('Token ไม่ถูกต้อง')
-    ) {
-      return 'เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่';
-    }
+  if (
+    text.includes('ไม่มีสิทธิ์') ||
+    status === 401 ||
+    status === 403
+  ) {
+    return 'คุณไม่มีสิทธิ์ใช้งานส่วนนี้';
+  }
 
-    if (
-      text.includes('ไม่มีสิทธิ์') ||
-      status === 401 ||
-      status === 403
-    ) {
-      return 'คุณไม่มีสิทธิ์ใช้งานส่วนนี้';
-    }
+  if (
+    text.includes('ยังไม่มี Mapping') ||
+    text.includes('ไม่มี Mapping')
+  ) {
+    return 'ยังไม่มี Mapping ของชีทนี้ กรุณาบันทึก Mapping ก่อน';
+  }
 
-    if (
-      text.includes('ยังไม่มี Mapping') ||
-      text.includes('ไม่มี Mapping')
-    ) {
-      return 'ยังไม่มี Mapping ของชีทนี้ กรุณาบันทึก Mapping ก่อน';
-    }
-
-    if (
-      text.includes('ไม่พบ Dashboard') ||
-      text.includes('Dashboard นี้')
-    ) {
-      return text;
-    }
-
-    if (
-      text.includes('ไม่พบชีท') ||
-      text.includes('ไม่สามารถเปิด Google Sheet') ||
-      text.includes('ไม่สามารถเปิดแหล่งข้อมูล')
-    ) {
-      return 'ไม่สามารถอ่านข้อมูลจาก Google Sheet ได้ กรุณาตรวจสอบชื่อชีท / สิทธิ์การเข้าถึง / Sheet ID';
-    }
-
-    if (
-      text.includes('Apps Script ตอบกลับไม่ใช่ JSON') ||
-      text.includes('Worker Error') ||
-      text.includes('เชื่อมต่อ Apps Script ไม่สำเร็จ')
-    ) {
-      return 'ระบบ API Gateway หรือ Apps Script มีปัญหา กรุณาลองใหม่อีกครั้ง';
-    }
-
-    if (
-      text.includes('API ใช้เวลานานเกินกำหนด') ||
-      text.includes('timeout') ||
-      text.includes('aborted')
-    ) {
-      return 'API ใช้เวลานานเกินกำหนด กรุณาลดจำนวนแถวที่โหลด หรือกดใหม่อีกครั้ง';
-    }
-
+  if (
+    text.includes('ไม่พบ Dashboard') ||
+    text.includes('Dashboard นี้')
+  ) {
     return text;
   }
 
+  if (
+    text.includes('ไม่พบชีท') ||
+    text.includes('ไม่สามารถเปิด Google Sheet') ||
+    text.includes('ไม่สามารถเปิดแหล่งข้อมูล')
+  ) {
+    return 'ไม่สามารถอ่านข้อมูลจาก Google Sheet ได้ กรุณาตรวจสอบชื่อชีท / สิทธิ์การเข้าถึง / Sheet ID';
+  }
+
+  if (
+    text.includes('Apps Script ตอบกลับไม่ใช่ JSON') ||
+    text.includes('Worker Error') ||
+    text.includes('เชื่อมต่อ Apps Script ไม่สำเร็จ')
+  ) {
+    return 'ระบบ API Gateway หรือ Apps Script มีปัญหา กรุณาลองใหม่อีกครั้ง';
+  }
+
+  if (
+    text.includes('API ใช้เวลานานเกินกำหนด') ||
+    text.includes('timeout') ||
+    text.includes('aborted')
+  ) {
+    return 'API ใช้เวลานานเกินกำหนด กรุณาลดจำนวนแถวที่โหลด หรือกดใหม่อีกครั้ง';
+  }
+
+  return text;
+}
   async function request(path, options = {}) {
     const token = getToken();
     const method = String(options.method || 'GET').toUpperCase();
@@ -162,12 +160,12 @@
         options.timeoutMs || API_TIMEOUT.DEFAULT
       );
     } catch (error) {
-      if (error && error.name === 'AbortError') {
-        const err = new Error('API ใช้เวลานานเกินกำหนด กรุณาลดจำนวนแถวที่โหลด หรือกดใหม่อีกครั้ง');
-        err.status = 408;
-        err.isTimeout = true;
-        throw err;
-      }
+     if (error && error.name === 'AbortError') {
+  const err = new Error('API ใช้เวลานานเกินกำหนด กรุณาลดจำนวนแถวที่โหลด หรือกดใหม่อีกครั้ง');
+  err.status = 408;
+  err.isTimeout = true;
+  throw err;
+}
 
       throw new Error('ไม่สามารถเชื่อมต่อ API ได้: ' + error.message);
     }
@@ -179,66 +177,67 @@
     }
 
     if (!response.ok || data.ok === false) {
-      const rawMessage = data.message || 'API Error';
-      const message = normalizeApiErrorMessage(rawMessage, response.status);
+  const rawMessage = data.message || 'API Error';
+  const message = normalizeApiErrorMessage(rawMessage, response.status);
 
-      const err = new Error(message);
-      err.rawMessage = rawMessage;
-      err.payload = data;
-      err.status = response.status;
-      err.isAuthError =
-        message.includes('เซสชันหมดอายุ') ||
-        rawMessage.includes('Token หมดอายุ') ||
-        rawMessage.includes('กรุณาเข้าสู่ระบบก่อนใช้งาน') ||
-        rawMessage.includes('Token ไม่ถูกต้อง');
+  const err = new Error(message);
+  err.rawMessage = rawMessage;
+  err.payload = data;
+  err.status = response.status;
+  err.isAuthError =
+    message.includes('เซสชันหมดอายุ') ||
+    rawMessage.includes('Token หมดอายุ') ||
+    rawMessage.includes('กรุณาเข้าสู่ระบบก่อนใช้งาน') ||
+    rawMessage.includes('Token ไม่ถูกต้อง');
 
-      throw err;
-    }
+  throw err;
+}
 
     return data;
   }
 
-  function sleep(ms) {
-    return new Promise(function (resolve) {
-      setTimeout(resolve, ms);
+
+ function sleep(ms) {
+  return new Promise(function (resolve) {
+    setTimeout(resolve, ms);
+  });
+}
+
+
+async function requestWithRetry(path, options = {}) {
+  const retry = Number(options.retry || 0);
+  const retryDelay = Number(options.retryDelay || 800);
+
+  try {
+    return await request(path, options);
+  } catch (error) {
+    const shouldRetry =
+      retry > 0 &&
+      (
+        error.isTimeout ||
+        error.status === 408 ||
+        error.status === 429 ||
+        error.status === 500 ||
+        error.status === 502 ||
+        error.status === 503 ||
+        error.status === 504 ||
+        String(error.message || '').includes('API ใช้เวลานานเกินกำหนด') ||
+        String(error.message || '').includes('เชื่อมต่อ API')
+      );
+
+    if (!shouldRetry) {
+      throw error;
+    }
+
+    await sleep(retryDelay);
+
+    return requestWithRetry(path, {
+      ...options,
+      retry: retry - 1,
+      retryDelay: retryDelay + 700
     });
   }
-
-  async function requestWithRetry(path, options = {}) {
-    const retry = Number(options.retry || 0);
-    const retryDelay = Number(options.retryDelay || 800);
-
-    try {
-      return await request(path, options);
-    } catch (error) {
-      const shouldRetry =
-        retry > 0 &&
-        (
-          error.isTimeout ||
-          error.status === 408 ||
-          error.status === 429 ||
-          error.status === 500 ||
-          error.status === 502 ||
-          error.status === 503 ||
-          error.status === 504 ||
-          String(error.message || '').includes('API ใช้เวลานานเกินกำหนด') ||
-          String(error.message || '').includes('เชื่อมต่อ API')
-        );
-
-      if (!shouldRetry) {
-        throw error;
-      }
-
-      await sleep(retryDelay);
-
-      return requestWithRetry(path, {
-        ...options,
-        retry: retry - 1,
-        retryDelay: retryDelay + 700
-      });
-    }
-  }
-
+}
   function health() {
     return request('/api/health', {
       timeoutMs: API_TIMEOUT.HEALTH
@@ -248,20 +247,6 @@
   function setupStatus() {
     return request('/api/setup-status', {
       timeoutMs: API_TIMEOUT.HEALTH
-    });
-  }
-
-  function systemCheck() {
-    return request('/api/system-check', {
-      method: 'GET',
-      timeoutMs: API_TIMEOUT.READ
-    });
-  }
-
-  function systemCheckAuth() {
-    return request('/api/system-check-auth', {
-      method: 'GET',
-      timeoutMs: API_TIMEOUT.READ
     });
   }
 
@@ -326,31 +311,29 @@
     });
   }
 
-  function listSourceSheets(payload) {
-    payload = payload || {};
+function listSourceSheets(payload) {
+  payload = payload || {};
 
-    return requestWithRetry('/api/source-sheets', {
-      method: 'POST',
-      timeoutMs: API_TIMEOUT.DASHBOARD,
-      retry: 1,
-      retryDelay: 1000,
-      body: {
-        ...payload,
-        includeMeta: false
-      }
-    });
-  }
-
-  function readHeaders(payload) {
-    return requestWithRetry('/api/headers', {
-      method: 'POST',
-      timeoutMs: API_TIMEOUT.DASHBOARD,
-      retry: 1,
-      retryDelay: 1000,
-      body: payload
-    });
-  }
-
+  return requestWithRetry('/api/source-sheets', {
+    method: 'POST',
+    timeoutMs: API_TIMEOUT.DASHBOARD,
+    retry: 1,
+    retryDelay: 1000,
+    body: {
+      ...payload,
+      includeMeta: false
+    }
+  });
+}
+function readHeaders(payload) {
+  return requestWithRetry('/api/headers', {
+    method: 'POST',
+    timeoutMs: API_TIMEOUT.DASHBOARD,
+    retry: 1,
+    retryDelay: 1000,
+    body: payload
+  });
+}
   function getMapping(payload) {
     return request('/api/mapping', {
       method: 'POST',
@@ -408,9 +391,17 @@
   function listDashboards(options = {}) {
     const includeDeleted = !!options.includeDeleted;
 
+    if (includeDeleted) {
+      return request('/api/dashboards', {
+        timeoutMs: API_TIMEOUT.READ,
+        query: {
+          includeDeleted: true
+        }
+      });
+    }
+
     return request('/api/dashboards', {
-      timeoutMs: API_TIMEOUT.READ,
-      query: includeDeleted ? { includeDeleted: true } : {}
+      timeoutMs: API_TIMEOUT.READ
     });
   }
 
@@ -495,223 +486,82 @@
   }
 
   function listUsers() {
-    return request('/api/users', {
-      timeoutMs: API_TIMEOUT.READ
-    });
-  }
+  return request('/api/users', {
+    timeoutMs: API_TIMEOUT.READ
+  });
+}
 
-  function createUser(payload) {
-    return request('/api/users', {
-      method: 'POST',
-      timeoutMs: API_TIMEOUT.READ,
-      body: {
-        mode: 'create',
-        ...payload
-      }
-    });
-  }
 
-  function updateUser(payload) {
-    return request('/api/users', {
-      method: 'POST',
-      timeoutMs: API_TIMEOUT.READ,
-      body: {
-        mode: 'update',
-        ...payload
-      }
-    });
-  }
+function createUser(payload) {
+  return request('/api/users', {
+    method: 'POST',
+    timeoutMs: API_TIMEOUT.READ,
+    body: {
+      mode: 'create',
+      ...payload
+    }
+  });
+}
 
-  function resetUserPassword(userId, newPassword) {
-    return request('/api/users', {
-      method: 'POST',
-      timeoutMs: API_TIMEOUT.READ,
-      body: {
-        mode: 'resetPassword',
-        userId: userId,
-        newPassword: newPassword || ''
-      }
-    });
-  }
 
-  function setUserStatus(userId, status) {
-    return request('/api/users', {
-      method: 'POST',
-      timeoutMs: API_TIMEOUT.READ,
-      body: {
-        mode: 'setStatus',
-        userId: userId,
-        status: status
-      }
-    });
-  }
+function updateUser(payload) {
+  return request('/api/users', {
+    method: 'POST',
+    timeoutMs: API_TIMEOUT.READ,
+    body: {
+      mode: 'update',
+      ...payload
+    }
+  });
+}
 
-  function disableUser(userId) {
-    return setUserStatus(userId, 'inactive');
-  }
 
-  function enableUser(userId) {
-    return setUserStatus(userId, 'active');
-  }
+function resetUserPassword(userId, newPassword) {
+  return request('/api/users', {
+    method: 'POST',
+    timeoutMs: API_TIMEOUT.READ,
+    body: {
+      mode: 'resetPassword',
+      userId: userId,
+      newPassword: newPassword || ''
+    }
+  });
+}
 
-  function clearCache(payload = {}) {
-    return request('/api/clear-cache', {
-      method: 'POST',
-      timeoutMs: API_TIMEOUT.READ,
-      body: payload
-    });
-  }
 
+function setUserStatus(userId, status) {
+  return request('/api/users', {
+    method: 'POST',
+    timeoutMs: API_TIMEOUT.READ,
+    body: {
+      mode: 'setStatus',
+      userId: userId,
+      status: status
+    }
+  });
+}
+
+
+function disableUser(userId) {
+  return setUserStatus(userId, 'inactive');
+}
+
+
+function enableUser(userId) {
+  return setUserStatus(userId, 'active');
+}
+function clearCache(payload = {}) {
+  return request('/api/clear-cache', {
+    method: 'POST',
+    timeoutMs: API_TIMEOUT.READ,
+    body: payload
+  });
+}
   function auditLog(payload = {}) {
     return request('/api/audit-log', {
       method: 'POST',
       timeoutMs: API_TIMEOUT.READ,
       body: payload
-    });
-  }
-
-  function themes() {
-    return request('/api/themes', {
-      method: 'GET',
-      timeoutMs: API_TIMEOUT.READ
-    });
-  }
-
-  function widgetTemplates() {
-    return request('/api/widget-templates', {
-      method: 'GET',
-      timeoutMs: API_TIMEOUT.READ
-    });
-  }
-
-  function fieldAnalysis(payload = {}) {
-    const mode = payload.mode || 'list';
-
-    if (String(mode).toLowerCase() === 'list') {
-      return request('/api/field-analysis', {
-        method: 'GET',
-        query: {
-          mode: 'list',
-          sourceId: payload.sourceId || '',
-          sheetName: payload.sheetName || ''
-        },
-        timeoutMs: API_TIMEOUT.READ
-      });
-    }
-
-    return requestWithRetry('/api/field-analysis', {
-      method: 'POST',
-      body: {
-        ...payload,
-        mode: 'save'
-      },
-      timeoutMs: API_TIMEOUT.DASHBOARD,
-      retry: 1,
-      retryDelay: 1000
-    });
-  }
-
-  function analyzeSheet(payload = {}) {
-    return requestWithRetry('/api/analyze-sheet', {
-      method: 'POST',
-      body: {
-        sourceId: payload.sourceId || '',
-        sheetName: payload.sheetName || '',
-        sampleLimit: payload.sampleLimit || 200
-      },
-      timeoutMs: API_TIMEOUT.DASHBOARD,
-      retry: 1,
-      retryDelay: 1000
-    });
-  }
-
-  function suggestWidgets(payload = {}) {
-    return requestWithRetry('/api/suggest-widgets', {
-      method: 'POST',
-      body: {
-        sourceId: payload.sourceId || '',
-        sheetName: payload.sheetName || '',
-        dashboardType: payload.dashboardType || 'operation'
-      },
-      timeoutMs: API_TIMEOUT.DASHBOARD,
-      retry: 1,
-      retryDelay: 1000
-    });
-  }
-
-  function widgetPreview(payload = {}) {
-    return requestWithRetry('/api/widget-preview', {
-      method: 'POST',
-      body: payload,
-      timeoutMs: API_TIMEOUT.DASHBOARD,
-      retry: 1,
-      retryDelay: 1000
-    });
-  }
-
-  function comparisonPreview(payload = {}) {
-    return request('/api/comparison-preview', {
-      method: 'POST',
-      body: payload,
-      timeoutMs: API_TIMEOUT.DASHBOARD
-    });
-  }
-
-  function saveWidget(payload = {}) {
-    return request('/api/save-widget', {
-      method: 'POST',
-      body: payload,
-      timeoutMs: API_TIMEOUT.DASHBOARD
-    });
-  }
-
-  function updateWidget(payload = {}) {
-    return request('/api/update-widget', {
-      method: 'POST',
-      body: payload,
-      timeoutMs: API_TIMEOUT.DASHBOARD
-    });
-  }
-
-  function deleteWidget(widgetId) {
-    if (!widgetId) {
-      return Promise.reject(new Error('ไม่พบ widgetId สำหรับลบ Widget'));
-    }
-
-    return request('/api/delete-widget', {
-      method: 'POST',
-      body: {
-        widgetId
-      },
-      timeoutMs: API_TIMEOUT.DEFAULT
-    });
-  }
-
-  function dashboardDesignerLoad(dashboardId) {
-    if (!dashboardId) {
-      return Promise.reject(new Error('ไม่พบ dashboardId สำหรับโหลด Dashboard Designer'));
-    }
-
-    return request('/api/dashboard-designer-load', {
-      method: 'GET',
-      query: {
-        dashboardId
-      },
-      timeoutMs: API_TIMEOUT.DASHBOARD
-    });
-  }
-
-  function dashboardBuilderView(payload = {}) {
-    return requestWithRetry('/api/dashboard-builder-view', {
-      method: 'POST',
-      body: {
-        dashboardId: payload.dashboardId || '',
-        limit: payload.limit || 5000,
-        filters: payload.filters || {}
-      },
-      timeoutMs: API_TIMEOUT.DASHBOARD,
-      retry: 1,
-      retryDelay: 1000
     });
   }
 
@@ -724,14 +574,12 @@
     setToken,
     clearToken,
 
-    request,
-    requestWithRetry,
-    normalizeApiErrorMessage,
-
-    health,
-    setupStatus,
-    systemCheck,
-    systemCheckAuth,
+   request,
+requestWithRetry,
+normalizeApiErrorMessage,
+    
+  health,
+  setupStatus,
 
     login,
     me,
@@ -761,37 +609,17 @@
     setDashboardHidden,
     setDashboardVisibility,
     regenerateDashboard,
-    deleteDashboard,
+deleteDashboard,
 
-    listUsers,
-    createUser,
-    updateUser,
-    resetUserPassword,
-    setUserStatus,
-    disableUser,
-    enableUser,
+listUsers,
+createUser,
+updateUser,
+resetUserPassword,
+setUserStatus,
+disableUser,
+enableUser,
 
-    clearCache,
-    auditLog,
-
-    themes,
-    widgetTemplates,
-    fieldAnalysis,
-    analyzeSheet,
-    suggestWidgets,
-    widgetPreview,
-    comparisonPreview,
-    saveWidget,
-    updateWidget,
-    deleteWidget,
-    dashboardDesignerLoad,
-    dashboardBuilderView,
-
-    /**
-     * Alias กันชื่อ API เก่า/ใหม่ไม่ตรงกัน
-     */
-    dashboards: listDashboards,
-    sources: listSources,
-    sourceSheets: listSourceSheets
+clearCache,
+auditLog
   };
 })();
